@@ -1,0 +1,14 @@
+# Uploads de usuarios (imágenes subidas)
+uploads/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
