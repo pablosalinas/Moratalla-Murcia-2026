@@ -17,7 +17,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2. Subir archivos al hosting por SFTP
+      # 2. Diagnóstico de secretos (No muestra valores, solo si existen)
+      - name: 🔍 Diagnóstico de Secretos
+        run: |
+          echo "Verificando disponibilidad de secretos..."
+          [ -n "${{ secrets.SFTP_HOST }}" ] && echo "✅ SFTP_HOST detectado" || echo "❌ SFTP_HOST FALTA"
+          [ -n "${{ secrets.SFTP_USER }}" ] && echo "✅ SFTP_USER detectado" || echo "❌ SFTP_USER FALTA"
+          [ -n "${{ secrets.SFTP_PASS }}" ] && echo "✅ SFTP_PASS detectado" || echo "❌ SFTP_PASS FALTA"
+          [ -n "${{ secrets.SFTP_REMOTE_PATH }}" ] && echo "✅ SFTP_REMOTE_PATH detectado" || echo "❌ SFTP_REMOTE_PATH FALTA"
+          [ -n "${{ secrets.SITE_URL }}" ] && echo "✅ SITE_URL detectado" || echo "❌ SITE_URL FALTA"
+          [ -n "${{ secrets.MIGRATE_SECRET }}" ] && echo "✅ MIGRATE_SECRET detectado" || echo "❌ MIGRATE_SECRET FALTA"
+
+      # 3. Subir archivos al hosting por SFTP
       - name: 📤 Subir archivos por SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
