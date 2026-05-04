@@ -1,5 +1,10 @@
-# Uploads de usuarios (imágenes subidas)
+# Uploads de usuarios (imágenes subidas desde admin)
 uploads/
+
+# Archivos de entorno con credenciales reales
+.env
+.env.production
+config.local.php
 
 # Archivos del sistema
 .DS_Store
@@ -12,3 +17,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Archivos temporales
+*.tmp
+*.bak

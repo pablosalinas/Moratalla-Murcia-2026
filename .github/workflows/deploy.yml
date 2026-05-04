@@ -1,0 +1,48 @@
+name: Deploy to Ionos (SFTP)
+
+# Se activa automáticamente con cada push a main
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: 🚀 Desplegar a producción
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descargar el código del repositorio
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Subir archivos al hosting por SFTP
+      - name: 📤 Subir archivos por SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          local_path: './'
+          remote_path: ${{ secrets.SFTP_REMOTE_PATH }}
+          sftp_only: true
+          delete_remote_files: false
+
+      # 3. Ejecutar migraciones de base de datos
+      - name: 🐬 Ejecutar migraciones MySQL
+        run: |
+          echo "Ejecutando migraciones de base de datos..."
+          HTTP_CODE=$(curl -s -o /tmp/migrate_output.txt -w "%{http_code}" \
+            "${{ secrets.SITE_URL }}/migrate_runner.php?secret=${{ secrets.MIGRATE_SECRET }}")
+          
+          echo "Respuesta del servidor:"
+          cat /tmp/migrate_output.txt
+          
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Error en migraciones (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          
+          echo "✅ Migraciones ejecutadas correctamente"
