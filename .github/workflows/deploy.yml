@@ -11,48 +11,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Descargar el código del repositorio
       - name: 📥 Checkout código
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # 2. Diagnóstico de secretos (No muestra valores, solo si existen)
-      - name: 🔍 Diagnóstico de Secretos
-        run: |
-          echo "Verificando disponibilidad de secretos..."
-          [ -n "${{ secrets.SFTP_HOST }}" ] && echo "✅ SFTP_HOST detectado" || echo "❌ SFTP_HOST FALTA"
-          [ -n "${{ secrets.SFTP_USER }}" ] && echo "✅ SFTP_USER detectado" || echo "❌ SFTP_USER FALTA"
-          [ -n "${{ secrets.SFTP_PASS }}" ] && echo "✅ SFTP_PASS detectado" || echo "❌ SFTP_PASS FALTA"
-          [ -n "${{ secrets.SFTP_REMOTE_PATH }}" ] && echo "✅ SFTP_REMOTE_PATH detectado" || echo "❌ SFTP_REMOTE_PATH FALTA"
-          [ -n "${{ secrets.SITE_URL }}" ] && echo "✅ SITE_URL detectado" || echo "❌ SITE_URL FALTA"
-          [ -n "${{ secrets.MIGRATE_SECRET }}" ] && echo "✅ MIGRATE_SECRET detectado" || echo "❌ MIGRATE_SECRET FALTA"
-
-      # 3. Subir archivos al hosting (SFTP)
-      - name: 📤 Subir archivos por SFTP
+      - name: 📤 Subir archivos (SFTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
-          port: ${{ secrets.SFTP_PORT }}
+          port: 22
           protocol: sftp
           local-dir: ./
           server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
 
-      # 4. Ejecutar migraciones de base de datos
-      - name: 🐬 Ejecutar migraciones MySQL
+      - name: 🐬 Migraciones
         run: |
-          echo "Ejecutando migraciones de base de datos..."
-          HTTP_CODE=$(curl -s -o /tmp/migrate_output.txt -w "%{http_code}" \
-            "${{ secrets.SITE_URL }}/migrate_runner.php?secret=${{ secrets.MIGRATE_SECRET }}")
-          
-          echo "Respuesta del servidor:"
-          cat /tmp/migrate_output.txt
-          
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Error en migraciones (HTTP $HTTP_CODE)"
-            exit 1
-          fi
-          
-          echo "✅ Migraciones ejecutadas correctamente"
+          curl -s "${{ secrets.SITE_URL }}/migrate_runner.php?secret=${{ secrets.MIGRATE_SECRET }}"
