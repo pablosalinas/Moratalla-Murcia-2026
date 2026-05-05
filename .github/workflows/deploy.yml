@@ -9,6 +9,7 @@ jobs:
   deploy:
     name: 🚀 Desplegar a producción
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       # 1. Descargar el código del repositorio
