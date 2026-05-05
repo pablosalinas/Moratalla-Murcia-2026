@@ -14,14 +14,14 @@ jobs:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: 📤 Subir archivos (SFTP)
+      - name: 📤 Subir archivos (FTP/SFTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASS }}
-          port: 22
-          protocol: sftp
+          password: ${{ secrets.SFTP_PASS || secrets.SFTP_PASSWORD }}
+          port: ${{ secrets.SFTP_PORT || 22 }}
+          protocol: ${{ secrets.SFTP_PROTOCOL || 'sftp' }}
           local-dir: ./
           server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
 
