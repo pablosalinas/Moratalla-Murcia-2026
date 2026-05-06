@@ -14,25 +14,16 @@ jobs:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: 🧪 Test de visibilidad de secreto
-        run: |
-          if [ -z "${{ secrets.SFTP_PASS }}" ]; then 
-            echo "❌ ERROR: GitHub NO está pasando el secreto SFTP_PASS al proceso."
-            exit 1
-          else 
-            echo "✅ OK: El secreto SFTP_PASS es visible."
-          fi
-
       - name: 📤 Subir archivos (SFTP)
-        uses: pressidium/sftp-deploy@v1.1.0
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SFTP_HOST }}
-          user: ${{ secrets.SFTP_USER }}
+          username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
           port: 22
-          local_path: ./
-          remote_path: ${{ secrets.SFTP_REMOTE_PATH }}
-          delete_remote_files: false
+          source: "./*"
+          target: ${{ secrets.SFTP_REMOTE_PATH }}
+          strip_components: 0
 
       - name: 🐬 Migraciones
         run: |
