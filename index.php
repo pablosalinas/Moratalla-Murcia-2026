@@ -1,5 +1,5 @@
 <?php
-// index.php - v1.1.6 (Triggering auto-deploy)
+// index.php - v1.2.0 (Finalizing deployment)
 require_once 'inc/header.php';
 ?>
 
