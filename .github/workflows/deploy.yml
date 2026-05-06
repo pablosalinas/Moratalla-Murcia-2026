@@ -23,16 +23,16 @@ jobs:
             echo "✅ OK: El secreto SFTP_PASS es visible."
           fi
 
-      - name: 📤 Subir archivos (FTP/SFTP)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: 📤 Subir archivos (SFTP)
+        uses: pressidium/sftp-deploy@v1.1.0
         with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASS || secrets.SFTP_PASSWORD }}
-          port: ${{ secrets.SFTP_PORT || 22 }}
-          protocol: ${{ secrets.SFTP_PROTOCOL || 'sftp' }}
-          local-dir: ./
-          server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
+          host: ${{ secrets.SFTP_HOST }}
+          user: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          port: 22
+          local_path: ./
+          remote_path: ${{ secrets.SFTP_REMOTE_PATH }}
+          delete_remote_files: false
 
       - name: 🐬 Migraciones
         run: |
