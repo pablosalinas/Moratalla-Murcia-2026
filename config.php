@@ -49,7 +49,7 @@ if ($environment === 'production') {
     define('DB_PORT', '3306');
     define('DB_USER', 'root');
     define('DB_PASS', '');
-    define('DB_NAME', 'moratalla-murcia-2026');
+    define('DB_NAME', 'moratalla_web_2026');
     define('BASE_URL', '/moratalla-murcia_2026');
 }
 
@@ -72,7 +72,12 @@ function getDB() {
         }
 
         try {
-            // En producción (Ionos), intentamos conectar directamente a la DB
+            // Primero conectamos sin base de datos para asegurar que podemos crearla si falta (útil en local)
+            $dsn_no_db = "mysql:host=$host;port=$port;charset=utf8mb4";
+            $temp_pdo = new PDO($dsn_no_db, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $temp_pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbname` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            
+            // Ahora conectamos a la base de datos real
             $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
             $pdo = new PDO($dsn, $user, $pass, [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -80,10 +85,17 @@ function getDB() {
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
         } catch (PDOException $e) {
-            // Diagnóstico amigable
-            $display_host = (env('APP_ENV') === 'production') ? substr($host, 0, 5) . "..." : $host;
-            $msg = "Error de conexión (Host: $display_host, Puerto: $port): " . $e->getMessage();
-            die($msg);
+            // Si falla la conexión directa (común en hostings compartidos que no permiten CREATE DATABASE), intentamos conexión directa
+            try {
+                $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
+                $pdo = new PDO($dsn, $user, $pass, [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                ]);
+            } catch (PDOException $e2) {
+                $display_host = (env('APP_ENV') === 'production') ? substr($host, 0, 5) . "..." : $host;
+                die("Error de conexión (Host: $display_host): " . $e2->getMessage());
+            }
         }
     }
     return $pdo;
