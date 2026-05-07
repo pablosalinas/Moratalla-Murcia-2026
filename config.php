@@ -1,54 +1,89 @@
 <?php
-// config.php - Configuración multi-entorno (local / producción)
+// config.php - Configuración multi-entorno robusta
 
-// Detectar entorno: si existe .env.production en el servidor, estamos en producción
-$envFile = __DIR__ . '/.env';
-if (file_exists($envFile)) {
-    $envVars = parse_ini_file($envFile);
-    foreach ($envVars as $key => $value) {
-        if (!getenv($key)) {
-            putenv("$key=$value");
+/**
+ * Carga variables desde el archivo .env
+ */
+function loadEnv() {
+    $env_file = __DIR__ . '/.env';
+    if (file_exists($env_file)) {
+        $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (!$line || strpos($line, '#') === 0) continue;
+            if (strpos($line, '=') !== false) {
+                list($name, $value) = explode('=', $line, 2);
+                $name = trim($name);
+                $value = trim($value);
+                $_ENV[$name] = $value;
+                $_SERVER[$name] = $value;
+                putenv("$name=$value");
+            }
         }
     }
 }
 
-$environment = getenv('APP_ENV') ?: 'local';
+// Cargar el entorno al iniciar
+loadEnv();
+
+/**
+ * Obtiene una variable de entorno con fallback
+ */
+function env($key, $default = null) {
+    return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
+}
+
+// Definir constantes globales basadas en el entorno
+$environment = env('APP_ENV', 'local');
 
 if ($environment === 'production') {
-    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-    define('DB_PORT', getenv('DB_PORT') ?: '3306');
-    define('DB_USER', getenv('DB_USER') ?: 'root');
-    define('DB_PASS', getenv('DB_PASS') ?: '');
-    define('DB_NAME', getenv('DB_NAME') ?: 'moratalla-murcia-2026');
-    define('BASE_URL', getenv('BASE_URL') ?: '');
-    define('MIGRATE_SECRET', getenv('MIGRATE_SECRET') ?: '');
+    define('DB_HOST', env('DB_HOST'));
+    define('DB_PORT', env('DB_PORT', '3306'));
+    define('DB_USER', env('DB_USER'));
+    define('DB_PASS', env('DB_PASS'));
+    define('DB_NAME', env('DB_NAME'));
+    define('BASE_URL', env('BASE_URL', ''));
 } else {
-    define('DB_HOST', '127.0.0.1');
+    // Valores por defecto para XAMPP local
+    define('DB_HOST', 'localhost');
     define('DB_PORT', '3306');
     define('DB_USER', 'root');
     define('DB_PASS', '');
-    define('DB_NAME', 'moratalla-murcia-2026');
+    define('DB_NAME', 'moratalla_2026');
     define('BASE_URL', '/moratalla-murcia_2026');
-    define('MIGRATE_SECRET', 'local-dev');
 }
 
+define('MIGRATE_SECRET', env('MIGRATE_SECRET', 'local-dev'));
+
+/**
+ * Retorna la conexión PDO única
+ */
 function getDB() {
     static $pdo;
     if ($pdo === null) {
-        $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";charset=utf8mb4";
+        $host = DB_HOST;
+        $port = DB_PORT;
+        $user = DB_USER;
+        $pass = DB_PASS;
+        $dbname = DB_NAME;
+
+        if (!$host && env('APP_ENV') === 'production') {
+            die("Error: El archivo .env en el servidor está vacío o no contiene DB_HOST.");
+        }
+
         try {
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+            // En producción (Ionos), intentamos conectar directamente a la DB
+            $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
+            $pdo = new PDO($dsn, $user, $pass, [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
-            
-            // Intenta crear la DB y seleccionarla si es necesario
-            $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            $pdo->exec("USE `" . DB_NAME . "`");
-            
         } catch (PDOException $e) {
-            die("Error de conexión a la base de datos (Puerto ".DB_PORT."): " . $e->getMessage() . "<br>Asegúrate de que MySQL está encendido.");
+            // Diagnóstico amigable
+            $display_host = (env('APP_ENV') === 'production') ? substr($host, 0, 5) . "..." : $host;
+            $msg = "Error de conexión (Host: $display_host, Puerto: $port): " . $e->getMessage();
+            die($msg);
         }
     }
     return $pdo;
