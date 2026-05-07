@@ -1,5 +1,5 @@
 -- Migración 004: Restauración de Datos (Estado Lunes)
--- Generada: 2026-05-07 23:47:09
+-- Generada: 2026-05-07 23:53:43
 
 -- Datos para la tabla `categories`
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('1', NULL, 'Asociaciones', 'asociaciones', '0');
@@ -120,9 +120,9 @@ INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('116', NULL, 'Situacion', 'situacion', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('117', NULL, 'Artesania', 'artesania', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('118', '117', 'Esparto', 'esparto-14', '0');
-INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('119', '118', 'Bartolome', 'bartolome-11', '0');
+INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('119', '118', 'Bartolo', 'bartolo', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('120', '117', 'Pintura', 'pintura-57', '0');
-INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('121', '120', 'Almagroana', 'almagroana-76', '0');
+INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('121', '120', 'Ana María Almagro', 'ana-maria-almagro', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('122', NULL, 'Biblioteca', 'biblioteca', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('123', '122', 'Popups', 'popups-27', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('124', NULL, 'Centros', 'centros', '0');
