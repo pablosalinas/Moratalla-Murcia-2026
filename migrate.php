@@ -8,7 +8,7 @@ $pdo = getDB();
 $pdo->exec("SET FOREIGN_KEY_CHECKS = 0; TRUNCATE TABLE page_images; TRUNCATE TABLE pages; TRUNCATE TABLE categories; SET FOREIGN_KEY_CHECKS = 1;");
 
 // Directorio origen y destino de imágenes
-$sourceDir = 'E:\00 PARTICULAR\moratalla-murcia\moratalla';
+$sourceDir = 'E:\00 particular\moratalla-murcia\moratalla';
 $assetsDir = __DIR__ . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'images';
 
 if (!is_dir($sourceDir)) {
