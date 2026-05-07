@@ -49,7 +49,7 @@ if ($environment === 'production') {
     define('DB_PORT', '3306');
     define('DB_USER', 'root');
     define('DB_PASS', '');
-    define('DB_NAME', 'moratalla_2026');
+    define('DB_NAME', 'moratalla-murcia-2026');
     define('BASE_URL', '/moratalla-murcia_2026');
 }
 
