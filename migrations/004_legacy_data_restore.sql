@@ -1,5 +1,5 @@
 -- Migración 004: Restauración de Datos (Estado Lunes)
--- Generada: 2026-05-08 13:01:46
+-- Generada: 2026-05-08 13:05:40
 
 -- Datos para la tabla `categories`
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('1', NULL, 'Asociaciones', 'asociaciones', '0');
@@ -120,7 +120,6 @@ INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('116', NULL, 'Situacion', 'situacion', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('117', NULL, 'Artesania', 'artesania', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('118', '117', 'Esparto', 'esparto-14', '0');
-INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('119', '118', 'Bartolo', 'bartolo', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('120', '117', 'Pintura', 'pintura-57', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('122', NULL, 'Biblioteca', 'biblioteca', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('123', '122', 'Popups', 'popups-27', '0');
@@ -139,8 +138,8 @@ INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('136', '133', 'Lacortija', 'lacortija-41', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('137', '136', 'Index archivos', 'index-archivos-61', '0');
 INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('138', NULL, 'Public', 'public', '0');
-INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('139', '1', 'Ana María Almagro', 'ana-maria-almagro', '0');
-INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('140', '1', 'Bartolomé Marín Rubio', 'bartolome-marin-rubio', '0');
+INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('139', '120', 'Ana María Almagro', 'ana-maria-almagro', '0');
+INSERT IGNORE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('140', '118', 'Bartolomé Marín Rubio', 'bartolome-marin-rubio', '0');
 
 -- Datos para la tabla `pages`
 INSERT IGNORE INTO `pages` (`id`, `category_id`, `title`, `slug`, `content`, `original_file`, `sort_order`, `created_at`) VALUES ('1', '3', 'automovil_2004', 'automovil-2004-6986', '\n\n<table border=\"1\" cellpadding=\"0\" cellspacing=\"0\"  border  id=\"AutoNumber1\" >\n  <tr>\n    <td   border>\n    <p  align=\"center\">\n    <font size=\"2\" >\n                \n        <embed   src=\"images/subida8.swf\" align=\"left\" hspace=\"0\"></font><b><font size=\"2\" >VIII \n    SUBIDA CAMPO DE SAN JUAN </font></b></p>\n    <p  align=\"center\"><b>\n    <font  size=\"2\">MORATALLA</font></b></p>\n    <p  align=\"center\"><b>\n    <font  size=\"2\">5 de Septiembre de 2004</font></b></p>\n    <p  align=\"center\"><b>\n    <font   size=\"2\">Con la participación del \n    piloto moratallero </font></b></p>\n    <p  align=\"center\"><b>\n    <font  >JESÚS BAUTISTA MARTÍNEZ</font></b></p>\n    <p  align=\"center\"><b>\n    <font   size=\"1\">Licencia : E546MU</font></b></p>\n    <p  align=\"center\"><b>\n    <font  size=\"2\">9º clasificado en la general </font></b></p>\n    <p  align=\"center\"><b>\n    <font  size=\"2\">2º clasificado en su categoría (enhorabuena)</font></b></p>\n    <div align=\"left\">\n      <table border=\"0\" cellspacing=\"0\" border id=\"AutoNumber8\"   cellpadding=\"0\">\n        <tr>\n          <td  align=\"center\">\n          <font   size=\"2\">\n          <a target=\"_blank\"  href=\"Entrenamientos.pdf\">\n          <font >Entrenamientos </font></a></font></td>\n          <td  align=\"center\">\n          <font   size=\"2\">\n          <a target=\"_blank\"  href=\"1%20Oficial.pdf\">\n          <font >1ª Oficial</font></a></font></td>\n          <td  align=\"center\">\n          <font   size=\"2\">\n          <a target=\"_blank\"  href=\"2%20Oficial.pdf\">\n          <font >2ª Oficial </font></a></font></td>\n          <td  align=\"center\">\n          <p align=\"left\"><font   size=\"2\">\n          <a target=\"_blank\"  href=\"General.pdf\">\n          <font >General</font></a></font></td>\n        </tr>\n      </table>\n    </div>\n    <p  align=\"right\"><b>\n    <font size=\"2\"  >\n    <a target=\"_blank\" href=\"AVANCE%20MORATALLA_04.doc\">Otra información adicional</a></font></b></td>\n  </tr>\n  <tr>\n    <td   border><font >\n    <embed   src=\"../../../images/atras.swf\" align=\"left\"></font></td>\n  </tr>\n</table>\n\n', 'automovil_2004.htm', '0', '2026-05-07 23:42:40');
