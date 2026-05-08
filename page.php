@@ -70,7 +70,7 @@ if ($page['cat_parent_id']) {
                             $displaySrc = 'data:image/jpeg;base64,' . $imageData;
                         }
                     ?>
-                        <a href="<?php echo $fullPath; ?>" class="lightbox-link" style="flex: 0 0 350px; height: 280px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
+                        <a href="<?php echo $fullPath; ?>" class="lightbox-link" style="flex: 0 0 450px; height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
                             <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
                             <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
                                 <i class="fas fa-search-plus"></i> Ampliar obra
@@ -111,8 +111,8 @@ if ($page['cat_parent_id']) {
     <button id="next-img" class="nav-btn" style="right: 2rem;"><i class="fas fa-chevron-right"></i></button>
 
     <!-- Imagen Principal -->
-    <div style="max-width: 85%; max-height: 85vh; display: flex; justify-content: center; align-items: center; position: relative;">
-        <img id="lightbox-img" src="" style="max-width: 100%; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); transition: opacity 0.3s ease;">
+    <div style="max-width: 95%; max-height: 95vh; display: flex; justify-content: center; align-items: center; position: relative;">
+        <img id="lightbox-img" src="" style="max-width: 100%; max-height: 95vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); transition: opacity 0.3s ease;">
     </div>
     
     <!-- Indicador de Tiempo Visual (Opcional pero elegante) -->
