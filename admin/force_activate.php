@@ -3,8 +3,8 @@
 require_once '../config.php';
 $pdo = getDB();
 
-$username = 'admin';
-$password = 'admin123';
+$username = 'Pablo';
+$password = 'p1s2m3';
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
 echo "<h2>Forzando activación de Admin en Producción...</h2>";
