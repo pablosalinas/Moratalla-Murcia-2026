@@ -7,15 +7,23 @@ $username = 'Pablo';
 $password = 'p1s2m3';
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
-echo "<h2>Forzando activación de Admin en Producción...</h2>";
+echo "<h2>Forzando activación de Admin en Producción (Versión Compatible)...</h2>";
 
 try {
-    // 1. Asegurar columnas de seguridad
-    $pdo->exec("ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `failed_attempts` INT DEFAULT 0 AFTER `role` ");
-    $pdo->exec("ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `locked_until` DATETIME NULL DEFAULT NULL AFTER `failed_attempts` ");
-    echo "<p>✅ Estructura de tabla verificada.</p>";
+    // 1. Verificar y añadir columnas una a una (sin IF NOT EXISTS)
+    $columns = $pdo->query("DESCRIBE users")->fetchAll(PDO::FETCH_COLUMN);
+    
+    if (!in_array('failed_attempts', $columns)) {
+        $pdo->exec("ALTER TABLE `users` ADD `failed_attempts` INT DEFAULT 0 AFTER `role` ");
+        echo "<p>✅ Columna 'failed_attempts' añadida.</p>";
+    }
+    
+    if (!in_array('locked_until', $columns)) {
+        $pdo->exec("ALTER TABLE `users` ADD `locked_until` DATETIME NULL DEFAULT NULL AFTER `failed_attempts` ");
+        echo "<p>✅ Columna 'locked_until' añadida.</p>";
+    }
 
-    // 2. Limpiar y recrear usuario
+    // 2. Limpiar y recrear usuario Pablo
     $pdo->prepare("DELETE FROM users WHERE username = ?")->execute([$username]);
     $pdo->prepare("INSERT INTO users (username, password, role, failed_attempts, locked_until) VALUES (?, ?, 'admin', 0, NULL)")
         ->execute([$username, $hash]);
