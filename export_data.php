@@ -7,6 +7,12 @@ $tables = ['categories', 'pages', 'page_images', 'settings', 'users'];
 $sql = "-- Migración 004: Restauración de Datos (Estado Lunes)\n";
 $sql .= "-- Generada: " . date('Y-m-d H:i:s') . "\n\n";
 
+// Añadir limpieza de tablas para evitar duplicados
+$sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
+$sql .= "TRUNCATE TABLE `page_images`;\n";
+$sql .= "TRUNCATE TABLE `pages`;\n";
+$sql .= "TRUNCATE TABLE `categories`;\n\n";
+
 foreach ($tables as $table) {
     echo "Exportando tabla $table...\n";
     $stmt = $pdo->query("SELECT * FROM `$table` ORDER BY id ASC");
@@ -21,11 +27,13 @@ foreach ($tables as $table) {
             return ($v === null) ? 'NULL' : $pdo->quote($v);
         }, array_values($row));
         
-        $sql .= "INSERT IGNORE INTO `$table` (`" . implode("`, `", $cols) . "`) VALUES (" . implode(", ", $vals) . ");\n";
+        $sql .= "REPLACE INTO `$table` (`" . implode("`, `", array_keys($row)) . "`) VALUES (" . implode(", ", $vals) . ");\n";
     }
     $sql .= "\n";
 }
 
-file_put_contents('migrations/004_legacy_data_restore.sql', $sql);
-echo "✅ ARCHIVO GENERADO: migrations/004_legacy_data_restore.sql\n";
+$sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+
+file_put_contents('migrations/013_menu_cleanup_sync.sql', $sql);
+echo "✅ ARCHIVO GENERADO: migrations/013_menu_cleanup_sync.sql\n";
 ?>

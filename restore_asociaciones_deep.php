@@ -73,11 +73,16 @@ foreach ($asociaciones as $asoc) {
             if ($file->isFile() && in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png'])) {
                 $filename = $file->getFilename();
                 $filePath = $file->getRealPath();
+                $ext = strtolower($file->getExtension());
                 
-                // Ignorar miniaturas (terminan en p.jpg) y carpetas de FrontPage
-                if (strpos($filePath, '_vti_cnf') !== false) continue;
+                // Ignorar carpetas técnicas de FrontPage
+                if (strpos($filePath, '_vti_') !== false) continue;
+                if (strpos(strtolower($filePath), 'thumbnails') !== false) continue;
+                
+                // Ignorar miniaturas (suelen terminar en p.jpg o ser muy pequeñas)
                 if (preg_match('/p\.(jpg|jpeg|png)$/i', $filename)) continue;
-                if ($file->getSize() < 5000) continue;
+                if (preg_match('/thumb/i', $filename)) continue;
+                if ($file->getSize() < 4000) continue; // Umbral de seguridad para fotos reales
 
                 $newFilename = "asoc_".strtolower($asoc['dir'])."_".preg_replace('/[^a-z0-9]/i', '', $yearName)."_".$imgCount.".jpg";
                 $destPath = $uploadDir . $newFilename;
@@ -87,7 +92,7 @@ foreach ($asociaciones as $asoc) {
                         ->execute([$pageId, $destPath, ($imgCount === 0 ? 1 : 0)]);
                     $imgCount++;
                 }
-                if ($imgCount > 25) break; 
+                if ($imgCount >= 30) break; // Aumentamos un poco el límite
             }
         }
         echo "   ✅ $imgCount fotos y texto rescatados.\n";

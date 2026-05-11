@@ -1,5 +1,5 @@
 -- Migración 004: Restauración de Datos (Estado Lunes)
--- Generada: 2026-05-11 14:05:24
+-- Generada: 2026-05-11 14:08:33
 
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE `page_images`;
