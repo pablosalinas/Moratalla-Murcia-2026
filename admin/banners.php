@@ -8,7 +8,6 @@ require_once 'inc/layout.php';
 $pdo = getDB();
 $message = '';
 
-// Procesar Acciones
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'upload') {
@@ -148,13 +147,9 @@ adminHeader("Gestión de Banners");
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <small style="color: var(--text-light);"><?php echo $row['is_active'] ? '<span style="color: #10b981;">Activo</span>' : '<span style="color: #ef4444;">Inactivo</span>'; ?></small>
-                        <form method="POST" style="margin: 0;" onsubmit="return confirm('¿Seguro que deseas eliminar este banner?')">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
-                            <button type="submit" class="btn btn-sm" style="color: #ef4444; background: #fef2f2; border: none; padding: 8px 12px; border-radius: 6px;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
+                        <button type="button" class="btn btn-sm btn-delete-banner" data-id="<?php echo $row['id']; ?>" style="color: #ef4444; background: #fef2f2; border: none; padding: 8px 12px; border-radius: 6px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -171,7 +166,31 @@ adminHeader("Gestión de Banners");
     .slider-toggle:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider-toggle { background-color: var(--primary); }
     input:checked + .slider-toggle:before { transform: translateX(24px); }
+
+    /* Modal de confirmación */
+    #deleteModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; }
+    #deleteModal.active { display:flex; }
+    #deleteModal .modal-box { background:white; padding:2rem; border-radius:16px; max-width:400px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+    #deleteModal h4 { margin:0 0 1rem; font-size:1.1rem; }
+    #deleteModal p { color:#666; margin-bottom:1.5rem; font-size:0.9rem; }
+    #deleteModal .modal-actions { display:flex; gap:1rem; justify-content:center; }
 </style>
+
+<!-- Modal de confirmación de borrado -->
+<div id="deleteModal">
+    <div class="modal-box">
+        <h4>¿Eliminar este banner?</h4>
+        <p>Esta acción borrará el registro de la base de datos. Si el archivo físico existe, también se eliminará.</p>
+        <div class="modal-actions">
+            <button id="cancelDelete" class="btn" style="background:#f3f4f6;">Cancelar</button>
+            <form id="deleteForm" method="POST" style="margin:0;">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" id="deleteId" value="">
+                <button type="submit" class="btn btn-primary" style="background:#ef4444; border-color:#ef4444;">Sí, eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script>
 document.querySelectorAll('.toggle-banner').forEach(checkbox => {
@@ -195,11 +214,29 @@ document.querySelectorAll('.update-title').forEach(input => {
         const id = this.getAttribute('data-id');
         const value = this.value;
         updateBannerField(id, 'title', value);
-        
-        // Show subtle success indicator
         this.style.background = '#e6ffed';
         setTimeout(() => this.style.background = 'transparent', 1000);
     });
+});
+
+// Modal de confirmación de borrado (reemplaza window.confirm que puede ser bloqueado)
+const deleteModal = document.getElementById('deleteModal');
+const cancelDelete = document.getElementById('cancelDelete');
+const deleteId = document.getElementById('deleteId');
+
+document.querySelectorAll('.btn-delete-banner').forEach(btn => {
+    btn.addEventListener('click', function() {
+        deleteId.value = this.getAttribute('data-id');
+        deleteModal.classList.add('active');
+    });
+});
+
+cancelDelete.addEventListener('click', function() {
+    deleteModal.classList.remove('active');
+});
+
+deleteModal.addEventListener('click', function(e) {
+    if (e.target === deleteModal) deleteModal.classList.remove('active');
 });
 
 function updateBannerField(id, field, value) {
