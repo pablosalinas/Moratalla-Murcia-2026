@@ -15,8 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] === 0) {
                 $ext = pathinfo($_FILES['banner_image']['name'], PATHINFO_EXTENSION);
                 $filename = 'banner_' . time() . '.' . $ext;
-                $target = '../uploads/banners/' . $filename;
+                $targetDir = '../uploads/banners/';
+                $target = $targetDir . $filename;
                 $dbPath = 'uploads/banners/' . $filename;
+
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
 
                 if (move_uploaded_file($_FILES['banner_image']['tmp_name'], $target)) {
                     $stmt = $pdo->prepare("INSERT INTO banners (image_path, title, sort_order, is_active) VALUES (?, ?, ?, 1)");

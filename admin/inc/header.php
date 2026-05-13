@@ -17,6 +17,7 @@ function checkLogin() {
     <title>Admin - Moratalla 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin-style.css">
+    <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon">
 </head>
 <body>
 <div class="admin-container">

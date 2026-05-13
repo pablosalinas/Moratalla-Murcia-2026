@@ -3,15 +3,16 @@
 require_once 'config.php';
 $pdo = getDB();
 
-$tables = ['categories', 'pages', 'page_images', 'settings', 'users'];
-$sql = "-- Migración 004: Restauración de Datos (Estado Lunes)\n";
+$tables = ['categories', 'pages', 'page_images', 'settings', 'users', 'banners'];
+$sql = "-- Migración 015: Restauración Completa de Datos (Fix Producción)\n";
 $sql .= "-- Generada: " . date('Y-m-d H:i:s') . "\n\n";
 
 // Añadir limpieza de tablas para evitar duplicados
 $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
 $sql .= "TRUNCATE TABLE `page_images`;\n";
 $sql .= "TRUNCATE TABLE `pages`;\n";
-$sql .= "TRUNCATE TABLE `categories`;\n\n";
+$sql .= "TRUNCATE TABLE `categories`;\n";
+$sql .= "TRUNCATE TABLE `banners`;\n\n";
 
 foreach ($tables as $table) {
     echo "Exportando tabla $table...\n";
@@ -34,6 +35,6 @@ foreach ($tables as $table) {
 
 $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
 
-file_put_contents('migrations/013_menu_cleanup_sync.sql', $sql);
-echo "✅ ARCHIVO GENERADO: migrations/013_menu_cleanup_sync.sql\n";
+file_put_contents('migrations/015_data_sync_fix.sql', $sql);
+echo "✅ ARCHIVO GENERADO: migrations/015_data_sync_fix.sql\n";
 ?>
