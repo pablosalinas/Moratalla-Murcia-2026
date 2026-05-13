@@ -150,7 +150,7 @@ body {
 /* Banner Slider */
 .banner-slider {
     width: 100%;
-    background: #000;
+    background: var(--primary);
     overflow: hidden;
 }
 
@@ -182,7 +182,7 @@ body {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background-color: #0b1a14; /* Dark forest background */
+    background-color: var(--primary); /* Match the web's primary green */
     transition: transform 12s linear;
 }
 
