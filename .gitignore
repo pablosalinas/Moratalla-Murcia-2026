@@ -1,5 +1,6 @@
 # Uploads de usuarios (imágenes subidas desde admin)
 uploads/
+!uploads/theme/
 
 # Archivos de entorno con credenciales reales
 .env
