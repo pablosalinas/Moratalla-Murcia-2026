@@ -10,6 +10,7 @@ $settings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 $tickerText = $settings['ticker_text'] ?? "Bienvenido a moratalla-murcia.com";
 $tickerSpeed = $settings['ticker_speed'] ?? "30";
 $bannerSpeed = $settings['banner_speed'] ?? "5000";
+if ((int)$bannerSpeed < 3000) $bannerSpeed = 3000; // Seguridad para evitar parpadeos
 
 function renderHorizontalMenu($parentId = null) {
     global $pdo;
@@ -45,7 +46,7 @@ function renderHorizontalMenu($parentId = null) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>moratalla-murcia.com - Patrimonio Histórico Digital</title>
-    <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
+    <link rel="stylesheet" href="style.css?v=<?php echo filemtime(__DIR__ . '/../style.css'); ?>">
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
