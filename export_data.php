@@ -4,36 +4,37 @@ require_once 'config.php';
 $pdo = getDB();
 
 $tables = ['categories', 'pages', 'page_images', 'settings', 'users'];
-$sql = "-- Migración 016: Restauración de Categorías sin afectar Banners\n";
-$sql .= "-- Generada: " . date('Y-m-d H:i:s') . "\n\n";
+$migrationBaseId = 17;
 
-// Añadir limpieza de tablas para evitar duplicados
-$sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
-$sql .= "TRUNCATE TABLE `page_images`;\n";
-$sql .= "TRUNCATE TABLE `pages`;\n";
-$sql .= "TRUNCATE TABLE `categories`;\n\n";
+foreach ($tables as $index => $table) {
+    $currentMigrationId = sprintf("%03d", $migrationBaseId + $index);
+    $filename = "migrations/{$currentMigrationId}_sync_{$table}.sql";
+    
+    $sql = "-- Migración {$currentMigrationId}: Sincronización de tabla {$table}\n";
+    $sql .= "-- Generada: " . date('Y-m-d H:i:s') . "\n\n";
+    $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
+    $sql .= "TRUNCATE TABLE `{$table}`;\n\n";
 
-foreach ($tables as $table) {
     echo "Exportando tabla $table...\n";
     $stmt = $pdo->query("SELECT * FROM `$table` ORDER BY id ASC");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    if (empty($rows)) continue;
-    
-    $sql .= "-- Datos para la tabla `$table`\n";
+    if (empty($rows)) {
+        echo "Saltando $table (vacía)\n";
+        continue;
+    }
+
     foreach ($rows as $row) {
         $cols = array_keys($row);
         $vals = array_map(function($v) use ($pdo) {
             return ($v === null) ? 'NULL' : $pdo->quote($v);
         }, array_values($row));
         
-        $sql .= "REPLACE INTO `$table` (`" . implode("`, `", array_keys($row)) . "`) VALUES (" . implode(", ", $vals) . ");\n";
+        $sql .= "REPLACE INTO `$table` (`" . implode("`, `", $cols) . "`) VALUES (" . implode(", ", $vals) . ");\n";
     }
-    $sql .= "\n";
+    
+    $sql .= "\nSET FOREIGN_KEY_CHECKS = 1;\n";
+    file_put_contents($filename, $sql);
+    echo "✅ ARCHIVO GENERADO: $filename\n";
 }
-
-$sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
-
-file_put_contents('migrations/016_data_sync_retry.sql', $sql);
-echo "✅ ARCHIVO GENERADO: migrations/016_data_sync_retry.sql\n";
 ?>
