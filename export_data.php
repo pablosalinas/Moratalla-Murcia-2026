@@ -4,7 +4,7 @@ require_once 'config.php';
 $pdo = getDB();
 
 $tables = ['categories', 'pages', 'page_images', 'settings', 'users'];
-$migrationBaseId = 17;
+$migrationBaseId = 27;
 
 foreach ($tables as $index => $table) {
     $currentMigrationId = sprintf("%03d", $migrationBaseId + $index);

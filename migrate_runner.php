@@ -76,18 +76,32 @@ foreach ($files as $file) {
     $sql = file_get_contents($file);
     
     try {
-        // Ejecutar migración (puede contener múltiples sentencias)
-        $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
-        $pdo->exec($sql);
-        $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+        $pdo->beginTransaction();
+        
+        // Dividir por punto y coma, pero ignorando los que están dentro de comillas (simplificado)
+        // Para mayor seguridad en archivos gigantes, leemos línea a línea
+        $lines = file($file);
+        $query = '';
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line) || strpos($line, '--') === 0 || strpos($line, '/*') === 0) continue;
+            
+            $query .= $line . " ";
+            if (substr($line, -1) === ';') {
+                $pdo->exec($query);
+                $query = '';
+            }
+        }
         
         // Registrar como ejecutada
         $stmt = $pdo->prepare("INSERT INTO `_migrations` (migration) VALUES (?)");
         $stmt->execute([$migrationName]);
         
+        $pdo->commit();
         output("[✓] $migrationName — ejecutada correctamente.");
         
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
         $errors++;
         output("[✗] ERROR en $migrationName: " . $e->getMessage());
     }
