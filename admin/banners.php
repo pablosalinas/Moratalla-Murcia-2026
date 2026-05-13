@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $field = $_POST['field'];
             $value = $_POST['value'];
             
-            if ($field === 'is_active' || $field === 'sort_order') {
+            if ($field === 'is_active' || $field === 'sort_order' || $field === 'title') {
                 $stmt = $pdo->prepare("UPDATE banners SET $field = ? WHERE id = ?");
                 $stmt->execute([$value, $id]);
                 echo json_encode(['success' => true]);
@@ -133,8 +133,8 @@ adminHeader("Gestión de Banners");
                     </div>
                 </div>
                 <div style="padding: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <div style="font-weight: 600; font-size: 0.9rem;"><?php echo htmlspecialchars($row['title'] ?: 'Sin título'); ?></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 10px;">
+                        <input type="text" class="update-title" data-id="<?php echo $row['id']; ?>" value="<?php echo htmlspecialchars($row['title']); ?>" placeholder="Añadir título/descripción..." style="flex: 1; padding: 4px; border: 1px solid transparent; border-radius: 4px; font-weight: 600; font-size: 0.9rem; background: transparent; transition: all 0.3s;" onfocus="this.style.border='1px solid var(--primary)'; this.style.background='white';" onblur="this.style.border='1px solid transparent'; this.style.background='transparent';">
                         <div style="display: flex; align-items: center; gap: 5px;">
                             <label style="font-size: 0.7rem; color: #888;">Orden:</label>
                             <input type="number" class="update-order" data-id="<?php echo $row['id']; ?>" value="<?php echo $row['sort_order']; ?>" style="width: 50px; padding: 2px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem;">
@@ -181,6 +181,18 @@ document.querySelectorAll('.update-order').forEach(input => {
         const id = this.getAttribute('data-id');
         const value = this.value;
         updateBannerField(id, 'sort_order', value);
+    });
+});
+
+document.querySelectorAll('.update-title').forEach(input => {
+    input.addEventListener('change', function() {
+        const id = this.getAttribute('data-id');
+        const value = this.value;
+        updateBannerField(id, 'title', value);
+        
+        // Show subtle success indicator
+        this.style.background = '#e6ffed';
+        setTimeout(() => this.style.background = 'transparent', 1000);
     });
 });
 

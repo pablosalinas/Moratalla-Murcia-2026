@@ -10,8 +10,11 @@
  * Las migraciones ejecutadas se registran en la tabla `_migrations`
  * para que nunca se ejecuten dos veces.
  */
-
 require_once __DIR__ . '/config.php';
+
+// Aumentar límites para scripts grandes
+set_time_limit(0);
+ini_set('memory_limit', '512M');
 
 // === Seguridad ===
 $isCLI = (php_sapi_name() === 'cli');
