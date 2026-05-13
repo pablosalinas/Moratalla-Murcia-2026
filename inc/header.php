@@ -9,6 +9,7 @@ $settings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $tickerText = $settings['ticker_text'] ?? "Bienvenido a moratalla-murcia.com";
 $tickerSpeed = $settings['ticker_speed'] ?? "30";
+$bannerSpeed = $settings['banner_speed'] ?? "5000";
 
 function renderHorizontalMenu($parentId = null) {
     global $pdo;
@@ -48,6 +49,9 @@ function renderHorizontalMenu($parentId = null) {
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Swiper.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <style>
         .ticker-content {
             animation: ticker-animation <?php echo (int)$tickerSpeed; ?>s linear infinite !important;
@@ -82,3 +86,32 @@ function renderHorizontalMenu($parentId = null) {
             <?php renderHorizontalMenu(); ?>
         </nav>
     </header>
+
+    <?php if (basename($_SERVER['PHP_SELF']) == 'index.php'): ?>
+    <section class="banner-slider">
+        <div class="swiper main-banner-swiper">
+            <div class="swiper-wrapper">
+                <?php
+                $bannerStmt = $pdo->query("SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order ASC, id DESC");
+                $banners = $bannerStmt->fetchAll();
+                if (count($banners) > 0) {
+                    foreach ($banners as $banner) {
+                        echo '<div class="swiper-slide">';
+                        echo '<img src="' . htmlspecialchars($banner['image_path']) . '" alt="' . htmlspecialchars($banner['title']) . '">';
+                        if ($banner['title']) {
+                            echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
+                        }
+                        echo '</div>';
+                    }
+                } else {
+                    // Fallback if no banners are active
+                    echo '<div class="swiper-slide"><img src="uploads/theme/moratalla.jpg" alt="Moratalla"></div>';
+                }
+                ?>
+            </div>
+            <div class="swiper-pagination"></div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+        </div>
+    </section>
+    <?php endif; ?>

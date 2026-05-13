@@ -24,7 +24,9 @@ function adminHeader($title = "Admin Panel") {
                 <a href="pages.php" class="nav-link"><i class="fas fa-file-alt"></i> Páginas</a>
                 <a href="images.php" class="nav-link"><i class="fas fa-images"></i> Galería</a>
                 <a href="users.php" class="nav-link"><i class="fas fa-users-cog"></i> Usuarios</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración</a>
+                <div class="nav-divider"></div>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>
+                <a href="banners.php" class="nav-link"><i class="fas fa-image"></i> Banner Interactivo</a>
                 <div class="nav-divider"></div>
                 <a href="../index.php" target="_blank" class="nav-link"><i class="fas fa-external-link-alt"></i> Ver Web</a>
                 <a href="logout.php" class="nav-link logout"><i class="fas fa-sign-out-alt"></i> Salir</a>

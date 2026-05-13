@@ -81,6 +81,43 @@
                 navContainer.classList.toggle('active');
             });
         }
+
+        // Swiper Banner Initialization
+        const swiper = new Swiper('.main-banner-swiper', {
+            loop: true,
+            autoplay: {
+                delay: <?php echo (int)$bannerSpeed; ?>,
+                disableOnInteraction: false,
+            },
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+            },
+            breakpoints: {
+                // when window width is >= 320px
+                320: {
+                    slidesPerView: 1.1,
+                    spaceBetween: 10,
+                    centeredSlides: true
+                },
+                // when window width is >= 768px
+                768: {
+                    slidesPerView: 2.2,
+                    spaceBetween: 20,
+                    centeredSlides: false
+                },
+                // when window width is >= 1024px
+                1024: {
+                    slidesPerView: 3,
+                    spaceBetween: 0,
+                    centeredSlides: false
+                }
+            }
+        });
     </script>
 </body>
 </html>

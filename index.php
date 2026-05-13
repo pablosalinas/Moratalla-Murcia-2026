@@ -3,14 +3,8 @@
 require_once 'inc/header.php';
 ?>
 
-<section class="hero-page" style="display: flex; flex-direction: column; justify-content: center;">
-    <div class="hero-content container">
-        <h2 style="text-shadow: none; font-size: 3rem;">Patrimonio Histórico Digital</h2>
-        <p style="font-size: 1.2rem; max-width: 700px; margin: 0 auto; opacity: 1; color: var(--text);">Explora la cultura, festividades y tradiciones de nuestro municipio rescatadas del archivo histórico.</p>
-    </div>
-</section>
 
-<div class="container main-content">
+<div class="container main-content" style="margin-top: 2rem;">
     <div class="content-card">
         <h2 style="font-size: 2.2rem; color: var(--primary); margin-bottom: 2rem; text-align: center;">Secciones Destacadas</h2>
         

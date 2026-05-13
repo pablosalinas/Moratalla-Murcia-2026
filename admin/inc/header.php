@@ -27,6 +27,13 @@ function checkLogin() {
                 <li><a href="dashboard.php">Inicio</a></li>
                 <li><a href="pages.php">Páginas y Textos</a></li>
                 <li><a href="categories.php">Menú y Submenús</a></li>
+                <li><a href="images.php">Galería de Imágenes</a></li>
+                <li><a href="users.php">Usuarios</a></li>
+                <br>
+                <li style="padding-left: 1rem; color: rgba(255,255,255,0.4); font-size: 0.7rem; text-transform: uppercase;">Ajustes</li>
+                <li><a href="settings.php">Configuración General</a></li>
+                <li><a href="banners.php">Banner Interactivo</a></li>
+                <br>
                 <li><a href="../index.php" target="_blank">Ver Web</a></li>
                 <br>
                 <li><a href="logout.php" style="color: #f87171;">Cerrar Sesión</a></li>
