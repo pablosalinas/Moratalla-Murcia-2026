@@ -46,12 +46,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             $banner = $stmt->fetch();
             if ($banner) {
-                if (file_exists('../' . $banner['image_path'])) {
-                    unlink('../' . $banner['image_path']);
+                // Intentar borrar archivo físico solo si la ruta no está vacía y el archivo existe
+                if (!empty($banner['image_path'])) {
+                    $fullPath = '../' . $banner['image_path'];
+                    if (file_exists($fullPath) && is_file($fullPath)) {
+                        @unlink($fullPath);
+                    }
                 }
+                
+                // Siempre proceder a borrar el registro de la base de datos
                 $stmt = $pdo->prepare("DELETE FROM banners WHERE id = ?");
                 $stmt->execute([$id]);
-                $message = '<div class="alert alert-success">Banner eliminado.</div>';
+                $message = '<div class="alert alert-success">Registro de banner eliminado correctamente.</div>';
             }
         } elseif ($_POST['action'] === 'save_settings') {
             $speed = (int)$_POST['banner_speed'];
