@@ -1,6 +1,7 @@
 -- Migración 041: Sincronización de tabla page_images (Parte 6)
--- Generada: 2026-05-13 23:18:13
+-- Generada: 2026-05-13 23:50:43
 
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 SET FOREIGN_KEY_CHECKS = 0;
 REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('251', '144', 'assets/images/p144/img_69fd0754d6373_escudo_moratalla.gif', NULL, '1');
 REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('252', '164', 'assets/images/p164/img_69fd075530f8c_San-Anton-16p.jpg', NULL, '1');

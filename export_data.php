@@ -25,6 +25,7 @@ foreach ($tables as $table) {
         
         $sql = "-- Migración {$currentMigrationId}: Sincronización de tabla {$table} (Parte " . ($index + 1) . ")\n";
         $sql .= "-- Generada: " . date('Y-m-d H:i:s') . "\n\n";
+        $sql .= "SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';\n";
         $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
         
         // Solo hacer TRUNCATE en la primera parte de cada tabla

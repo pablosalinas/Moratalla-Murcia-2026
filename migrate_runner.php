@@ -31,6 +31,7 @@ if (!$isCLI) {
 
 // === Conexión BD ===
 $pdo = getDB();
+$pdo->exec("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
 
 // === Crear tabla de control de migraciones ===
 $pdo->exec("

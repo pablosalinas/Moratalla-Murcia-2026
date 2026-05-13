@@ -1,6 +1,7 @@
 -- Migración 030: Sincronización de tabla pages (Parte 2)
--- Generada: 2026-05-13 23:18:13
+-- Generada: 2026-05-13 23:50:43
 
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 SET FOREIGN_KEY_CHECKS = 0;
 REPLACE INTO `pages` (`id`, `category_id`, `title`, `slug`, `content`, `original_file`, `sort_order`, `created_at`) VALUES ('51', NULL, 'IMGP3114', 'imgp3114-4092', '\n<table   border=\"0\" cellspacing=\"0\" cellpadding=\"0\">\n	<tr>\n		<td align=\"center\" valign=\"middle\">\n			<table  border=\"0\" cellspacing=\"0\" cellpadding=\"0\">\n				<tr>\n					<td><img src=\"../images/IMGP3114.jpg\" %image_width% %image_height% border=\"0\" alt=\"IMGP3114\"></td>\n				</tr>\n			</table>\n		</td>\n	</tr>\n</table>\n</div>\n', 'IMGP3114.htm', '0', '2026-05-07 23:42:42');
 REPLACE INTO `pages` (`id`, `category_id`, `title`, `slug`, `content`, `original_file`, `sort_order`, `created_at`) VALUES ('52', NULL, 'IMGP3115', 'imgp3115-4304', '\n<table   border=\"0\" cellspacing=\"0\" cellpadding=\"0\">\n	<tr>\n		<td align=\"center\" valign=\"middle\">\n			<table  border=\"0\" cellspacing=\"0\" cellpadding=\"0\">\n				<tr>\n					<td><img src=\"../images/IMGP3115.jpg\" %image_width% %image_height% border=\"0\" alt=\"IMGP3115\"></td>\n				</tr>\n			</table>\n		</td>\n	</tr>\n</table>\n</div>\n', 'IMGP3115.htm', '0', '2026-05-07 23:42:42');

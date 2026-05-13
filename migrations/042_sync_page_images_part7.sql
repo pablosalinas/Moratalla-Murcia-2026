@@ -1,6 +1,7 @@
 -- Migración 042: Sincronización de tabla page_images (Parte 7)
--- Generada: 2026-05-13 23:18:13
+-- Generada: 2026-05-13 23:50:43
 
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 SET FOREIGN_KEY_CHECKS = 0;
 REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('301', '192', 'assets/images/p192/img_69fd07561803f_loteria.jpg', NULL, '1');
 REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('302', '192', 'assets/images/p192/img_69fd0756188f0_papeleta_cesta.jpg', NULL, '0');

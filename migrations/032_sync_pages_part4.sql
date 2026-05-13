@@ -1,6 +1,7 @@
 -- Migración 032: Sincronización de tabla pages (Parte 4)
--- Generada: 2026-05-13 23:18:13
+-- Generada: 2026-05-13 23:50:43
 
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 SET FOREIGN_KEY_CHECKS = 0;
 REPLACE INTO `pages` (`id`, `category_id`, `title`, `slug`, `content`, `original_file`, `sort_order`, `created_at`) VALUES ('151', '37', 'direbullas', 'direbullas-4638', '\n\n\n', 'direbullas.html', '0', '2026-05-07 23:42:44');
 REPLACE INTO `pages` (`id`, `category_id`, `title`, `slug`, `content`, `original_file`, `sort_order`, `created_at`) VALUES ('152', '37', 'direcehegin', 'direcehegin-6591', '\n\n\n', 'direcehegin.html', '0', '2026-05-07 23:42:45');

@@ -1,6 +1,7 @@
 -- Migración 049: Sincronización de tabla page_images (Parte 14)
--- Generada: 2026-05-13 23:18:13
+-- Generada: 2026-05-13 23:50:43
 
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 SET FOREIGN_KEY_CHECKS = 0;
 REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('839', '408', 'uploads/asociaciones/asoc_grupos_beodos_0.jpg', NULL, '1');
 REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('840', '408', 'uploads/asociaciones/asoc_grupos_beodos_1.jpg', NULL, '0');
