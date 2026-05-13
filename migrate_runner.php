@@ -75,21 +75,24 @@ foreach ($files as $file) {
     
     $sql = file_get_contents($file);
     
+    $sql = file_get_contents($file);
+    
     try {
         $pdo->beginTransaction();
         
-        // Dividir por punto y coma, pero ignorando los que están dentro de comillas (simplificado)
-        // Para mayor seguridad en archivos gigantes, leemos línea a línea
-        $lines = file($file);
-        $query = '';
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line) || strpos($line, '--') === 0 || strpos($line, '/*') === 0) continue;
-            
-            $query .= $line . " ";
-            if (substr($line, -1) === ';') {
-                $pdo->exec($query);
-                $query = '';
+        // Limpiar el SQL de comentarios y espacios innecesarios al inicio/final
+        // Pero preservar los saltos de línea dentro de las comillas
+        $sql = preg_replace('/^\s*--.*$/m', '', $sql);
+        $sql = preg_replace('/^\s*\/\*.*\*\/;?$/m', '', $sql);
+        
+        // Dividir por punto y coma seguido de un salto de línea (estándar de nuestro exportador)
+        // Esto es mucho más seguro que el split por líneas simple
+        $statements = preg_split('/;\s*[\r\n]+/', $sql);
+        
+        foreach ($statements as $statement) {
+            $statement = trim($statement);
+            if (!empty($statement)) {
+                $pdo->exec($statement);
             }
         }
         
@@ -104,6 +107,7 @@ foreach ($files as $file) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         $errors++;
         output("[✗] ERROR en $migrationName: " . $e->getMessage());
+        // No detenemos el proceso completo, intentamos con la siguiente
     }
 }
 
