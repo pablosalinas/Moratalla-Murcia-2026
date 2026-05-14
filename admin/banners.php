@@ -186,18 +186,34 @@ adminHeader("Gestión de Banners");
 
 <div class="card" style="margin-top: 2rem;">
     <h3>Configuración del Slider</h3>
-    <form method="POST" style="display: flex; align-items: end; gap: 2rem; margin-top: 1rem;">
+    <form method="POST" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
         <input type="hidden" name="action" value="save_settings">
         <div class="form-group" style="flex: 1;">
-            <label>Tiempo entre transiciones (milisegundos)</label>
-            <input type="number" name="banner_speed" class="form-control" value="<?php echo htmlspecialchars($currentBannerSpeed); ?>" step="500" min="1000">
-            <small style="color: #666;">1000 ms = 1 segundo. Recomendado: 5000.</small>
+            <label style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Tiempo entre transiciones</span>
+                <span style="background: var(--bg-alt); padding: 4px 12px; border-radius: 20px; font-weight: bold; color: var(--primary);" id="speedValueText"><?php echo number_format((int)$currentBannerSpeed / 1000, 1); ?> segundos</span>
+            </label>
+            <input type="range" name="banner_speed" id="bannerSpeedSlider" min="1000" max="15000" step="500" value="<?php echo htmlspecialchars($currentBannerSpeed); ?>" style="width: 100%; margin-top: 15px; cursor: pointer; accent-color: var(--primary);">
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.8rem; color: #888;">
+                <span>1s (Rápido)</span>
+                <span>Recomendado: 5s</span>
+                <span>15s (Lento)</span>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary" style="height: 42px;">
-            <i class="fas fa-save"></i> Guardar Tiempo
-        </button>
+        <div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Guardar Tiempo
+            </button>
+        </div>
     </form>
 </div>
+
+<script>
+document.getElementById('bannerSpeedSlider').addEventListener('input', function() {
+    const seconds = (this.value / 1000).toFixed(1);
+    document.getElementById('speedValueText').textContent = seconds + ' segundos';
+});
+</script>
 
 <?php echo $message; ?>
 
