@@ -98,7 +98,23 @@ function renderHorizontalMenu($parentId = null) {
                 if (count($banners) > 0) {
                     foreach ($banners as $banner) {
                         echo '<div class="swiper-slide">';
-                        echo '<img src="' . htmlspecialchars($banner['image_path']) . '" alt="' . htmlspecialchars($banner['title']) . '">';
+                        $baseExt = pathinfo($banner['image_path'], PATHINFO_EXTENSION);
+                        $baseName = pathinfo($banner['image_path'], PATHINFO_FILENAME);
+                        $dirName = pathinfo($banner['image_path'], PATHINFO_DIRNAME);
+                        
+                        $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
+                        $mobilePath = $dirName . '/' . $baseName . '_mobile.' . $baseExt;
+                        
+                        if (!file_exists(__DIR__ . '/../' . $desktopPath)) {
+                            $desktopPath = $banner['image_path'];
+                            $mobilePath = $banner['image_path'];
+                        }
+
+                        echo '<picture>';
+                        echo '<source media="(max-width: 768px)" srcset="' . htmlspecialchars($mobilePath) . '">';
+                        echo '<source media="(min-width: 769px)" srcset="' . htmlspecialchars($desktopPath) . '">';
+                        echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title']) . '">';
+                        echo '</picture>';
                         if ($banner['title']) {
                             echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
                         }

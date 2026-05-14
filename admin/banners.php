@@ -12,20 +12,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'upload') {
             if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] === 0) {
-                $ext = pathinfo($_FILES['banner_image']['name'], PATHINFO_EXTENSION);
-                $filename = 'banner_' . time() . '.' . $ext;
+                $ext = strtolower(pathinfo($_FILES['banner_image']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                    $ext = 'jpg';
+                }
+                
+                $baseFilename = 'banner_' . time();
                 $targetDir = '../uploads/banners/';
-                $target = $targetDir . $filename;
-                $dbPath = 'uploads/banners/' . $filename;
-
+                
                 if (!is_dir($targetDir)) {
                     mkdir($targetDir, 0755, true);
                 }
 
-                if (move_uploaded_file($_FILES['banner_image']['tmp_name'], $target)) {
+                $tmpName = $_FILES['banner_image']['tmp_name'];
+                
+                // Función auxiliar para optimizar y redimensionar
+                function createResponsiveImage($source, $dest, $maxWidth, $quality = 80) {
+                    $info = getimagesize($source);
+                    if (!$info) return false;
+                    
+                    $mime = $info['mime'];
+                    switch ($mime) {
+                        case 'image/jpeg': $img = imagecreatefromjpeg($source); break;
+                        case 'image/png': $img = imagecreatefrompng($source); break;
+                        case 'image/webp': $img = imagecreatefromwebp($source); break;
+                        case 'image/gif': $img = imagecreatefromgif($source); break;
+                        default: return false;
+                    }
+                    
+                    $width = imagesx($img);
+                    $height = imagesy($img);
+                    
+                    // Si la imagen es más pequeña que el máximo, no la ampliamos
+                    if ($width > $maxWidth) {
+                        $newWidth = $maxWidth;
+                        $newHeight = floor($height * ($maxWidth / $width));
+                    } else {
+                        $newWidth = $width;
+                        $newHeight = $height;
+                    }
+                    
+                    $newImg = imagecreatetruecolor($newWidth, $newHeight);
+                    
+                    // Preservar transparencia
+                    if ($mime == 'image/png' || $mime == 'image/webp' || $mime == 'image/gif') {
+                        imagealphablending($newImg, false);
+                        imagesavealpha($newImg, true);
+                        $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
+                        imagefilledrectangle($newImg, 0, 0, $newWidth, $newHeight, $transparent);
+                    }
+                    
+                    imagecopyresampled($newImg, $img, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                    
+                    // Guardar como original type o convertir a jpg para uniformidad
+                    if ($mime == 'image/png') {
+                        imagepng($newImg, $dest, 8);
+                    } elseif ($mime == 'image/webp') {
+                        imagewebp($newImg, $dest, $quality);
+                    } elseif ($mime == 'image/gif') {
+                        imagegif($newImg, $dest);
+                    } else {
+                        imagejpeg($newImg, $dest, $quality);
+                    }
+                    
+                    imagedestroy($img);
+                    imagedestroy($newImg);
+                    return true;
+                }
+                
+                $desktopFilename = $baseFilename . '_desktop.' . $ext;
+                $mobileFilename = $baseFilename . '_mobile.' . $ext;
+                
+                $desktopPath = $targetDir . $desktopFilename;
+                $mobilePath = $targetDir . $mobileFilename;
+                
+                $successDesktop = createResponsiveImage($tmpName, $desktopPath, 1920, 80);
+                $successMobile = createResponsiveImage($tmpName, $mobilePath, 768, 75);
+                
+                // Fallback si algo falla
+                if (!$successDesktop && move_uploaded_file($tmpName, $desktopPath)) {
+                    $successDesktop = true;
+                    copy($desktopPath, $mobilePath);
+                }
+
+                if ($successDesktop) {
+                    $dbPath = 'uploads/banners/' . $baseFilename . '.' . $ext;
+                    
                     $stmt = $pdo->prepare("INSERT INTO banners (image_path, title, sort_order, is_active) VALUES (?, ?, ?, 1)");
                     $stmt->execute([$dbPath, $_POST['title'] ?? '', (int)($_POST['sort_order'] ?? 0)]);
-                    $message = '<div class="alert alert-success">Banner subido correctamente.</div>';
+                    $message = '<div class="alert alert-success">Banner subido y optimizado (Desktop/Móvil).</div>';
+                } else {
+                    $message = '<div class="alert alert-danger">Error al procesar la imagen del banner.</div>';
                 }
             }
         } elseif ($_POST['action'] === 'update_field') {
@@ -45,12 +122,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             $banner = $stmt->fetch();
             if ($banner) {
-                // Intentar borrar archivo físico solo si la ruta no está vacía y el archivo existe
+                // Intentar borrar archivo físico solo si la ruta no está vacía
                 if (!empty($banner['image_path'])) {
                     $fullPath = '../' . $banner['image_path'];
-                    if (file_exists($fullPath) && is_file($fullPath)) {
-                        @unlink($fullPath);
-                    }
+                    $baseExt = pathinfo($fullPath, PATHINFO_EXTENSION);
+                    $baseName = pathinfo($fullPath, PATHINFO_FILENAME);
+                    $dirName = pathinfo($fullPath, PATHINFO_DIRNAME);
+                    
+                    $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
+                    $mobilePath = $dirName . '/' . $baseName . '_mobile.' . $baseExt;
+                    
+                    if (file_exists($fullPath) && is_file($fullPath)) @unlink($fullPath);
+                    if (file_exists($desktopPath) && is_file($desktopPath)) @unlink($desktopPath);
+                    if (file_exists($mobilePath) && is_file($mobilePath)) @unlink($mobilePath);
                 }
                 
                 // Siempre proceder a borrar el registro de la base de datos
@@ -128,7 +212,17 @@ adminHeader("Gestión de Banners");
             ?>
             <div class="banner-card" style="background: white; border: 1px solid var(--gray-200); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
                 <div style="position: relative; height: 180px;">
-                    <img src="../<?php echo $row['image_path']; ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php
+                    $previewPath = $row['image_path'];
+                    $baseExt = pathinfo($previewPath, PATHINFO_EXTENSION);
+                    $baseName = pathinfo($previewPath, PATHINFO_FILENAME);
+                    $dirName = pathinfo($previewPath, PATHINFO_DIRNAME);
+                    $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
+                    if (file_exists('../' . $desktopPath)) {
+                        $previewPath = $desktopPath;
+                    }
+                    ?>
+                    <img src="../<?php echo $previewPath; ?>" style="width: 100%; height: 100%; object-fit: cover;">
                     <div style="position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <small style="font-weight: 700; font-size: 0.7rem; color: var(--primary);"><?php echo $row['is_active'] ? 'VISIBLE' : 'OCULTO'; ?></small>
                         <label class="switch">
