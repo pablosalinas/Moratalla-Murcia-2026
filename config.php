@@ -34,7 +34,11 @@ function env($key, $default = null) {
 }
 
 // Definir constantes globales basadas en el entorno
-$environment = env('APP_ENV', 'local');
+// Autodetectar entorno basado en el host si no hay variable de entorno
+$currentHost = $_SERVER['HTTP_HOST'] ?? '';
+$isProdHost = (strpos($currentHost, 'moratalla-murcia.com') !== false);
+$environment = env('APP_ENV', $isProdHost ? 'production' : 'local');
+
 
 if ($environment === 'production') {
     define('DB_HOST', env('DB_HOST'));
