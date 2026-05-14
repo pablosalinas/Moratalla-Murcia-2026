@@ -38,7 +38,7 @@ if ($action == 'save') {
         
         if (move_uploaded_file($_FILES['gallery_image']['tmp_name'], $targetFile)) {
             // Aplicar marca de agua
-            $watermarkText = 'www.moratalla.murcia.com';
+            $watermarkText = 'www.moratalla-murcia.com';
             $info = getimagesize($targetFile);
             if ($info !== false) {
                 $mime = $info['mime'];
@@ -50,7 +50,7 @@ if ($action == 'save') {
                 }
                 
                 if ($imgRes) {
-                    $fontSize = 3; // Fuente pequeña nativa de GD
+                    $fontSize = 5; // Fuente más grande nativa de GD (1 a 5)
                     $width = imagesx($imgRes);
                     $height = imagesy($imgRes);
                     $textColor = imagecolorallocate($imgRes, 255, 255, 255); // Blanco
