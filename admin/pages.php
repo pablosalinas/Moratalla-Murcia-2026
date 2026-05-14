@@ -83,7 +83,7 @@ if ($action == 'list') {
             </thead>
             <tbody>
                 <?php
-                $stmt = $pdo->query("SELECT p.*, c.name as cat_name FROM pages p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.updated_at DESC, p.title ASC LIMIT 100");
+                $stmt = $pdo->query("SELECT p.*, c.name as cat_name FROM pages p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC, p.title ASC LIMIT 100");
                 while ($row = $stmt->fetch()) {
                     echo "<tr style='border-bottom: 1px solid var(--gray-100);'>";
                     echo "<td style='padding: 1rem;'><strong>{$row['title']}</strong></td>";
