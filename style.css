@@ -156,7 +156,7 @@ body {
 
 .main-banner-swiper {
     width: 100%;
-    aspect-ratio: 21 / 9; /* Ultra-wide for desktop */
+    height: 380px; /* Altura ajustada para mostrar 5 imágenes como cinta */
     min-height: 250px;
 }
 
