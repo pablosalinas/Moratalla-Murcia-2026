@@ -124,6 +124,45 @@
             document.getElementById('bannerModalImg').src = src;
             document.getElementById('bannerModal').style.display = 'flex';
         }
+
+        // Animación interactiva y aleatoria de logos
+        const logos = document.querySelectorAll('img.main-site-logo, footer img[alt="Logo"]');
+        const logoSources = ['uploads/theme/logo.jpg', 'uploads/theme/logo2.jpg'];
+        let currentLogoIndex = Math.floor(Math.random() * 2); // Aleatorio al cargar
+
+        logos.forEach(logo => {
+            logo.style.transition = "opacity 0.4s ease-in-out";
+            logo.src = logoSources[currentLogoIndex];
+            
+            // Fallback: si logo2.jpg aún no existe, usar el original
+            logo.onerror = function() {
+                if (this.src.includes('logo2.jpg')) {
+                    this.src = 'uploads/theme/logo.jpg';
+                }
+            };
+
+            // Interacción: Cambiar de logo al pasar el ratón
+            logo.addEventListener('mouseenter', () => {
+                logo.style.opacity = 0;
+                setTimeout(() => {
+                    let nextSrc = logo.src.includes('logo2.jpg') ? 'uploads/theme/logo.jpg' : 'uploads/theme/logo2.jpg';
+                    logo.src = nextSrc;
+                    logo.style.opacity = 1;
+                }, 400);
+            });
+        });
+
+        // Alternancia automática cada 10 segundos
+        setInterval(() => {
+            currentLogoIndex = (currentLogoIndex + 1) % 2;
+            logos.forEach(logo => {
+                logo.style.opacity = 0;
+                setTimeout(() => {
+                    logo.src = logoSources[currentLogoIndex];
+                    logo.style.opacity = 1;
+                }, 400);
+            });
+        }, 10000);
     </script>
 
     <!-- Modal para maximizar banners -->
