@@ -1,0 +1,50 @@
+-- Migración 042: Sincronización de tabla categories (Parte 2)
+-- Generada: 2026-05-14 13:25:20
+
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+SET FOREIGN_KEY_CHECKS = 0;
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('117', NULL, 'Artesania', 'artesania', '1');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('118', '117', 'Esparto', 'esparto-14', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('120', '117', 'Pintura', 'pintura-57', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('122', NULL, 'Biblioteca', 'biblioteca', '99');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('123', '122', 'Popups', 'popups-27', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('124', NULL, 'Centros', 'centros', '99');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('125', NULL, 'Cultura', 'cultura', '3');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('127', '125', 'Historia', 'historia-55', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('128', '125', 'Musica', 'musica-69', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('129', '128', 'Banda', 'banda-84', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('131', '128', 'Rondalla', 'rondalla-15', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('133', '125', 'Literatura', 'literatura-17', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('139', '120', 'Ana María Almagro', 'ana-maria-almagro', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('140', '118', 'Bartolomé Marín Rubio', 'bartolome-marin-rubio', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('141', '1', 'Asociaciones Culturales', 'asociaciones-culturales', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('142', '1', 'Asociaciones Deportivas', 'asociaciones-deportivas', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('143', '142', 'Club Automovilismo Moratalla', 'club-automovilismo-moratalla', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('144', '143', '2004', 'automovilismo-2004', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('145', '143', '2005', 'automovilismo-2005', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('146', '143', '2006', 'automovilismo-2006', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('147', '143', '2007', 'automovilismo-2007', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('148', '142', 'Club Baloncesto Moratalla', 'club-baloncesto-moratalla', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('149', '148', '2005', 'baloncesto-2005', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('150', '148', '2006', 'baloncesto-2006', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('151', '142', 'Club Ciclista Moratalla', 'club-ciclista-moratalla', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('152', '151', '2004', 'ciclista-2004', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('153', '151', '2005', 'ciclista-2005', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('154', '151', '2006', 'ciclista-2006', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('155', '142', 'Moratalla Club de Fútbol', 'moratalla-club-de-f??tbol', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('156', '155', 'temporada03-04', 'futbol-temporada03-04', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('157', '155', 'temporada04-05', 'futbol-temporada04-05', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('158', '155', 'temporada05-06', 'futbol-temporada05-06', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('159', '155', 'temporada06-07', 'futbol-temporada06-07', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('160', '155', 'temporada07-08', 'futbol-temporada07-08', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('161', '155', 'temporada08-09', 'futbol-temporada08-09', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('162', '155', 'temporada09-10', 'futbol-temporada09-10', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('163', '155', 'temporada10-11', 'futbol-temporada10-11', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('164', '141', 'Grupos y Peñas', 'grupos-y-pe??as', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('165', '164', 'beodos', 'grupos-beodos', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('166', '141', 'Padre Jesús Nazareno', 'padre-jes??s-nazareno', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('168', '141', 'Asociación de Tamboristas', 'asociaci??n-de-tamboristas', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('169', '168', '2004', 'tamboristas-2004', '0');
+REPLACE INTO `categories` (`id`, `parent_id`, `name`, `slug`, `sort_order`) VALUES ('170', '168', '2008', 'tamboristas-2008', '0');
+
+SET FOREIGN_KEY_CHECKS = 1;
