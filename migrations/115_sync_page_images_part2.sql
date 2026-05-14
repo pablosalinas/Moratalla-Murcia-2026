@@ -1,0 +1,57 @@
+-- Migración 115: Sincronización de tabla page_images (Parte 2)
+-- Generada: 2026-05-14 12:39:49
+
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+SET FOREIGN_KEY_CHECKS = 0;
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('51', '31', 'assets/images/p31/img_69fd0751529b2_IMGP3150.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('52', '31', 'assets/images/p31/img_69fd075153ac5_IMGP3151.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('53', '31', 'assets/images/p31/img_69fd075155d51_IMGP3158.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('54', '31', 'assets/images/p31/img_69fd0751569d0_IMGP3161.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('55', '31', 'assets/images/p31/img_69fd075159150_IMGP3164.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('56', '31', 'assets/images/p31/img_69fd07515b1d7_IMGP3166.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('57', '31', 'assets/images/p31/img_69fd07515c4b8_IMGP3173.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('58', '31', 'assets/images/p31/img_69fd07515e693_IMGP3176.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('59', '31', 'assets/images/p31/img_69fd075160cbf_IMGP3180.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('60', '31', 'assets/images/p31/img_69fd075161916_IMGP3183.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('61', '31', 'assets/images/p31/img_69fd075163cdc_IMGP3186.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('62', '31', 'assets/images/p31/img_69fd075165d5d_IMGP3188.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('63', '31', 'assets/images/p31/img_69fd075168064_IMGP3191.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('64', '31', 'assets/images/p31/img_69fd075169ffb_IMGP3196.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('65', '31', 'assets/images/p31/img_69fd07516c6a8_IMGP3200.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('66', '31', 'assets/images/p31/img_69fd07516e634_IMGP3201.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('67', '31', 'assets/images/p31/img_69fd0751784de_IMGP3204.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('68', '31', 'assets/images/p31/img_69fd07517b37b_IMGP3205.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('69', '31', 'assets/images/p31/img_69fd07517dca7_IMGP3206.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('70', '31', 'assets/images/p31/img_69fd07517fc14_IMGP3207.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('71', '31', 'assets/images/p31/img_69fd07518234e_IMGP3208.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('72', '31', 'assets/images/p31/img_69fd075184564_IMGP3210.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('73', '31', 'assets/images/p31/img_69fd075186b5b_IMGP3215.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('74', '31', 'assets/images/p31/img_69fd075188f62_IMGP3216.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('75', '31', 'assets/images/p31/img_69fd075189e47_IMGP3218.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('76', '31', 'assets/images/p31/img_69fd07518c28a_IMGP3219.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('77', '31', 'assets/images/p31/img_69fd07518d4d3_IMGP3220.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('78', '31', 'assets/images/p31/img_69fd07518e37b_IMGP3221.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('79', '31', 'assets/images/p31/img_69fd07519153b_IMGP3222.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('80', '31', 'assets/images/p31/img_69fd075193495_IMGP3223.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('81', '31', 'assets/images/p31/img_69fd0751942c1_IMGP3224.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('82', '31', 'assets/images/p31/img_69fd0751953ea_IMGP3225.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('83', '31', 'assets/images/p31/img_69fd075196571_IMGP3226.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('84', '31', 'assets/images/p31/img_69fd0751985ae_IMGP3231.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('85', '31', 'assets/images/p31/img_69fd0751996c4_IMGP3236.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('86', '31', 'assets/images/p31/img_69fd07519b62d_IMGP3237.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('87', '31', 'assets/images/p31/img_69fd07519dc22_IMGP3239.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('88', '31', 'assets/images/p31/img_69fd07519fd9e_IMGP3240.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('89', '31', 'assets/images/p31/img_69fd0751a2171_IMGP3241.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('90', '31', 'assets/images/p31/img_69fd0751a493a_IMGP3245.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('91', '31', 'assets/images/p31/img_69fd0751a5bc0_IMGP3246.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('92', '31', 'assets/images/p31/img_69fd0751a7a2e_IMGP3248.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('93', '31', 'assets/images/p31/img_69fd0751aa186_IMGP3250.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('94', '31', 'assets/images/p31/img_69fd0751aaf07_IMGP3251.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('95', '31', 'assets/images/p31/img_69fd0751abd60_IMGP3252.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('96', '31', 'assets/images/p31/img_69fd0751ad066_IMGP3254.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('97', '31', 'assets/images/p31/img_69fd0751ae2e9_IMGP3259.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('98', '31', 'assets/images/p31/img_69fd0751b0136_IMGP3263.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('99', '31', 'assets/images/p31/img_69fd0751b2934_IMGP3266.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('100', '31', 'assets/images/p31/img_69fd0751b35be_IMGP3267.jpg', NULL, '0');
+
+SET FOREIGN_KEY_CHECKS = 1;

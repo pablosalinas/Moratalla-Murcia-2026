@@ -40,9 +40,9 @@ foreach ($tables as $table) {
         $sql .= "SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';\n";
         $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n";
         
-        // Solo hacer TRUNCATE en la primera parte de cada tabla
+        // Solo hacer DELETE en la primera parte de cada tabla (evita commits implícitos de TRUNCATE)
         if ($index === 0) {
-            $sql .= "TRUNCATE TABLE `{$table}`;\n\n";
+            $sql .= "DELETE FROM `{$table}`;\n\n";
         }
 
         foreach ($chunk as $row) {
