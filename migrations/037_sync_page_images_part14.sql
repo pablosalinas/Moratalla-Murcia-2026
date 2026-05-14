@@ -1,0 +1,57 @@
+-- Migración 037: Sincronización de tabla page_images (Parte 14)
+-- Generada: 2026-05-14 13:13:08
+
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+SET FOREIGN_KEY_CHECKS = 0;
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('839', '408', 'uploads/asociaciones/asoc_grupos_beodos_0.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('840', '408', 'uploads/asociaciones/asoc_grupos_beodos_1.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('841', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_0.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('842', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_1.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('843', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_2.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('844', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_3.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('845', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_4.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('846', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_5.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('847', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_6.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('848', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_7.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('849', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_8.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('850', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_9.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('851', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_10.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('852', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_11.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('853', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_12.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('854', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_13.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('855', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_14.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('856', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_15.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('857', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_16.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('858', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_17.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('859', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_18.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('860', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_19.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('861', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_20.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('862', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_21.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('863', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_22.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('864', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_23.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('865', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_24.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('866', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_25.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('867', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_26.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('868', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_27.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('869', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_28.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('870', '409', 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_29.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('871', '410', 'uploads/asociaciones/asoc_tamboristas_2004_0.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('872', '410', 'uploads/asociaciones/asoc_tamboristas_2004_1.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('873', '410', 'uploads/asociaciones/asoc_tamboristas_2004_2.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('874', '410', 'uploads/asociaciones/asoc_tamboristas_2004_3.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('875', '410', 'uploads/asociaciones/asoc_tamboristas_2004_4.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('876', '410', 'uploads/asociaciones/asoc_tamboristas_2004_5.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('877', '410', 'uploads/asociaciones/asoc_tamboristas_2004_6.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('878', '410', 'uploads/asociaciones/asoc_tamboristas_2004_7.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('879', '410', 'uploads/asociaciones/asoc_tamboristas_2004_8.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('880', '410', 'uploads/asociaciones/asoc_tamboristas_2004_9.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('881', '410', 'uploads/asociaciones/asoc_tamboristas_2004_10.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('882', '410', 'uploads/asociaciones/asoc_tamboristas_2004_11.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('883', '410', 'uploads/asociaciones/asoc_tamboristas_2004_12.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('884', '410', 'uploads/asociaciones/asoc_tamboristas_2004_13.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('885', '410', 'uploads/asociaciones/asoc_tamboristas_2004_14.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('886', '410', 'uploads/asociaciones/asoc_tamboristas_2004_15.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('887', '410', 'uploads/asociaciones/asoc_tamboristas_2004_16.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('888', '410', 'uploads/asociaciones/asoc_tamboristas_2004_17.jpg', NULL, '0');
+
+SET FOREIGN_KEY_CHECKS = 1;

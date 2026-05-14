@@ -1,122 +1,132 @@
 <?php
 /**
- * migrate_runner.php — Sistema de Migraciones Automáticas
+ * migrate_runner.php — Sistema de Migraciones Automáticas Profesional
  * 
- * Ejecuta migraciones SQL pendientes de forma segura.
- * Se puede invocar:
- *   - Por HTTP con token secreto: migrate_runner.php?secret=TU_TOKEN
- *   - Por CLI: php migrate_runner.php
- * 
- * Las migraciones ejecutadas se registran en la tabla `_migrations`
- * para que nunca se ejecuten dos veces.
+ * Ejecuta migraciones SQL de forma robusta, manejando transacciones
+ * y evitando bucles de error por comandos que auto-commitean (como TRUNCATE).
  */
 require_once __DIR__ . '/config.php';
 
-// Aumentar límites para scripts grandes
 set_time_limit(0);
 ini_set('memory_limit', '512M');
 
-// === Seguridad ===
 $isCLI = (php_sapi_name() === 'cli');
+$logFile = __DIR__ . '/migration_log.txt';
 
 if (!$isCLI) {
-    // Acceso por HTTP: requiere token secreto
     $providedSecret = $_GET['secret'] ?? $_POST['secret'] ?? '';
     if (empty(MIGRATE_SECRET) || $providedSecret !== MIGRATE_SECRET) {
         http_response_code(403);
-        die('Acceso denegado. Token de migración inválido.');
+        die('Acceso denegado.');
     }
     header('Content-Type: text/plain; charset=utf-8');
 }
 
-// === Conexión BD ===
+function output($message) {
+    global $isCLI, $logFile;
+    $timestamp = date('Y-m-d H:i:s');
+    $formatted = "[$timestamp] $message";
+    echo $formatted . "\n";
+    file_put_contents($logFile, $formatted . "\n", FILE_APPEND);
+    if (!$isCLI) flush();
+}
+
 $pdo = getDB();
 $pdo->exec("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
 
-// === Crear tabla de control de migraciones ===
+// Asegurar tabla de control
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS `_migrations` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `migration` VARCHAR(255) NOT NULL UNIQUE,
+        `status` ENUM('success', 'failed') DEFAULT 'success',
+        `error_message` TEXT,
         `executed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ");
 
-// === Obtener migraciones ya ejecutadas ===
-$executedStmt = $pdo->query("SELECT migration FROM `_migrations`");
-$executed = $executedStmt->fetchAll(PDO::FETCH_COLUMN);
-
-// === Leer archivos de migración ===
-$migrationsDir = __DIR__ . '/migrations';
-if (!is_dir($migrationsDir)) {
-    output("No se encontró el directorio de migraciones: $migrationsDir");
-    exit(1);
+// Verificar si existe la columna 'status' (para compatibilidad con versiones previas)
+try {
+    $pdo->query("SELECT status FROM `_migrations` LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE `_migrations` ADD COLUMN `status` ENUM('success', 'failed') DEFAULT 'success' AFTER `migration`, ADD COLUMN `error_message` TEXT AFTER `status` ");
 }
 
-$files = glob($migrationsDir . '/*.sql');
-sort($files); // Orden alfabético = orden de ejecución
+$executed = $pdo->query("SELECT migration FROM `_migrations` WHERE status = 'success'")->fetchAll(PDO::FETCH_COLUMN);
+$failed = $pdo->query("SELECT migration FROM `_migrations` WHERE status = 'failed'")->fetchAll(PDO::FETCH_COLUMN);
+
+$migrationsDir = __DIR__ . '/migrations';
+$files = is_dir($migrationsDir) ? glob($migrationsDir . '/*.sql') : [];
+sort($files);
 
 $pending = 0;
 $errors = 0;
 
-output("=== Ejecutando Migraciones ===");
-output("Fecha: " . date('Y-m-d H:i:s'));
-output(str_repeat("-", 50));
+output("=== INICIANDO RUNNER DE MIGRACIONES ===");
 
 foreach ($files as $file) {
     $migrationName = basename($file);
     
     if (in_array($migrationName, $executed)) {
-        output("[OK] $migrationName — ya ejecutada, saltando.");
         continue;
     }
-    
+
+    if (in_array($migrationName, $failed)) {
+        output("[!] Omitiendo $migrationName porque falló anteriormente. Corrígelo o bórralo de _migrations.");
+        continue;
+    }
+
     $pending++;
     output("[>>] Ejecutando: $migrationName ...");
     
     $sql = file_get_contents($file);
     
-    $sql = file_get_contents($file);
+    // Eliminar comentarios
+    $sql = preg_replace('/^\s*--.*$/m', '', $sql);
+    $sql = preg_replace('/^\s*\/\*.*\*\/;?$/m', '', $sql);
+
+    // Separar por punto y coma al final de línea
+    $statements = preg_split('/;\s*[\r\n]+/', $sql);
     
     try {
         $pdo->beginTransaction();
         
-        // Limpiar el SQL de comentarios y espacios innecesarios al inicio/final
-        // Pero preservar los saltos de línea dentro de las comillas
-        $sql = preg_replace('/^\s*--.*$/m', '', $sql);
-        $sql = preg_replace('/^\s*\/\*.*\*\/;?$/m', '', $sql);
-        
-        // Dividir por punto y coma seguido de un salto de línea (estándar de nuestro exportador)
-        // Esto es mucho más seguro que el split por líneas simple
-        $statements = preg_split('/;\s*[\r\n]+/', $sql);
-        
         foreach ($statements as $statement) {
             $statement = trim($statement);
-            if (!empty($statement)) {
-                $pdo->exec($statement);
+            if (empty($statement)) continue;
+            
+            // Si el comando es un TRUNCATE o DROP, avisar de que el rollback no funcionará
+            if (preg_match('/^\s*(TRUNCATE|DROP|CREATE|ALTER|RENAME)/i', $statement)) {
+                // MySQL commiteará automáticamente aquí
             }
+            
+            $pdo->exec($statement);
         }
         
-        // Registrar como ejecutada
-        $stmt = $pdo->prepare("INSERT INTO `_migrations` (migration) VALUES (?)");
+        $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'success', NULL)");
         $stmt->execute([$migrationName]);
         
-        $pdo->commit();
-        output("[✓] $migrationName — ejecutada correctamente.");
+        if ($pdo->inTransaction()) $pdo->commit();
+        output("[✓] $migrationName — OK.");
         
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
+        
         $errors++;
-        output("[✗] ERROR en $migrationName: " . $e->getMessage());
-        // No detenemos el proceso completo, intentamos con la siguiente
+        $errorMsg = $e->getMessage();
+        output("[✗] ERROR en $migrationName: $errorMsg");
+        
+        // Registrar el fallo para evitar bucles infinitos
+        $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'failed', ?)");
+        $stmt->execute([$migrationName, $errorMsg]);
     }
 }
 
 output(str_repeat("-", 50));
 if ($pending === 0) {
-    output("No hay migraciones pendientes. Todo está actualizado.");
+    output("Sin cambios pendientes.");
 } else {
-    output("Migraciones ejecutadas: " . ($pending - $errors) . " | Errores: $errors");
+    output("Finalizado. Éxitos: " . ($pending - $errors) . " | Errores: $errors");
 }
 
 if ($errors > 0) {
@@ -124,9 +134,3 @@ if ($errors > 0) {
     exit(1);
 }
 
-// === Función de salida ===
-function output($message) {
-    global $isCLI;
-    echo $message . ($isCLI ? "\n" : "\n");
-    if (!$isCLI) flush();
-}
