@@ -7,33 +7,182 @@ require_once 'inc/layout.php';
 
 $pdo = getDB();
 
-adminHeader("Galería de Imágenes");
+// Procesar actualización de imagen
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_image') {
+    $img_id = (int)$_POST['image_id'];
+    $caption = $_POST['caption'] ?? '';
+    $sort_order = (int)($_POST['sort_order'] ?? 0);
+    $is_visible = isset($_POST['is_visible']) ? 1 : 0;
+    $is_cover = isset($_POST['is_cover']) ? 1 : 0;
+    $current_page = (int)($_POST['current_page'] ?? 1);
+
+    // Si se marca como portada, desmarcar las demás de ESA MISMA PÁGINA
+    if ($is_cover) {
+        $stmtPageId = $pdo->prepare("SELECT page_id FROM page_images WHERE id = ?");
+        $stmtPageId->execute([$img_id]);
+        $pageId = $stmtPageId->fetchColumn();
+        
+        if ($pageId) {
+            $stmtReset = $pdo->prepare("UPDATE page_images SET is_cover = 0 WHERE page_id = ?");
+            $stmtReset->execute([$pageId]);
+        }
+    }
+
+    $stmt = $pdo->prepare("UPDATE page_images SET caption = ?, sort_order = ?, is_visible = ?, is_cover = ? WHERE id = ?");
+    $stmt->execute([$caption, $sort_order, $is_visible, $is_cover, $img_id]);
+    
+    header("Location: images.php?page=" . $current_page . "&msg=updated");
+    exit;
+}
+
+// Procesar eliminación de imagen (Opcional, pero útil)
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    $current_page = (int)($_GET['page'] ?? 1);
+    
+    $stmt = $pdo->prepare("SELECT image_path FROM page_images WHERE id = ?");
+    $stmt->execute([$id]);
+    $img = $stmt->fetch();
+    
+    if ($img) {
+        if (file_exists('../' . $img['image_path'])) {
+            unlink('../' . $img['image_path']);
+        }
+        $pdo->prepare("DELETE FROM page_images WHERE id = ?")->execute([$id]);
+    }
+    header("Location: images.php?page=" . $current_page . "&msg=deleted");
+    exit;
+}
+
+// --- Paginación ---
+$limit = 50;
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$offset = ($page - 1) * $limit;
+
+$totalImages = $pdo->query("SELECT COUNT(*) FROM page_images")->fetchColumn();
+$totalPages = ceil($totalImages / $limit);
+
+// Consulta
+$stmt = $pdo->prepare("
+    SELECT pi.*, p.title as page_title, p.id as real_page_id 
+    FROM page_images pi 
+    LEFT JOIN pages p ON pi.page_id = p.id 
+    ORDER BY pi.id DESC 
+    LIMIT ? OFFSET ?
+");
+$stmt->bindValue(1, $limit, PDO::PARAM_INT);
+$stmt->bindValue(2, $offset, PDO::PARAM_INT);
+$stmt->execute();
+$images = $stmt->fetchAll();
+
+adminHeader("Galería General");
 ?>
 
 <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h3>Imágenes del Proyecto</h3>
-        <span class="badge badge-info">Total: <?php echo $pdo->query("SELECT COUNT(*) FROM page_images")->fetchColumn(); ?></span>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h3>Gestor Global de Imágenes</h3>
+        <span class="badge badge-info" style="font-size: 1.1rem; padding: 0.5rem 1rem;">Total: <?php echo $totalImages; ?></span>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
-        <?php
-        $stmt = $pdo->query("SELECT pi.*, p.title as page_title FROM page_images pi JOIN pages p ON pi.page_id = p.id ORDER BY pi.id DESC LIMIT 60");
-        while ($row = $stmt->fetch()) {
-            ?>
-            <div class="image-item" style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; position: relative;">
-                <img src="../<?php echo $row['image_path']; ?>" style="width: 100%; height: 120px; object-fit: cover;">
-                <div style="padding: 0.5rem; font-size: 0.7rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    <?php echo $row['page_title']; ?>
+    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'updated'): ?>
+        <div class="alert alert-success">Imagen actualizada correctamente.</div>
+    <?php endif; ?>
+    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'deleted'): ?>
+        <div class="alert alert-success">Imagen eliminada permanentemente.</div>
+    <?php endif; ?>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+        <?php foreach ($images as $row): ?>
+            <div class="image-item" style="background: var(--bg-alt); border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+                
+                <!-- Imagen -->
+                <div style="position: relative; height: 180px; background: #eee;">
+                    <img src="../<?php echo htmlspecialchars($row['image_path']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php if ($row['is_cover']) : ?>
+                        <span style="position: absolute; top: 10px; right: 10px; background: var(--accent); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-star"></i> Portada</span>
+                    <?php endif; ?>
+                    <?php if (!$row['is_visible']) : ?>
+                        <span style="position: absolute; top: 10px; left: 10px; background: #666; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-eye-slash"></i> Oculta</span>
+                    <?php endif; ?>
                 </div>
-                <?php if ($row['is_cover']) : ?>
-                    <span style="position: absolute; top: 5px; right: 5px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">Portada</span>
-                <?php endif; ?>
+
+                <!-- Info Origen -->
+                <div style="padding: 0.75rem; border-bottom: 1px solid var(--gray-200); font-size: 0.85rem; background: white;">
+                    <?php if (empty($row['real_page_id'])): ?>
+                        <span style="color: #d9534f; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Huérfana (Página <?php echo $row['page_id']; ?> borrada)</span>
+                    <?php else: ?>
+                        <i class="fas fa-file-alt" style="color: var(--primary);"></i> 
+                        <a href="pages.php?edit=<?php echo $row['real_page_id']; ?>" style="color: var(--primary); text-decoration: none; font-weight: 600;" title="Editar página a la que pertenece">
+                            <?php echo htmlspecialchars($row['page_title']); ?>
+                        </a>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Formulario de Edición Rápida -->
+                <form action="images.php" method="POST" style="padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.8rem;">
+                    <input type="hidden" name="action" value="update_image">
+                    <input type="hidden" name="image_id" value="<?php echo $row['id']; ?>">
+                    <input type="hidden" name="current_page" value="<?php echo $page; ?>">
+
+                    <div>
+                        <label style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem; display: block;">Descripción (Pie de foto)</label>
+                        <input type="text" name="caption" value="<?php echo htmlspecialchars($row['caption'] ?? ''); ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.9rem;" placeholder="Sin descripción...">
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem; display: block;">Orden</label>
+                            <input type="number" name="sort_order" value="<?php echo $row['sort_order']; ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.9rem;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="is_visible" value="1" <?php echo $row['is_visible'] ? 'checked' : ''; ?>>
+                                Visible
+                            </label>
+                            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="is_cover" value="1" <?php echo $row['is_cover'] ? 'checked' : ''; ?>>
+                                Portada
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: auto; padding-top: 1rem;">
+                        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;"><i class="fas fa-save"></i> Guardar</button>
+                        <a href="images.php?delete=<?php echo $row['id']; ?>&page=<?php echo $page; ?>" onclick="return confirm('¿Eliminar esta imagen para siempre?');" class="btn-danger" style="padding: 0.5rem; font-size: 0.85rem; background: transparent; color: #d9534f; border: 1px solid #d9534f; border-radius: 4px; text-decoration: none;" title="Eliminar Imagen">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </form>
             </div>
-            <?php
-        }
-        ?>
+        <?php endforeach; ?>
     </div>
+
+    <!-- Paginación -->
+    <?php if ($totalPages > 1): ?>
+    <div style="margin-top: 3rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+        <?php if ($page > 1): ?>
+            <a href="images.php?page=1" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-double-left"></i></a>
+            <a href="images.php?page=<?php echo $page - 1; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-left"></i></a>
+        <?php endif; ?>
+
+        <?php 
+        $startPage = max(1, $page - 2);
+        $endPage = min($totalPages, $page + 2);
+        for ($i = $startPage; $i <= $endPage; $i++): 
+        ?>
+            <a href="images.php?page=<?php echo $i; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: <?php echo $i === $page ? 'var(--primary)' : 'white'; ?>; color: <?php echo $i === $page ? 'white' : 'var(--text)'; ?>; border: 1px solid var(--gray-300);"><?php echo $i; ?></a>
+        <?php endfor; ?>
+
+        <?php if ($page < $totalPages): ?>
+            <a href="images.php?page=<?php echo $page + 1; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-right"></i></a>
+            <a href="images.php?page=<?php echo $totalPages; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-double-right"></i></a>
+        <?php endif; ?>
+    </div>
+    <div style="text-align: center; margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
+        Página <?php echo $page; ?> de <?php echo $totalPages; ?>
+    </div>
+    <?php endif; ?>
+
 </div>
 
 <?php adminFooter(); ?>
