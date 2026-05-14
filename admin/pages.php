@@ -37,6 +37,45 @@ if ($action == 'save') {
         $targetFile = $uploadDir . $filename;
         
         if (move_uploaded_file($_FILES['gallery_image']['tmp_name'], $targetFile)) {
+            // Aplicar marca de agua
+            $watermarkText = 'www.moratalla.murcia.com';
+            $info = getimagesize($targetFile);
+            if ($info !== false) {
+                $mime = $info['mime'];
+                $imgRes = null;
+                switch ($mime) {
+                    case 'image/jpeg': $imgRes = imagecreatefromjpeg($targetFile); break;
+                    case 'image/png': $imgRes = imagecreatefrompng($targetFile); break;
+                    case 'image/gif': $imgRes = imagecreatefromgif($targetFile); break;
+                }
+                
+                if ($imgRes) {
+                    $fontSize = 3; // Fuente pequeña nativa de GD
+                    $width = imagesx($imgRes);
+                    $height = imagesy($imgRes);
+                    $textColor = imagecolorallocate($imgRes, 255, 255, 255); // Blanco
+                    $shadowColor = imagecolorallocate($imgRes, 0, 0, 0); // Sombra negra
+                    
+                    // Posición esquina inferior derecha
+                    $textWidth = imagefontwidth($fontSize) * strlen($watermarkText);
+                    $textHeight = imagefontheight($fontSize);
+                    $x = $width - $textWidth - 10;
+                    $y = $height - $textHeight - 10;
+                    
+                    // Sombra
+                    imagestring($imgRes, $fontSize, $x + 1, $y + 1, $watermarkText, $shadowColor);
+                    // Texto blanco
+                    imagestring($imgRes, $fontSize, $x, $y, $watermarkText, $textColor);
+                    
+                    switch ($mime) {
+                        case 'image/jpeg': imagejpeg($imgRes, $targetFile, 90); break;
+                        case 'image/png': imagepng($imgRes, $targetFile); break;
+                        case 'image/gif': imagegif($imgRes, $targetFile); break;
+                    }
+                    imagedestroy($imgRes);
+                }
+            }
+
             $dbPath = 'uploads/galerias/' . $filename;
             $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover) VALUES (?, ?, 0)");
             $stmtImg->execute([$id, $dbPath]);
@@ -44,6 +83,23 @@ if ($action == 'save') {
     }
     
     header("Location: pages.php?action=edit&id=$id&msg=" . urlencode($msg));
+    exit;
+}
+
+if ($action == 'save_gallery') {
+    $page_id = $_POST['page_id'] ?? null;
+    $images_data = $_POST['images'] ?? [];
+    
+    if ($page_id) {
+        $stmtUpdate = $pdo->prepare("UPDATE page_images SET caption = ?, sort_order = ?, is_visible = ? WHERE id = ? AND page_id = ?");
+        foreach ($images_data as $img_id => $data) {
+            $caption = $data['caption'] ?? '';
+            $sort_order = (int)($data['sort_order'] ?? 0);
+            $is_visible = isset($data['is_visible']) ? 1 : 0;
+            $stmtUpdate->execute([$caption, $sort_order, $is_visible, $img_id, $page_id]);
+        }
+    }
+    header("Location: pages.php?action=edit&id=$page_id&msg=" . urlencode("Galería actualizada"));
     exit;
 }
 
@@ -162,34 +218,59 @@ if ($action == 'list') {
 
         <!-- Galería Existente -->
         <?php if ($action == 'edit'): ?>
-            <div class="card" style="flex: 1; min-width: 300px; background: #f9f9f9;">
+            <div class="card" style="flex: 1; min-width: 400px; background: #f9f9f9;">
                 <h3><i class="fas fa-camera"></i> Galería Actual</h3>
                 <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Obras, cuadros o fotos adjudicadas a esta página.</p>
                 
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <?php
-                    $iStmt = $pdo->prepare("SELECT * FROM page_images WHERE page_id = ?");
-                    $iStmt->execute([$id]);
-                    $images = $iStmt->fetchAll();
-                    
-                    if (count($images) == 0) {
-                        echo "<p style='color: #888; font-style: italic;'>No hay fotos en la galería.</p>";
-                    }
-                    
-                    foreach ($images as $img) {
-                        ?>
-                        <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 0.5rem; display: flex; align-items: center; gap: 1rem;">
-                            <img src="../<?php echo $img['image_path']; ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
-                            <div style="flex: 1;">
-                                <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto?');" style="color: #d32f2f; font-size: 0.8rem; text-decoration: none;">
-                                    <i class="fas fa-trash"></i> Eliminar
-                                </a>
-                            </div>
-                        </div>
+                <form method="POST" action="?action=save_gallery">
+                    <input type="hidden" name="page_id" value="<?php echo $id; ?>">
+                    <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
                         <?php
-                    }
-                    ?>
-                </div>
+                        $iStmt = $pdo->prepare("SELECT * FROM page_images WHERE page_id = ? ORDER BY sort_order ASC, id ASC");
+                        $iStmt->execute([$id]);
+                        $images = $iStmt->fetchAll();
+                        
+                        if (count($images) == 0) {
+                            echo "<p style='color: #888; font-style: italic;'>No hay fotos en la galería.</p>";
+                        }
+                        
+                        foreach ($images as $img) {
+                            $isVisible = $img['is_visible'] ? 'checked' : '';
+                            ?>
+                            <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; gap: 1rem;">
+                                    <img src="../<?php echo $img['image_path']; ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+                                    <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <div style="display: flex; gap: 1rem; align-items: center;">
+                                            <div style="flex: 1;">
+                                                <label style="font-size: 0.8rem; font-weight: 600; display: block;">Orden</label>
+                                                <input type="number" name="images[<?php echo $img['id']; ?>][sort_order]" value="<?php echo $img['sort_order']; ?>" style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px;">
+                                            </div>
+                                            <div style="flex: 1; text-align: center;">
+                                                <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.2rem;">Visible</label>
+                                                <input type="checkbox" name="images[<?php echo $img['id']; ?>][is_visible]" value="1" <?php echo $isVisible; ?> style="transform: scale(1.5);">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.8rem; font-weight: 600; display: block;">Descripción / Título de la obra</label>
+                                    <textarea name="images[<?php echo $img['id']; ?>][caption]" style="width: 100%; height: 60px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem;"><?php echo htmlspecialchars($img['caption'] ?? ''); ?></textarea>
+                                </div>
+                                <div style="text-align: right; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; margin-top: 0.5rem;">
+                                    <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto?');" style="color: #d32f2f; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+                                        <i class="fas fa-trash"></i> Eliminar Foto
+                                    </a>
+                                </div>
+                            </div>
+                            <?php
+                        }
+                        ?>
+                    </div>
+                    <?php if (count($images) > 0): ?>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; background: #10b981; border: none;"><i class="fas fa-save"></i> Guardar Cambios de Galería</button>
+                    <?php endif; ?>
+                </form>
             </div>
         <?php endif; ?>
     </div>

@@ -48,7 +48,7 @@ if ($page['cat_parent_id']) {
         
         <?php
         // Galería de imágenes
-        $iStmt = $pdo->prepare("SELECT * FROM page_images WHERE page_id = ?");
+        $iStmt = $pdo->prepare("SELECT * FROM page_images WHERE page_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
         $iStmt->execute([$id]);
         $images = $iStmt->fetchAll();
         
@@ -70,9 +70,12 @@ if ($page['cat_parent_id']) {
                             $displaySrc = 'data:image/jpeg;base64,' . $imageData;
                         }
                     ?>
-                        <a href="<?php echo $fullPath; ?>" class="lightbox-link" style="flex: 0 0 450px; height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
+                        <a href="<?php echo $fullPath; ?>" class="lightbox-link" data-caption="<?php echo htmlspecialchars($img['caption'] ?? ''); ?>" style="flex: 0 0 450px; height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
                             <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
                             <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
+                                <?php if (!empty($img['caption'])): ?>
+                                    <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><?php echo htmlspecialchars($img['caption']); ?></strong>
+                                <?php endif; ?>
                                 <i class="fas fa-search-plus"></i> Ampliar obra
                             </div>
                         </a>
@@ -111,8 +114,9 @@ if ($page['cat_parent_id']) {
     <button id="next-img" class="nav-btn" style="right: 2rem;"><i class="fas fa-chevron-right"></i></button>
 
     <!-- Imagen Principal -->
-    <div style="max-width: 95%; max-height: 95vh; display: flex; justify-content: center; align-items: center; position: relative;">
-        <img id="lightbox-img" src="" style="max-width: 100%; max-height: 95vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); transition: opacity 0.3s ease;">
+    <div style="max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative;">
+        <img id="lightbox-img" src="" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); transition: opacity 0.3s ease;">
+        <div id="lightbox-caption" style="color: white; margin-top: 1.5rem; font-size: 1.2rem; text-align: center; max-width: 800px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); min-height: 2rem;"></div>
     </div>
     
     <!-- Indicador de Tiempo Visual (Opcional pero elegante) -->
@@ -186,8 +190,11 @@ if ($page['cat_parent_id']) {
     const prevBtn = document.getElementById('prev-img');
     const nextBtn = document.getElementById('next-img');
 
-    // Extraer todas las rutas de imágenes
-    const galleryItems = Array.from(links).map(link => link.getAttribute('href'));
+    // Extraer todas las rutas de imágenes y descripciones
+    const galleryItems = Array.from(links).map(link => ({
+        src: link.getAttribute('href'),
+        caption: link.getAttribute('data-caption')
+    }));
     let currentIndex = 0;
     let autoPlayInterval;
 
@@ -199,7 +206,8 @@ if ($page['cat_parent_id']) {
         lightboxImg.style.opacity = 0; // Efecto de parpadeo suave
         
         setTimeout(() => {
-            lightboxImg.src = galleryItems[currentIndex];
+            lightboxImg.src = galleryItems[currentIndex].src;
+            document.getElementById('lightbox-caption').textContent = galleryItems[currentIndex].caption;
             lightboxImg.style.opacity = 1;
         }, 150);
     }
