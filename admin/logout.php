@@ -13,10 +13,11 @@ if (isset($_COOKIE[session_name()])) {
 // 3. Destruir la sesión físicamente en el servidor
 session_destroy();
 
-// 4. Redirigir al login asegurando que no haya caché
+// 4. Redirigir al destino (por defecto login.php)
+$target = isset($_GET['redirect']) ? $_GET['redirect'] : 'login.php?msg=logged_out';
 header("Cache-Control: no-cache, no-store, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
-header("Location: login.php?msg=logged_out");
+header("Location: " . $target);
 exit;
 ?>

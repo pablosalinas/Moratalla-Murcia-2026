@@ -35,7 +35,7 @@ function checkLogin() {
                 <li><a href="settings.php">Configuración General</a></li>
                 <li><a href="banners.php">Banner Interactivo</a></li>
                 <br>
-                <li><a href="../index.php" target="_blank">Ver Web</a></li>
+                <li><a href="logout.php?redirect=../index.php">Ver Web</a></li>
                 <br>
                 <li><a href="logout.php" style="color: #f87171;">Cerrar Sesión</a></li>
             </ul>
