@@ -4,7 +4,19 @@ require_once 'config.php';
 $pdo = getDB();
 
 $tables = ['categories', 'pages', 'page_images', 'settings', 'users'];
-$migrationBaseId = 27;
+
+$migrationsDir = __DIR__ . '/migrations';
+$files = glob($migrationsDir . '/*.sql');
+$maxId = 0;
+foreach ($files as $file) {
+    if (preg_match('/^(\d+)_/', basename($file), $matches)) {
+        $id = (int)$matches[1];
+        if ($id > $maxId) {
+            $maxId = $id;
+        }
+    }
+}
+$migrationBaseId = $maxId + 1;
 $chunkSize = 50;
 
 foreach ($tables as $table) {

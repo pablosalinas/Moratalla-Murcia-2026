@@ -1,0 +1,57 @@
+-- Migración 067: Sincronización de tabla page_images (Parte 6)
+-- Generada: 2026-05-14 12:02:50
+
+SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+SET FOREIGN_KEY_CHECKS = 0;
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('251', '144', 'assets/images/p144/img_69fd0754d6373_escudo_moratalla.gif', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('252', '164', 'assets/images/p164/img_69fd075530f8c_San-Anton-16p.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('253', '164', 'assets/images/p164/img_69fd075535fdb_San-Anton-04p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('254', '164', 'assets/images/p164/img_69fd0755387b2_San-Anton-13p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('255', '164', 'assets/images/p164/img_69fd07553aa4f_San-Anton-07p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('256', '164', 'assets/images/p164/img_69fd07553d095_San-Anton-10p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('257', '164', 'assets/images/p164/img_69fd07553fa34_San-Anton-08p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('258', '164', 'assets/images/p164/img_69fd075541b5c_San-Anton-09p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('259', '164', 'assets/images/p164/img_69fd075543eb4_San-Anton-03p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('260', '164', 'assets/images/p164/img_69fd075545df5_San-Anton-14p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('261', '164', 'assets/images/p164/img_69fd0755483e9_San-Anton-11p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('262', '164', 'assets/images/p164/img_69fd07554a2a2_San-Anton-12p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('263', '164', 'assets/images/p164/img_69fd07554cea1_San-Anton-05p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('264', '164', 'assets/images/p164/img_69fd07554ef5f_San-Anton-06p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('265', '164', 'assets/images/p164/img_69fd0755518b4_San-Anton-02p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('266', '164', 'assets/images/p164/img_69fd075553bc8_San-Anton-01p.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('267', '165', 'assets/images/p165/img_69fd07555bc08_tamborbo.gif', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('268', '167', 'assets/images/p167/img_69fd0755607a9_tamborbo.gif', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('269', '168', 'assets/images/p168/img_69fd0755616f8_tamborbo.gif', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('270', '170', 'assets/images/p170/img_69fd075575ead_danza-invisible1.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('271', '170', 'assets/images/p170/img_69fd075577039_portada_festival_bandas.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('272', '170', 'assets/images/p170/img_69fd075579d71_amparania1.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('273', '170', 'assets/images/p170/img_69fd07557c597_chambao.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('274', '170', 'assets/images/p170/img_69fd07557e8c9_cartelti.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('275', '171', 'assets/images/p171/img_69fd07558736e_Cartel-oficial.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('276', '176', 'assets/images/p176/img_69fd0755a44a5_loteria.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('277', '176', 'assets/images/p176/img_69fd0755a5798_papeleta_cesta.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('278', '176', 'assets/images/p176/img_69fd0755a69a9_c3_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('279', '176', 'assets/images/p176/img_69fd0755a8ff8_moto1.gif', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('280', '176', 'assets/images/p176/img_69fd0755aa049_c3_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('281', '176', 'assets/images/p176/img_69fd0755aa99a_C2_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('282', '176', 'assets/images/p176/img_69fd0755acd71_moto1.gif', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('283', '176', 'assets/images/p176/img_69fd0755ad9a4_c3_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('284', '176', 'assets/images/p176/img_69fd0755ae4e8_C2_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('285', '176', 'assets/images/p176/img_69fd0755aef97_c3_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('286', '176', 'assets/images/p176/img_69fd0755afa1d_C2_g.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('287', '178', 'assets/images/p178/img_69fd0755bab7f_noel_comision11.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('288', '178', 'assets/images/p178/img_69fd0755bbb1f_noel_comision12.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('289', '179', 'assets/images/p179/img_69fd0755c24ee_comision_P.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('290', '180', 'assets/images/p180/img_69fd0755cf185_PIC01141.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('291', '180', 'assets/images/p180/img_69fd0755d129b_PIC01142.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('292', '180', 'assets/images/p180/img_69fd0755d25b8_PIC01143.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('293', '181', 'assets/images/p181/img_69fd0755dad74_PIC01141.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('294', '182', 'assets/images/p182/img_69fd0755e37e5_PIC01142.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('295', '183', 'assets/images/p183/img_69fd0755ebe54_PIC01143.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('296', '184', 'assets/images/p184/img_69fd0755f055b_danza-invisible1.jpg', NULL, '1');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('297', '184', 'assets/images/p184/img_69fd0755f0ece_portada_festival_bandas.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('298', '184', 'assets/images/p184/img_69fd0755f16c1_amparania1.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('299', '184', 'assets/images/p184/img_69fd0755f2474_chambao.jpg', NULL, '0');
+REPLACE INTO `page_images` (`id`, `page_id`, `image_path`, `caption`, `is_cover`) VALUES ('300', '184', 'assets/images/p184/img_69fd0755f3043_cartelti.jpg', NULL, '0');
+
+SET FOREIGN_KEY_CHECKS = 1;
