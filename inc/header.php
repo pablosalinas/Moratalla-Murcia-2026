@@ -1,7 +1,17 @@
 <?php
 // inc/header.php
 require_once 'config.php';
-$pdo = getDB();
+if (!isset($pdo)) {
+    $pdo = getDB();
+}
+
+// Variables SEO y Metadatos Dinámicos
+$seoKeywords = "moratalla, mOratalla, morAtalla,Moratalla, Murcia, Turismo Moratalla, Trieta Moratalla, Espana Moratalla,cultura moratalla, casas rurales moratalla, rural, alojamientos moratalla,alharabe, benamor, casa cristo moratalla, encantada, san jorge, buitre, sabinar moratalla, otos moratalla, ca ada de la cruz, benizar, mazuza, calar de la santa, campo san juan, campo bejar, rogativa, zaen, murtas, nogueras, bajil,  rupestres, rupestre,pinturas, pintura,mediterraneo,banda, rondalla,Pablo Salinas,casas rurales, naturaleza, monta a, campo, monte, pueblo, castillo, iglesia, calles, fiestas, musica, Maria del Carmen Rodriguez Rodriguez, Pablo Salinas Rodriguez, Francisco Salinas Rodriguez,futbol, automovilismo, tamborada,ciclismo, rocasas, albury, pepe el pintor, villa juana, el olivar, villa zorrilla";
+$defaultTitle = "moratalla-murcia.com - Patrimonio Histórico Digital";
+$defaultDesc = "Moratalla (Murcia). Archivo histórico digital, turismo, asociaciones, Semana Santa, tambores y cultura local. Proyecto de conservación de memoria histórica.";
+
+$finalTitle = isset($pageTitle) ? $pageTitle . " - moratalla-murcia.com" : $defaultTitle;
+$finalDesc = isset($pageDescription) && !empty($pageDescription) ? $pageDescription : $defaultDesc;
 
 // Obtener ajustes
 $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
@@ -45,7 +55,20 @@ function renderHorizontalMenu($parentId = null) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>moratalla-murcia.com - Patrimonio Histórico Digital</title>
+    <title><?php echo htmlspecialchars($finalTitle); ?></title>
+    
+    <!-- Meta Etiquetas SEO -->
+    <meta name="description" content="<?php echo htmlspecialchars($finalDesc); ?>">
+    <meta name="keywords" content="<?php echo htmlspecialchars($seoKeywords); ?>">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph (WhatsApp, Redes Sociales) -->
+    <meta property="og:title" content="<?php echo htmlspecialchars($finalTitle); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($finalDesc); ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://www.moratalla-murcia.com/uploads/theme/logo.jpg">
+    <meta property="og:url" content="https://www.moratalla-murcia.com<?php echo $_SERVER['REQUEST_URI']; ?>">
+    
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime(__DIR__ . '/../style.css'); ?>">
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">

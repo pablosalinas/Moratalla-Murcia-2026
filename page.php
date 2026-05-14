@@ -1,6 +1,7 @@
 <?php
 // page.php
-require_once 'inc/header.php';
+require_once 'config.php';
+$pdo = getDB();
 
 $id = $_GET['id'] ?? null;
 if (!$id) { header("Location: index.php"); exit; }
@@ -10,6 +11,15 @@ $stmt->execute([$id]);
 $page = $stmt->fetch();
 
 if (!$page) { header("Location: index.php"); exit; }
+
+// SEO dinámico
+$pageTitle = $page['title'];
+$cleanText = trim(strip_tags($page['content']));
+// Limitar a 150 caracteres para la meta descripción
+$pageDescription = mb_substr(preg_replace('/\s+/', ' ', $cleanText), 0, 150);
+if (strlen($cleanText) > 150) $pageDescription .= "...";
+
+require_once 'inc/header.php';
 
 // Evitar bucle en botón "Volver": si la categoría actual es de 1 sola página, volver al padre
 $backLink = "category.php?id=" . $page['cat_id'];

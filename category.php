@@ -29,6 +29,7 @@ if (count($pages) === 1 && count($subcategories) === 0) {
 }
 
 // Ahora que hemos pasado todas las posibles redirecciones de cabecera, cargamos el Header
+$pageTitle = $category['name'];
 require_once 'inc/header.php';
 
 function getCategoryIcon($name) {
