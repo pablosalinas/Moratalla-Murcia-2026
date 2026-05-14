@@ -65,7 +65,7 @@
 
         <!-- Copyright final -->
         <div class="container" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-size: 0.85rem; opacity: 0.7; text-align: center;">
-            <p><a href="admin/" style="color: inherit; text-decoration: none; outline: none; -webkit-tap-highlight-color: transparent;">&copy;</a> Pablo Salinas Marín</p>
+            <p><a href="admin/" style="color: inherit; text-decoration: none; outline: none; -webkit-tap-highlight-color: transparent; display: inline-block; padding: 15px; margin: -15px;">&copy;</a> Pablo Salinas Marín</p>
             <p>www.moratalla-murcia.com</p>
             <p>1998 - 2026</p>
         </div>
