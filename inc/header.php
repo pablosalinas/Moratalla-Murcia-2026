@@ -113,7 +113,7 @@ function renderHorizontalMenu($parentId = null) {
                         echo '<picture>';
                         echo '<source media="(max-width: 768px)" srcset="' . htmlspecialchars($mobilePath) . '">';
                         echo '<source media="(min-width: 769px)" srcset="' . htmlspecialchars($desktopPath) . '">';
-                        echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title']) . '">';
+                        echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title']) . '" style="cursor: pointer;" onclick="openBannerModal(this.currentSrc || this.src)">';
                         echo '</picture>';
                         if ($banner['title']) {
                             echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
