@@ -27,4 +27,8 @@ jobs:
 
       - name: 🐬 Migraciones
         run: |
+          echo "Ejecutando migraciones en la raíz..."
           curl -s "${{ secrets.SITE_URL }}/migrate_runner.php?secret=${{ secrets.MIGRATE_SECRET }}"
+          echo "Ejecutando migraciones en /moratalla..."
+          curl -s "${{ secrets.SITE_URL }}/moratalla/migrate_runner.php?secret=${{ secrets.MIGRATE_SECRET }}"
+
