@@ -28,17 +28,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Función auxiliar para optimizar y redimensionar
                 function createResponsiveImage($source, $dest, $maxWidth, $quality = 80) {
-                    $info = getimagesize($source);
+                    if (!function_exists('getimagesize') || !function_exists('imagecreatefromjpeg')) {
+                        return false;
+                    }
+                    
+                    $info = @getimagesize($source);
                     if (!$info) return false;
                     
                     $mime = $info['mime'];
                     switch ($mime) {
-                        case 'image/jpeg': $img = imagecreatefromjpeg($source); break;
-                        case 'image/png': $img = imagecreatefrompng($source); break;
-                        case 'image/webp': $img = imagecreatefromwebp($source); break;
-                        case 'image/gif': $img = imagecreatefromgif($source); break;
+                        case 'image/jpeg': $img = @imagecreatefromjpeg($source); break;
+                        case 'image/png': $img = @imagecreatefrompng($source); break;
+                        case 'image/webp': 
+                            if (!function_exists('imagecreatefromwebp')) return false;
+                            $img = @imagecreatefromwebp($source); 
+                            break;
+                        case 'image/gif': $img = @imagecreatefromgif($source); break;
                         default: return false;
                     }
+                    
+                    if (!$img) return false;
                     
                     $width = imagesx($img);
                     $height = imagesy($img);
