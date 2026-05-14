@@ -56,30 +56,34 @@ if ($page['cat_parent_id']) {
             <!-- DEBUG: ID PAGINA <?php echo $id; ?> | IMAGENES ENCONTRADAS: <?php echo count($images); ?> -->
             <div class="gallery-wrapper" style="margin-bottom: 3rem;">
                 <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 3px solid var(--accent); padding-left: 1rem;">Obras y Galería de Imágenes</h3>
-                <!-- Carrusel horizontal más grande -->
-                <div class="gallery-scroll" style="display: flex; gap: 1.5rem; overflow-x: auto; padding-bottom: 1.5rem; scroll-snap-type: x mandatory; min-height: 280px;">
-                    <?php 
-                    foreach ($images as $img): 
-                        $fullPath = $img['image_path'];
-                        $isBartolome = (strpos($fullPath, 'bartolome') !== false);
-                        $displaySrc = $fullPath;
-                        
-                        // Si es Bartolomé, forzamos base64 para evitar fallos de ruta/formato
-                        if ($isBartolome && file_exists($fullPath)) {
-                            $imageData = base64_encode(file_get_contents($fullPath));
-                            $displaySrc = 'data:image/jpeg;base64,' . $imageData;
-                        }
-                    ?>
-                        <a href="<?php echo $fullPath; ?>" class="lightbox-link" data-caption="<?php echo htmlspecialchars($img['caption'] ?? ''); ?>" style="flex: 0 0 450px; height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; scroll-snap-align: start; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
-                            <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
-                            <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
-                                <?php if (!empty($img['caption'])): ?>
-                                    <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><?php echo htmlspecialchars($img['caption']); ?></strong>
-                                <?php endif; ?>
-                                <i class="fas fa-search-plus"></i> Ampliar obra
-                            </div>
-                        </a>
-                    <?php endforeach; ?>
+                <!-- Carrusel Animado (Swiper) -->
+                <div class="swiper page-gallery-swiper" style="padding-bottom: 3rem;">
+                    <div class="swiper-wrapper">
+                        <?php 
+                        foreach ($images as $img): 
+                            $fullPath = $img['image_path'];
+                            $isBartolome = (strpos($fullPath, 'bartolome') !== false);
+                            $displaySrc = $fullPath;
+                            
+                            if ($isBartolome && file_exists($fullPath)) {
+                                $imageData = base64_encode(file_get_contents($fullPath));
+                                $displaySrc = 'data:image/jpeg;base64,' . $imageData;
+                            }
+                        ?>
+                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-caption="<?php echo htmlspecialchars($img['caption'] ?? ''); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
+                                <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
+                                    <?php if (!empty($img['caption'])): ?>
+                                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><?php echo htmlspecialchars($img['caption']); ?></strong>
+                                    <?php endif; ?>
+                                    <i class="fas fa-search-plus"></i> Ampliar obra
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="swiper-pagination"></div>
+                    <div class="swiper-button-next"></div>
+                    <div class="swiper-button-prev"></div>
                 </div>
             </div>
         <?php endif; ?>
@@ -272,6 +276,34 @@ if ($page['cat_parent_id']) {
         document.body.style.overflow = '';
         clearInterval(autoPlayInterval);
     }
+</script>
+
+<script>
+    // Inicialización del carrusel animado para la galería de la página
+    document.addEventListener('DOMContentLoaded', function () {
+        if (document.querySelector('.page-gallery-swiper')) {
+            new Swiper('.page-gallery-swiper', {
+                loop: false,
+                autoplay: {
+                    delay: 4000,
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                breakpoints: {
+                    320: { slidesPerView: 1.1, spaceBetween: 15, centeredSlides: true },
+                    768: { slidesPerView: 2.2, spaceBetween: 20, centeredSlides: false },
+                    1024: { slidesPerView: 3, spaceBetween: 30, centeredSlides: false }
+                }
+            });
+        }
+    });
 </script>
 
 <?php require_once 'inc/footer.php'; ?>
