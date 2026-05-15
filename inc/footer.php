@@ -68,6 +68,9 @@
             <p><a href="admin/index.php" style="color: inherit; text-decoration: none; outline: none; -webkit-tap-highlight-color: transparent; position: relative; z-index: 999; display: inline-block; padding: 20px; margin: -20px;">&copy;</a> Pablo Salinas Marín</p>
             <p>www.moratalla-murcia.com</p>
             <p>1998 - 2026</p>
+            <div style="margin-top: 2rem; max-width: 800px; font-size: 0.75rem; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
+                <p><strong>Protección de Datos:</strong> En cumplimiento de la normativa vigente en materia de protección de datos personales, le informamos que moratalla-murcia.com trata la información facilitada con el fin de gestionar la difusión cultural e histórica del proyecto. Puede ejercer sus derechos de acceso, rectificación, limitación y supresión de datos dirigiéndose al correo electrónico de contacto: <a href="mailto:pablosalinas@moratalla-murcia.com" style="color: white; text-decoration: underline;">pablosalinas@moratalla-murcia.com</a>.</p>
+            </div>
         </div>
     </footer>
 
