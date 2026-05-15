@@ -37,6 +37,9 @@ function renderHorizontalMenu($parentId = null) {
             $hasChildren = $stmtChild->fetchColumn() > 0;
             
             $url = "category.php?id={$cat['id']}";
+            if (mb_strtolower($cat['name'], 'UTF-8') === 'biblioteca') {
+                $url = "http://www.moratalla-murcia.com/biblioiteca";
+            }
             
             echo "<li>";
             echo "<a href='{$url}'>";

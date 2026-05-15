@@ -30,12 +30,15 @@ loadEnv();
  * Obtiene una variable de entorno con fallback
  */
 function env($key, $default = null) {
-    return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
+    if (isset($_ENV[$key])) return $_ENV[$key];
+    if (isset($_SERVER[$key])) return $_SERVER[$key];
+    $val = getenv($key);
+    return ($val !== false && $val !== null) ? $val : $default;
 }
 
 // Definir constantes globales basadas en el entorno
 // Autodetectar entorno basado en el host si no hay variable de entorno
-$currentHost = $_SERVER['HTTP_HOST'] ?? '';
+$currentHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
 $isProdHost = (strpos($currentHost, 'moratalla-murcia.com') !== false);
 $environment = env('APP_ENV', $isProdHost ? 'production' : 'local');
 
