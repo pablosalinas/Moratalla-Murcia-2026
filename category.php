@@ -89,6 +89,17 @@ function getCategoryIcon($name) {
 <div class="container main-content">
     <div class="content-card">
         
+        <?php if (mb_strtolower($category['name'], 'UTF-8') === 'biblioteca'): ?>
+            <div style="text-align: center; padding: 6rem 2rem; background: white; border-radius: 30px; box-shadow: var(--shadow); border: 1px solid var(--gray-200); margin-bottom: 3rem;">
+                <i class="fas fa-book-reader" style="font-size: 5rem; color: var(--accent); margin-bottom: 2rem; display: block;"></i>
+                <h3 style="font-size: 2rem; color: var(--primary); margin-bottom: 1.5rem;">Bienvenido a la Biblioteca Virtual</h3>
+                <p style="font-size: 1.2rem; color: var(--text-light); max-width: 600px; margin: 0 auto 3rem;">Accede a nuestro catálogo completo y recursos digitales a través de nuestra plataforma especializada.</p>
+                <a href="http://www.moratalla-murcia.com/biblioiteca" target="_blank" class="btn-nav btn-nav-home" style="padding: 1.5rem 3rem; font-size: 1.3rem; border-radius: 20px;">
+                    <i class="fas fa-external-link-alt"></i> Acceder a la Biblioteca
+                </a>
+            </div>
+        <?php endif; ?>
+
         <?php if (count($subcategories) > 0): ?>
             <h3 style="margin-bottom: 2rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--accent); padding-left: 1.2rem;">Subsecciones</h3>
             <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 4rem;">
