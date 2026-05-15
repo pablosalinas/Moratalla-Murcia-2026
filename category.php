@@ -91,11 +91,11 @@ function getCategoryIcon($name) {
         
         <?php if (mb_strtolower($category['name'], 'UTF-8') === 'biblioteca'): ?>
             <div style="text-align: center; padding: 6rem 2rem; background: white; border-radius: 30px; box-shadow: var(--shadow); border: 1px solid var(--gray-200); margin-bottom: 3rem;">
-                <i class="fas fa-book-reader" style="font-size: 5rem; color: var(--accent); margin-bottom: 2rem; display: block;"></i>
-                <h3 style="font-size: 2rem; color: var(--primary); margin-bottom: 1.5rem;">Bienvenido a la Biblioteca Virtual</h3>
-                <p style="font-size: 1.2rem; color: var(--text-light); max-width: 600px; margin: 0 auto 3rem;">Accede a nuestro catálogo completo y recursos digitales a través de nuestra plataforma especializada.</p>
-                <a href="http://www.moratalla-murcia.com/biblioiteca" target="_blank" class="btn-nav btn-nav-home" style="padding: 1.5rem 3rem; font-size: 1.3rem; border-radius: 20px;">
-                    <i class="fas fa-external-link-alt"></i> Acceder a la Biblioteca
+                <i class="fas fa-lock" style="font-size: 5rem; color: var(--accent); margin-bottom: 2rem; display: block;"></i>
+                <h3 style="font-size: 2rem; color: var(--primary); margin-bottom: 1.5rem;">Acceso Privado a Biblioteca</h3>
+                <p style="font-size: 1.2rem; color: var(--text-light); max-width: 600px; margin: 0 auto 3rem;">Esta sección es de acceso restringido. Por favor, utiliza tus credenciales para acceder al catálogo y recursos digitales.</p>
+                <a href="http://www.moratalla-murcia.com/biblioiteca" target="_blank" class="btn-nav btn-nav-home" style="padding: 1.5rem 3rem; font-size: 1.3rem; border-radius: 20px; background: var(--primary-dark);">
+                    <i class="fas fa-key"></i> Acceso Privado a Biblioteca
                 </a>
             </div>
         <?php endif; ?>
