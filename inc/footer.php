@@ -74,7 +74,39 @@
         </div>
     </footer>
 
+    <!-- Banner de Cookies -->
+    <div id="cookie-banner" style="display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 999999; padding: 1.5rem 0; border-top: 3px solid var(--primary);">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 300px;">
+                <h4 style="margin-bottom: 0.5rem; color: var(--primary); font-weight: 700;">Aviso de Cookies</h4>
+                <p style="font-size: 0.9rem; color: var(--text); line-height: 1.4;">Utilizamos cookies para mejorar su experiencia en moratalla-murcia.com. Al continuar navegando, acepta nuestra política de cookies y el tratamiento de datos personales.</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button id="accept-cookies" class="btn-nav btn-nav-home" style="padding: 0.8rem 1.8rem; border-radius: 12px; cursor: pointer; font-size: 0.9rem;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Lógica del Banner de Cookies
+        const cookieBanner = document.getElementById('cookie-banner');
+        const acceptBtn = document.getElementById('accept-cookies');
+
+        if (!localStorage.getItem('cookies-accepted')) {
+            setTimeout(() => {
+                cookieBanner.style.display = 'block';
+                cookieBanner.style.animation = 'slideUp 0.5s ease-out';
+            }, 1000);
+        }
+
+        acceptBtn.addEventListener('click', () => {
+            localStorage.setItem('cookies-accepted', 'true');
+            cookieBanner.style.opacity = '0';
+            setTimeout(() => {
+                cookieBanner.style.display = 'none';
+            }, 500);
+        });
+
         // Mobile Toggle Menu
         const toggleBtn = document.getElementById('menu-toggle');
         const navContainer = document.querySelector('.nav-container');
