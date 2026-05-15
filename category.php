@@ -28,6 +28,21 @@ if (count($pages) === 1 && count($subcategories) === 0) {
     exit;
 }
 
+// Lógica de navegación dinámica
+$backLink = "index.php";
+$backName = "el Inicio";
+
+if (!empty($category['parent_id'])) {
+    $stmtParent = $pdo->prepare("SELECT id, name FROM categories WHERE id = ?");
+    $stmtParent->execute([$category['parent_id']]);
+    $parent = $stmtParent->fetch();
+    if ($parent) {
+        $backLink = "category.php?id=" . $parent['id'];
+        $backName = $parent['name'];
+    }
+}
+
+
 // Ahora que hemos pasado todas las posibles redirecciones de cabecera, cargamos el Header
 $pageTitle = $category['name'];
 require_once 'inc/header.php';
@@ -56,51 +71,64 @@ function getCategoryIcon($name) {
 }
 ?>
 
-<section class="hero-page">
-    <div class="container" style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 15px; display: inline-block;">
-        <h2 style="text-shadow: none;"><?php echo htmlspecialchars($category['name']); ?></h2>
-        <p style="color: var(--text);">Inicio > <?php echo htmlspecialchars($category['name']); ?></p>
+<section class="hero-page" style="background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; padding: 6rem 0; text-align: center; color: white;">
+    <div class="container">
+        <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 2rem; border-radius: 20px; display: inline-block; border: 1px solid rgba(255,255,255,0.2);">
+            <h2 style="color: white; margin-bottom: 0.5rem; font-size: 3rem; text-shadow: 0 2px 10px rgba(0,0,0,0.3);"><?php echo htmlspecialchars($category['name']); ?></h2>
+            <p style="color: rgba(255,255,255,0.9); font-weight: 600;"><i class="fas fa-home"></i> Inicio <i class="fas fa-chevron-right" style="font-size: 0.7rem; margin: 0 10px; opacity: 0.5;"></i> <?php echo htmlspecialchars($category['name']); ?></p>
+        </div>
     </div>
 </section>
+
+<div class="container" style="margin-top: 2rem;">
+    <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-nav btn-nav-back btn-nav-sm" style="box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <i class="fas fa-arrow-left"></i> Volver a <?php echo htmlspecialchars($backName); ?>
+    </a>
+</div>
 
 <div class="container main-content">
     <div class="content-card">
         
         <?php if (count($subcategories) > 0): ?>
-            <h3 style="margin-bottom: 2rem; color: var(--primary);">Subsecciones</h3>
-            <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 4rem;">
+            <h3 style="margin-bottom: 2rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--accent); padding-left: 1.2rem;">Subsecciones</h3>
+            <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 4rem;">
                 <?php foreach ($subcategories as $sub): ?>
-                    <a href="category.php?id=<?php echo $sub['id']; ?>" class="btn-modern" style="background: white; color: var(--text); border: 1px solid var(--gray-300); justify-content: flex-start;">
-                        <i class="<?php echo getCategoryIcon($sub['name']); ?>" style="color: var(--accent);"></i>
-                        <?php echo htmlspecialchars($sub['name']); ?>
+                    <a href="category.php?id=<?php echo $sub['id']; ?>" class="btn-creative">
+                        <i class="<?php echo getCategoryIcon($sub['name']); ?>"></i>
+                        <span><?php echo htmlspecialchars($sub['name']); ?></span>
                     </a>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
 
         <?php if (count($pages) > 0): ?>
-            <h3 style="margin-bottom: 2rem; color: var(--primary);">Páginas en esta sección</h3>
-            <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+            <h3 style="margin-bottom: 2rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--primary); padding-left: 1.2rem;">Páginas en esta sección</h3>
+            <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
                 <?php foreach ($pages as $p): ?>
-                    <a href="page.php?id=<?php echo $p['id']; ?>" class="btn-modern" style="background: white; color: var(--text); border: 1px solid var(--gray-300); justify-content: flex-start; border-left: 4px solid var(--primary);">
+                    <a href="page.php?id=<?php echo $p['id']; ?>" class="btn-creative" style="border-left: 6px solid var(--primary);">
                         <i class="far fa-file-alt" style="color: var(--primary);"></i>
-                        <?php echo htmlspecialchars($p['title']); ?>
+                        <span><?php echo htmlspecialchars($p['title']); ?></span>
                     </a>
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
             <?php if (count($subcategories) == 0): ?>
-                <div style="text-align: center; padding: 4rem 0;">
-                    <i class="fas fa-search" style="font-size: 3rem; color: var(--gray-300); margin-bottom: 1.5rem;"></i>
-                    <p>No se ha encontrado contenido directo en esta sección todavía.</p>
-                    <a href="index.php" class="btn-modern" style="margin-top: 1rem;">Volver al Inicio</a>
+                <div style="text-align: center; padding: 5rem 0; background: var(--bg-alt); border-radius: 20px; border: 2px dashed var(--gray-300);">
+                    <i class="fas fa-search" style="font-size: 4rem; color: var(--gray-300); margin-bottom: 1.5rem; display: block;"></i>
+                    <p style="font-size: 1.2rem; color: var(--text-light);">No se ha encontrado contenido directo en esta sección todavía.</p>
+                    <a href="index.php" class="btn-nav btn-nav-home" style="margin-top: 2rem;">
+                        <i class="fas fa-home"></i> Volver al Inicio
+                    </a>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
         
-        <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--gray-100); display: flex; justify-content: center;">
-            <a href="index.php" class="btn-modern" style="background: var(--gray-200); color: var(--text);">
-                <i class="fas fa-home"></i> Volver a la Página Inicial
+        <div class="nav-buttons-container" style="justify-content: space-between; align-items: center; border-top: 1px solid var(--gray-100); padding-top: 3rem;">
+            <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-nav btn-nav-back btn-nav-sm">
+                <i class="fas fa-arrow-left"></i> Volver a <?php echo htmlspecialchars($backName); ?>
+            </a>
+            <a href="index.php" class="btn-nav btn-nav-home">
+                <i class="fas fa-home"></i> Inicio
             </a>
         </div>
 

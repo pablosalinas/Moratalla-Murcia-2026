@@ -12,6 +12,28 @@ function adminHeader($title = "Admin Panel") {
         <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon">
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <style>
+            .nav-link-btn {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 0.8rem 1.2rem;
+                border-radius: 10px;
+                text-decoration: none;
+                font-size: 0.9rem;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                margin-bottom: 0.5rem;
+            }
+            .nav-link-btn:hover {
+                transform: translateY(-2px);
+                filter: brightness(1.1);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            }
+            .logout-btn:hover {
+                background: #c1121f !important;
+            }
+        </style>
     </head>
     <body class="admin-body">
         <aside class="sidebar">
@@ -28,8 +50,10 @@ function adminHeader($title = "Admin Panel") {
                 <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>
                 <a href="banners.php" class="nav-link"><i class="fas fa-image"></i> Banner Interactivo</a>
                 <div class="nav-divider"></div>
-                <a href="logout.php?redirect=../index.php" class="nav-link"><i class="fas fa-external-link-alt"></i> Ver Web</a>
-                <a href="logout.php" class="nav-link logout"><i class="fas fa-sign-out-alt"></i> Salir</a>
+                <div style="padding: 0 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
+                    <a href="logout.php?redirect=../index.php" class="nav-link-btn" style="background: var(--primary); color: white;"><i class="fas fa-external-link-alt"></i> Ver Web</a>
+                    <a href="logout.php" class="nav-link-btn logout-btn" style="background: #e63946; color: white;"><i class="fas fa-sign-out-alt"></i> Salir</a>
+                </div>
             </nav>
         </aside>
         <main class="main-content">

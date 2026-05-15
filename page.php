@@ -46,12 +46,20 @@ if ($page['cat_parent_id']) {
 }
 ?>
 
-<section class="hero-page">
-    <div class="container" style="background: rgba(255,255,255,0.8); padding: 1.5rem; border-radius: 15px; display: inline-block;">
-        <p style="opacity: 0.8; margin-bottom: 0.5rem; color: var(--text);"><i class="fas fa-folder-open"></i> <?php echo htmlspecialchars($page['cat_name']); ?></p>
-        <h2 style="text-shadow: none;"><?php echo htmlspecialchars($page['title']); ?></h2>
+<section class="hero-page" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; padding: 5rem 0; text-align: center; color: white;">
+    <div class="container">
+        <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 2rem; border-radius: 20px; display: inline-block; border: 1px solid rgba(255,255,255,0.2);">
+            <p style="opacity: 0.9; margin-bottom: 0.5rem; color: white; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-folder-open" style="color: var(--accent);"></i> <?php echo htmlspecialchars($page['cat_name']); ?></p>
+            <h2 style="color: white; font-size: 2.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.3);"><?php echo htmlspecialchars($page['title']); ?></h2>
+        </div>
     </div>
 </section>
+
+<div class="container" style="margin-top: 2rem;">
+    <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-nav btn-nav-back btn-nav-sm" style="box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <i class="fas fa-arrow-left"></i> Volver a <?php echo htmlspecialchars($backName); ?>
+    </a>
+</div>
 
 <div class="container main-content">
     <div class="content-card">
@@ -102,11 +110,14 @@ if ($page['cat_parent_id']) {
             <?php echo $page['content']; ?>
         </article>
         
-        <div style="margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center;">
-            <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-modern" style="background: var(--gray-200); color: var(--text);">
+        <div class="nav-buttons-container" style="justify-content: space-between; align-items: center; border-top: 1px solid var(--gray-100); padding-top: 3rem;">
+            <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-nav btn-nav-back btn-nav-sm">
                 <i class="fas fa-arrow-left"></i> Volver a <?php echo htmlspecialchars($backName); ?>
             </a>
-            <div style="text-align: right; opacity: 0.4; font-size: 0.75rem;">
+            <a href="index.php" class="btn-nav btn-nav-home">
+                <i class="fas fa-home"></i> Inicio
+            </a>
+            <div style="text-align: right; opacity: 0.4; font-size: 0.75rem;" class="hide-mobile">
                 Archivo original: <?php echo htmlspecialchars($page['original_file']); ?>
             </div>
         </div>
