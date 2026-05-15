@@ -33,7 +33,8 @@ function getCategoryIcon($name) {
     if (strpos($n, 'historia') !== false || strpos($n, 'patrimonio') !== false) return 'fas fa-landmark';
     if (strpos($n, 'naturaleza') !== false || strpos($n, 'lugares') !== false || strpos($n, 'excursiones') !== false) return 'fas fa-tree';
     if (strpos($n, 'gastronomía') !== false || strpos($n, 'recetas') !== false) return 'fas fa-utensils';
-    if (strpos($n, 'fiestas') !== false || strpos($n, 'semana santa') !== false || strpos($n, 'nazareno') !== false || strpos($n, 'tambor') !== false) return 'fas fa-church';
+    if (strpos($n, 'fiestas') !== false) return 'fas fa-glass-cheers';
+    if (strpos($n, 'semana santa') !== false || strpos($n, 'nazareno') !== false || strpos($n, 'tambor') !== false) return 'fas fa-church';
     if (strpos($n, 'cristo') !== false || strpos($n, 'rayo') !== false) return 'fas fa-cross';
     if (strpos($n, 'asociaciones') !== false || strpos($n, 'servicios') !== false) return 'fas fa-users';
     if (strpos($n, 'noticias') !== false || strpos($n, 'actualidad') !== false) return 'fas fa-newspaper';
