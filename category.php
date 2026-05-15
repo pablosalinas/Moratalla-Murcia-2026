@@ -47,29 +47,9 @@ if (!empty($category['parent_id'])) {
 $pageTitle = $category['name'];
 require_once 'inc/header.php';
 
-function getCategoryIcon($name) {
-    $n = mb_strtolower($name, 'UTF-8');
-    if (strpos($n, 'artesan') !== false) return 'fas fa-hammer';
-    if (strpos($n, 'pintura') !== false || strpos($n, 'almagro') !== false) return 'fas fa-palette';
-    if (strpos($n, 'esparto') !== false) return 'fas fa-leaf';
-    if (strpos($n, 'música') !== false || strpos($n, 'musica') !== false || strpos($n, 'banda') !== false) return 'fas fa-music';
-    if (strpos($n, 'tamboristas') !== false || strpos($n, 'tambor') !== false) return 'fas fa-drum';
-    if (strpos($n, 'deporte') !== false || strpos($n, 'fútbol') !== false || strpos($n, 'futbol') !== false) return 'fas fa-futbol';
-    if (strpos($n, 'automovilismo') !== false || strpos($n, 'coche') !== false) return 'fas fa-car';
-    if (strpos($n, 'ciclista') !== false || strpos($n, 'ciclismo') !== false || strpos($n, 'bici') !== false) return 'fas fa-bicycle';
-    if (strpos($n, 'baloncesto') !== false) return 'fas fa-basketball-ball';
-    if (strpos($n, 'historia') !== false || strpos($n, 'patrimonio') !== false) return 'fas fa-landmark';
-    if (strpos($n, 'naturaleza') !== false || strpos($n, 'lugares') !== false || strpos($n, 'excursiones') !== false) return 'fas fa-tree';
-    if (strpos($n, 'gastronomía') !== false || strpos($n, 'recetas') !== false) return 'fas fa-utensils';
-    if (strpos($n, 'fiestas') !== false || strpos($n, 'semana santa') !== false || strpos($n, 'nazareno') !== false || strpos($n, 'tambor') !== false) return 'fas fa-church';
-    if (strpos($n, 'cristo') !== false || strpos($n, 'rayo') !== false) return 'fas fa-cross';
-    if (strpos($n, 'asociaciones') !== false || strpos($n, 'servicios') !== false) return 'fas fa-users';
-    if (strpos($n, 'noticias') !== false || strpos($n, 'actualidad') !== false) return 'fas fa-newspaper';
-    if (strpos($n, 'fotografía') !== false || strpos($n, 'galería') !== false) return 'fas fa-camera';
-    
-    return 'fas fa-folder-open';
-}
+// La función getCategoryIcon ha sido movida a inc/header.php para uso global
 ?>
+
 
 <section class="hero-page" style="background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; padding: 6rem 0; text-align: center; color: white;">
     <div class="container">

@@ -14,7 +14,7 @@ require_once 'inc/header.php';
             while ($cat = $stmt->fetch()) {
                 ?>
                 <a href="category.php?id=<?php echo $cat['id']; ?>" class="section-link">
-                    <i class="fas fa-folder"></i>
+                    <i class="<?php echo getCategoryIcon($cat['name']); ?>"></i>
                     <div>
                         <div style="font-size: 1.1rem;"><?php echo htmlspecialchars($cat['name']); ?></div>
                         <small style="font-weight: 400; color: var(--text-light); font-size: 0.75rem;">Explorar sección</small>
