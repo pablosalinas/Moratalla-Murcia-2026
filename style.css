@@ -172,7 +172,7 @@ body {
 
 .main-banner-swiper .swiper-slide-prev,
 .main-banner-swiper .swiper-slide-next {
-    opacity: 0.8;
+    opacity: 1;
 }
 
 @media (max-width: 1023px) {
@@ -190,7 +190,7 @@ body {
 }
 
 .main-banner-swiper .swiper-slide:not(.swiper-slide-active) img {
-    opacity: 0.5;
+    opacity: 1;
 }
 .main-banner-swiper .swiper-slide-active img {
     opacity: 1;
