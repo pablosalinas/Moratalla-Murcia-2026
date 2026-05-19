@@ -10,7 +10,7 @@ require_once 'inc/header.php';
         
         <div class="sections-grid">
             <?php
-            $stmt = $pdo->query("SELECT * FROM categories WHERE parent_id IS NULL AND sort_order > 0 ORDER BY sort_order ASC");
+            $stmt = $pdo->query("SELECT * FROM categories WHERE parent_id IS NULL AND sort_order > 0 AND is_visible = 1 ORDER BY sort_order ASC");
             while ($cat = $stmt->fetch()) {
                 ?>
                 <a href="category.php?id=<?php echo $cat['id']; ?>" class="section-link">

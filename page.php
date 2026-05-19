@@ -3,14 +3,20 @@
 require_once 'config.php';
 $pdo = getDB();
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? $_GET['id'] : null;
 if (!$id) { header("Location: index.php"); exit; }
 
-$stmt = $pdo->prepare("SELECT p.*, c.name as cat_name, c.id as cat_id, c.parent_id as cat_parent_id FROM pages p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?");
+$stmt = $pdo->prepare("SELECT p.*, c.name as cat_name, c.id as cat_id, c.parent_id as cat_parent_id, c.is_visible as cat_is_visible FROM pages p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?");
 $stmt->execute([$id]);
 $page = $stmt->fetch();
 
 if (!$page) { header("Location: index.php"); exit; }
+
+// Si la página pertenece a una categoría y esa categoría está oculta/invisible, no permitir el acceso
+if ($page['cat_id'] && $page['cat_is_visible'] == 0) {
+    header("Location: index.php");
+    exit;
+}
 
 // SEO dinámico
 $pageTitle = $page['title'];
@@ -26,7 +32,7 @@ $backLink = "category.php?id=" . $page['cat_id'];
 $backName = $page['cat_name'];
 
 if ($page['cat_parent_id']) {
-    $stmtSub = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ?");
+    $stmtSub = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AND is_visible = 1");
     $stmtSub->execute([$page['cat_id']]);
     $subCount = $stmtSub->fetchColumn();
     
@@ -35,7 +41,7 @@ if ($page['cat_parent_id']) {
     $pgCount = $stmtPg->fetchColumn();
     
     if ($pgCount == 1 && $subCount == 0) {
-        $stmtParent = $pdo->prepare("SELECT id, name FROM categories WHERE id = ?");
+        $stmtParent = $pdo->prepare("SELECT id, name FROM categories WHERE id = ? AND is_visible = 1");
         $stmtParent->execute([$page['cat_parent_id']]);
         $parentCat = $stmtParent->fetch();
         if ($parentCat) {
@@ -88,7 +94,7 @@ if ($page['cat_parent_id']) {
                                 $displaySrc = 'data:image/jpeg;base64,' . $imageData;
                             }
                         ?>
-                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-caption="<?php echo htmlspecialchars($img['caption'] ?? ''); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
+                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-caption="<?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
                                 <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
                                 <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
                                     <?php if (!empty($img['caption'])): ?>

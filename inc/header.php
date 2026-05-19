@@ -43,13 +43,13 @@ function getCategoryIcon($name) {
     
     return 'fas fa-folder-open';
 }
-$tickerSpeed = $settings['ticker_speed'] ?? "30";
-$bannerSpeed = $settings['banner_speed'] ?? "5000";
+$tickerSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : "30";
+$bannerSpeed = isset($settings['banner_speed']) ? $settings['banner_speed'] : "5000";
 if ((int)$bannerSpeed < 3000) $bannerSpeed = 3000; // Seguridad para evitar parpadeos
 
 function renderHorizontalMenu($parentId = null) {
     global $pdo;
-    $stmt = $pdo->prepare("SELECT * FROM categories WHERE " . ($parentId === null ? "parent_id IS NULL" : "parent_id = ?") . " ORDER BY sort_order ASC, name ASC");
+    $stmt = $pdo->prepare("SELECT * FROM categories WHERE is_visible = 1 AND " . ($parentId === null ? "parent_id IS NULL" : "parent_id = ?") . " ORDER BY sort_order ASC, name ASC");
     if ($parentId === null) $stmt->execute();
     else $stmt->execute([$parentId]);
     
@@ -57,7 +57,7 @@ function renderHorizontalMenu($parentId = null) {
     if (count($categories) > 0) {
         echo $parentId === null ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
         foreach ($categories as $cat) {
-            $stmtChild = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ?");
+            $stmtChild = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AND is_visible = 1");
             $stmtChild->execute([$cat['id']]);
             $hasChildren = $stmtChild->fetchColumn() > 0;
             

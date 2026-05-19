@@ -165,3 +165,8 @@
 [2026-05-14 21:47:35] [✓] 067_add_image_metadata.sql — OK.
 [2026-05-14 21:47:35] --------------------------------------------------
 [2026-05-14 21:47:35] Finalizado. Éxitos: 1 | Errores: 0
+[2026-05-19 22:20:13] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-05-19 22:20:13] [>>] Ejecutando: 068_add_category_visibility.sql ...
+[2026-05-19 22:20:13] [✓] 068_add_category_visibility.sql — OK.
+[2026-05-19 22:20:13] --------------------------------------------------
+[2026-05-19 22:20:13] Finalizado. Éxitos: 1 | Errores: 0

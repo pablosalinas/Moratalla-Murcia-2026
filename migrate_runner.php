@@ -14,7 +14,7 @@ $isCLI = (php_sapi_name() === 'cli');
 $logFile = __DIR__ . '/migration_log.txt';
 
 if (!$isCLI) {
-    $providedSecret = $_GET['secret'] ?? $_POST['secret'] ?? '';
+    $providedSecret = isset($_GET['secret']) ? $_GET['secret'] : (isset($_POST['secret']) ? $_POST['secret'] : '');
     if (empty(MIGRATE_SECRET) || $providedSecret !== MIGRATE_SECRET) {
         http_response_code(403);
         die('Acceso denegado.');

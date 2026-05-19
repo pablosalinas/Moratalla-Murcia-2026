@@ -3,17 +3,17 @@
 require_once 'config.php';
 $pdo = getDB();
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? $_GET['id'] : null;
 if (!$id) { header("Location: index.php"); exit; }
 
-$stmt = $pdo->prepare("SELECT * FROM categories WHERE id = ?");
+$stmt = $pdo->prepare("SELECT * FROM categories WHERE id = ? AND is_visible = 1");
 $stmt->execute([$id]);
 $category = $stmt->fetch();
 
 if (!$category) { header("Location: index.php"); exit; }
 
 // Buscamos subcategorías
-$stmtSub = $pdo->prepare("SELECT * FROM categories WHERE parent_id = ? ORDER BY sort_order ASC, name ASC");
+$stmtSub = $pdo->prepare("SELECT * FROM categories WHERE parent_id = ? AND is_visible = 1 ORDER BY sort_order ASC, name ASC");
 $stmtSub->execute([$id]);
 $subcategories = $stmtSub->fetchAll();
 
@@ -33,7 +33,7 @@ $backLink = "index.php";
 $backName = "el Inicio";
 
 if (!empty($category['parent_id'])) {
-    $stmtParent = $pdo->prepare("SELECT id, name FROM categories WHERE id = ?");
+    $stmtParent = $pdo->prepare("SELECT id, name FROM categories WHERE id = ? AND is_visible = 1");
     $stmtParent->execute([$category['parent_id']]);
     $parent = $stmtParent->fetch();
     if ($parent) {

@@ -6,7 +6,7 @@ require_once '../config.php';
 require_once 'inc/layout.php';
 
 $pdo = getDB();
-$action = $_GET['action'] ?? 'list';
+$action = isset($_GET['action']) ? $_GET['action'] : 'list';
 $msg = "";
 $error = "";
 
@@ -37,11 +37,12 @@ function slugify($text) {
 // PROCESAR ACCIONES DE GUARDADO (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action == 'add' || $action == 'edit') {
-        $id = $_POST['id'] ?? '';
-        $name = trim($_POST['name'] ?? '');
-        $parent_id = $_POST['parent_id'] ?? '';
-        $slug = trim($_POST['slug'] ?? '');
-        $sort_order = (int)($_POST['sort_order'] ?? 0);
+        $id = isset($_POST['id']) ? $_POST['id'] : '';
+        $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+        $parent_id = isset($_POST['parent_id']) ? $_POST['parent_id'] : '';
+        $slug = isset($_POST['slug']) ? trim($_POST['slug']) : '';
+        $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
+        $is_visible = isset($_POST['is_visible']) ? 1 : 0;
         
         if (empty($parent_id)) {
             $parent_id = null;
@@ -71,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $stmt = $pdo->prepare("INSERT INTO categories (name, parent_id, slug, sort_order) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$name, $parent_id, $slug, $sort_order]);
+                $stmt = $pdo->prepare("INSERT INTO categories (name, parent_id, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$name, $parent_id, $slug, $sort_order, $is_visible]);
                 $msg = "Categoría creada con éxito.";
                 $action = 'list';
             } else {
@@ -80,8 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($parent_id == $id) {
                     $parent_id = null;
                 }
-                $stmt = $pdo->prepare("UPDATE categories SET name = ?, parent_id = ?, slug = ?, sort_order = ? WHERE id = ?");
-                $stmt->execute([$name, $parent_id, $slug, $sort_order, $id]);
+                $stmt = $pdo->prepare("UPDATE categories SET name = ?, parent_id = ?, slug = ?, sort_order = ?, is_visible = ? WHERE id = ?");
+                $stmt->execute([$name, $parent_id, $slug, $sort_order, $is_visible, $id]);
                 $msg = "Categoría modificada con éxito.";
                 $action = 'list';
             }
@@ -121,6 +122,11 @@ function renderCategoryTree($parentId = null, $depth = 0) {
                 <strong style="color: var(--primary);"><?php echo htmlspecialchars($cat['name']); ?></strong>
                 <small style="color: #7f8c8d; font-family: monospace;">(<?php echo htmlspecialchars($cat['slug']); ?>)</small>
                 <span class="badge badge-info" style="font-size: 0.7rem; background: var(--gray-100);">Orden: <?php echo $cat['sort_order']; ?></span>
+                <?php if (!$cat['is_visible']): ?>
+                    <span class="badge" style="font-size: 0.7rem; background: #ffebee; color: #c62828;"><i class="fas fa-eye-slash"></i> Invisible</span>
+                <?php else: ?>
+                    <span class="badge" style="font-size: 0.7rem; background: #e8f5e9; color: #2e7d32;"><i class="fas fa-eye"></i> Visible</span>
+                <?php endif; ?>
             </div>
             <div style="display: flex; gap: 8px;">
                 <a href="?action=edit&id=<?php echo $cat['id']; ?>" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;"><i class="fas fa-edit"></i> Modificar</a>
@@ -187,7 +193,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
     </div>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $cat_data = ['id' => '', 'name' => '', 'parent_id' => '', 'slug' => '', 'sort_order' => 0];
+    $cat_data = ['id' => '', 'name' => '', 'parent_id' => '', 'slug' => '', 'sort_order' => 0, 'is_visible' => 1];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM categories WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -231,6 +237,11 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
                 <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Orden de Visualización</label>
                 <input type="number" name="sort_order" required value="<?php echo (int)($cat_data['sort_order']); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem;">
                 <small style="color: #666; display: block; margin-top: 0.4rem;">Define la posición de esta categoría en los listados y menús. Las categorías raíz con orden mayor a 0 se listan en el Inicio.</small>
+            </div>
+
+            <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" name="is_visible" id="is_visible" value="1" <?php echo ($cat_data['is_visible'] ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
+                <label for="is_visible" style="font-weight: 600; color: var(--primary); cursor: pointer; user-select: none;">¿Categoría visible en la web?</label>
             </div>
             
             <div style="display: flex; gap: 10px; margin-top: 2.5rem; border-top: 1px solid var(--gray-200); padding-top: 1.5rem;">
