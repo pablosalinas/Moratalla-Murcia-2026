@@ -27,27 +27,37 @@ if (strlen($cleanText) > 150) $pageDescription .= "...";
 
 require_once 'inc/header.php';
 
-// Evitar bucle en botón "Volver": si la categoría actual es de 1 sola página, volver al padre
+// Evitar bucle en botón "Volver": si la categoría actual es de 1 sola página, volver al padre o al Inicio
 $backLink = "category.php?id=" . $page['cat_id'];
 $backName = $page['cat_name'];
 
-if ($page['cat_parent_id']) {
-    $stmtSub = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AND is_visible = 1");
-    $stmtSub->execute([$page['cat_id']]);
-    $subCount = $stmtSub->fetchColumn();
-    
-    $stmtPg = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ?");
-    $stmtPg->execute([$page['cat_id']]);
-    $pgCount = $stmtPg->fetchColumn();
-    
-    if ($pgCount == 1 && $subCount == 0) {
+// Obtenemos cantidad de páginas y subcategorías de la categoría actual
+$stmtSub = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AND is_visible = 1");
+$stmtSub->execute([$page['cat_id']]);
+$subCount = $stmtSub->fetchColumn();
+
+$stmtPg = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ?");
+$stmtPg->execute([$page['cat_id']]);
+$pgCount = $stmtPg->fetchColumn();
+
+$isSinglePageCategory = ($pgCount == 1 && $subCount == 0);
+
+if ($isSinglePageCategory) {
+    if ($page['cat_parent_id']) {
         $stmtParent = $pdo->prepare("SELECT id, name FROM categories WHERE id = ? AND is_visible = 1");
         $stmtParent->execute([$page['cat_parent_id']]);
         $parentCat = $stmtParent->fetch();
         if ($parentCat) {
             $backLink = "category.php?id=" . $parentCat['id'];
             $backName = $parentCat['name'];
+        } else {
+            $backLink = "index.php";
+            $backName = "el Inicio";
         }
+    } else {
+        // Es una categoría raíz con una sola página. Volver al Inicio.
+        $backLink = "index.php";
+        $backName = "el Inicio";
     }
 }
 ?>
@@ -117,9 +127,11 @@ if ($page['cat_parent_id']) {
         </article>
         
         <div class="nav-buttons-container" style="justify-content: space-between; align-items: center; border-top: 1px solid var(--gray-100); padding-top: 3rem;">
-            <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-nav btn-nav-back btn-nav-sm">
-                <i class="fas fa-arrow-left"></i> Volver a <?php echo htmlspecialchars($backName); ?>
-            </a>
+            <?php if ($backLink !== "index.php"): ?>
+                <a href="<?php echo htmlspecialchars($backLink); ?>" class="btn-nav btn-nav-back btn-nav-sm">
+                    <i class="fas fa-arrow-left"></i> Volver a <?php echo htmlspecialchars($backName); ?>
+                </a>
+            <?php endif; ?>
             <a href="index.php" class="btn-nav btn-nav-home">
                 <i class="fas fa-home"></i> Inicio
             </a>
