@@ -19,15 +19,16 @@ require_once 'inc/header.php';
                 $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
                 
                 // Obtener imágenes adicionales de galería
-                $stmtG = $pdo->prepare("SELECT image_path FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+                $stmtG = $pdo->prepare("SELECT image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
                 $stmtG->execute([$news['id']]);
-                $gallery = $stmtG->fetchAll(PDO::FETCH_COLUMN);
+                $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
                 ?>
                 <div class="news-card" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
                     'title' => $news['title'],
                     'date' => $dateText,
                     'isEvent' => $isEvent,
                     'image' => $news['image_path'] ? $news['image_path'] : '',
+                    'image_caption' => $news['image_caption'] ?? '',
                     'content' => nl2br($news['content']),
                     'gallery' => $gallery
                 ])); ?>)">

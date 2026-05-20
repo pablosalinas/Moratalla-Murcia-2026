@@ -65,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'] ?? '';
         $title = trim($_POST['title'] ?? '');
         $content = trim($_POST['content'] ?? '');
+        $image_caption = trim($_POST['image_caption'] ?? '');
         $event_date = $_POST['event_date'] ?? null;
         $is_active_home = isset($_POST['is_active_home']) ? 1 : 0;
         $category_id = $_POST['category_id'] ?? null;
@@ -117,13 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, event_date, is_active_home, category_id, is_active_category) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$title, $content, $image_path, $event_date, $is_active_home, $category_id, $is_active_category]);
+                $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category]);
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ? WHERE id = ?");
-                $stmt->execute([$title, $content, $image_path, $event_date, $is_active_home, $category_id, $is_active_category, $id]);
+                $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ? WHERE id = ?");
+                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $id]);
                 $news_id = $id;
                 $msg = "Noticia/Evento actualizado con éxito.";
             }
@@ -158,11 +159,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Actualizar órdenes de ordenación de la galería existente
+            // Actualizar órdenes y descripciones de la galería existente
             if (isset($_POST['sort_order']) && is_array($_POST['sort_order'])) {
                 foreach ($_POST['sort_order'] as $imgId => $orderVal) {
-                    $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ? WHERE id = ?");
-                    $stmtOrder->execute([(int)$orderVal, (int)$imgId]);
+                    $captionVal = isset($_POST['captions'][$imgId]) ? trim($_POST['captions'][$imgId]) : null;
+                    $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ?, caption = ? WHERE id = ?");
+                    $stmtOrder->execute([(int)$orderVal, $captionVal, (int)$imgId]);
                 }
             }
 
@@ -366,6 +368,7 @@ adminHeader("Noticias y Eventos");
                             <small style="color: #666;">Archivo actual. Si subes otro, se reemplazará.</small>
                         </div>
                     <?php endif; ?>
+                    <input type="text" name="image_caption" value="<?php echo htmlspecialchars($news_data['image_caption'] ?? ''); ?>" placeholder="Descripción o pie de foto (opcional)" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 0.9rem; margin-top: 0.8rem; background: white;">
                 </div>
             </div>
 
@@ -420,10 +423,11 @@ adminHeader("Noticias y Eventos");
                                 <?php else: ?>
                                     <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">
                                 <?php endif; ?>
-                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 0.3rem;">
                                     <span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>
                                     <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
                                 </div>
+                                <input type="text" name="captions[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['caption'] ?? ''); ?>" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
                                 <a href="news.php?action=delete_img&img_id=<?php echo $gimg['id']; ?>&news_id=<?php echo $news_data['id']; ?>" 
                                    style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" 
                                    onclick="return confirm('¿Eliminar esta imagen de la galería?')">
@@ -485,10 +489,11 @@ adminHeader("Noticias y Eventos");
                         const div = document.createElement('div');
                         div.style.cssText = 'border: 1px solid #10b981; border-radius: 8px; padding: 0.5rem; background: #ecfdf5; text-align: center; position: relative; animation: highlight 2s ease-out;';
                         div.innerHTML = content + 
-                            '<div style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">' +
+                            '<div style="display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 0.3rem;">' +
                             '<span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>' +
                             '<input type="number" name="sort_order[' + file.id + ']" value="0" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
                             '</div>' +
+                            '<input type="text" name="captions[' + file.id + ']" value="" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
                             '<a href="news.php?action=delete_img&img_id=' + file.id + '&news_id=' + newsId + '" style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" onclick="return confirm(\'¿Eliminar esta imagen de la galería?\')"><i class="fas fa-times"></i></a>';
                         
                         grid.appendChild(div);

@@ -205,6 +205,7 @@
         <div class="news-modal-content">
             <button class="news-modal-close" onclick="closeNewsModalDirect()"><i class="fas fa-times"></i></button>
             <div id="modalImageContainer"></div>
+            <div id="modalImageCaption" style="display:none; text-align:center; padding: 0.8rem; background: var(--gray-100); color: var(--text-light); font-size: 0.9rem; border-bottom: 1px solid var(--gray-200); font-style: italic;"></div>
             <div class="news-modal-body">
                 <div id="modalDate" class="news-modal-date"></div>
                 <h2 id="modalTitle" class="news-modal-title"></h2>
@@ -223,9 +224,10 @@
         <button class="news-carousel-btn next" onclick="nextNewsCarousel()"><i class="fas fa-chevron-right"></i></button>
         <div class="news-carousel-container">
             <img id="newsCarouselImg" class="news-carousel-img" src="" alt="" style="transition: opacity 0.3s ease;">
-            <div id="newsCarouselCounter" class="news-carousel-counter"></div>
+            <div id="newsCarouselCaption" style="color: white; margin-top: 1.5rem; font-size: 1.1rem; text-align: center; max-width: 800px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); min-height: 1.5rem;"></div>
+            <div id="newsCarouselCounter" class="news-carousel-counter" style="position: absolute; top: -30px; right: 0;"></div>
             <!-- Indicador de Tiempo Visual -->
-            <div style="position: absolute; bottom: -2rem; display: flex; gap: 0.5rem; color: white; opacity: 0.6; font-size: 0.9rem; left: 50%; transform: translateX(-50%); white-space: nowrap;">
+            <div style="position: absolute; bottom: -3.5rem; display: flex; gap: 0.5rem; color: white; opacity: 0.6; font-size: 0.9rem; left: 50%; transform: translateX(-50%); white-space: nowrap;">
                 <i class="fas fa-play" style="font-size: 0.7rem; margin-top: 3px;"></i> Reproducción Automática (4s)
             </div>
         </div>
@@ -239,6 +241,7 @@
     function openNewsModal(data) {
         const modal = document.getElementById('newsDetailModal');
         const modalImageContainer = document.getElementById('modalImageContainer');
+        const modalImageCaption = document.getElementById('modalImageCaption');
         const modalDate = document.getElementById('modalDate');
         const modalTitle = document.getElementById('modalTitle');
         const modalText = document.getElementById('modalText');
@@ -251,8 +254,16 @@
                 modalImageContainer.innerHTML = '<img id="modalImage" class="news-modal-img" src="' + data.image + '" alt="' + data.title + '">';
             }
             modalImageContainer.style.display = 'block';
+            
+            if (data.image_caption && data.image_caption.trim() !== '') {
+                modalImageCaption.textContent = data.image_caption;
+                modalImageCaption.style.display = 'block';
+            } else {
+                modalImageCaption.style.display = 'none';
+            }
         } else {
             modalImageContainer.style.display = 'none';
+            modalImageCaption.style.display = 'none';
         }
         
         modalDate.innerHTML = (data.isEvent ? '<i class="fas fa-calendar-alt" style="color:var(--accent);"></i> Evento: ' : '<i class="fas fa-newspaper" style="color:var(--primary);"></i> Noticia: ') + data.date;
@@ -266,14 +277,14 @@
         let hasGalleryFiles = false;
         
         if (data.image && !data.image.toLowerCase().endsWith('.pdf')) {
-            currentCarouselImages.push(data.image);
+            currentCarouselImages.push({src: data.image, caption: data.image_caption || ''});
         }
         
         if (data.gallery && data.gallery.length > 0) {
             hasGalleryFiles = true;
-            data.gallery.forEach(img => {
-                if (!img.toLowerCase().endsWith('.pdf')) {
-                    currentCarouselImages.push(img);
+            data.gallery.forEach(imgObj => {
+                if (!imgObj.image_path.toLowerCase().endsWith('.pdf')) {
+                    currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || ''});
                 }
             });
         }
@@ -289,15 +300,17 @@
             
             // Recorrer todos los archivos para mostrarlos (imágenes + PDFs)
             let allFiles = [];
-            if (data.image) allFiles.push(data.image);
-            if (data.gallery) allFiles = allFiles.concat(data.gallery);
+            if (data.image) allFiles.push({path: data.image, caption: data.image_caption || ''});
+            if (data.gallery) {
+                data.gallery.forEach(g => allFiles.push({path: g.image_path, caption: g.caption || ''}));
+            }
             
             allFiles.forEach(file => {
-                if (file.toLowerCase().endsWith('.pdf')) {
-                    galleryHtml += '<a href="' + file + '" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; text-decoration:none; border-radius:8px; border: 1px solid #f87171;"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">Abrir PDF</span></a>';
+                if (file.path.toLowerCase().endsWith('.pdf')) {
+                    galleryHtml += '<a href="' + file.path + '" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; text-decoration:none; border-radius:8px; border: 1px solid #f87171;"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">' + (file.caption ? file.caption : 'Abrir PDF') + '</span></a>';
                 } else {
-                    let cIndex = currentCarouselImages.indexOf(file);
-                    galleryHtml += '<img class="news-gallery-thumb" src="' + file + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">';
+                    let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
+                    galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px;"><img class="news-gallery-thumb" src="' + file.path + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">' + (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') + '</div>';
                 }
             });
             
@@ -344,10 +357,12 @@
     function updateCarouselState() {
         const imgElement = document.getElementById('newsCarouselImg');
         const counterElement = document.getElementById('newsCarouselCounter');
+        const captionElement = document.getElementById('newsCarouselCaption');
         
         imgElement.style.opacity = 0;
         setTimeout(() => {
-            imgElement.src = currentCarouselImages[currentCarouselIndex];
+            imgElement.src = currentCarouselImages[currentCarouselIndex].src;
+            captionElement.textContent = currentCarouselImages[currentCarouselIndex].caption;
             imgElement.style.opacity = 1;
             counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
         }, 150);
