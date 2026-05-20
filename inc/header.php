@@ -19,6 +19,19 @@ $settings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $tickerText = isset($settings['ticker_text']) ? $settings['ticker_text'] : "Bienvenido a moratalla-murcia.com";
 
+// Obtener una cita aleatoria para concatenarla al ticker
+try {
+    $quoteStmt = $pdo->query("SELECT phrase, author FROM quotes ORDER BY RAND() LIMIT 1");
+    $randomQuote = $quoteStmt->fetch();
+    if ($randomQuote) {
+        $authorText = !empty($randomQuote['author']) ? " — " . $randomQuote['author'] : "";
+        $spacer = str_repeat("\xc2\xa0", 15);
+        $tickerText .= $spacer . "\"" . $randomQuote['phrase'] . "\"" . $authorText;
+    }
+} catch (Exception $e) {
+    // Evitar romper la página si hay algún error
+}
+
 function getCategoryIcon($name) {
     $n = mb_strtolower($name, 'UTF-8');
     if (strpos($n, 'artesan') !== false) return 'fas fa-hammer';
