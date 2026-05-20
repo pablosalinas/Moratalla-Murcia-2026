@@ -45,8 +45,8 @@ if (isset($_GET['delete'])) {
     $img = $stmt->fetch();
     
     if ($img) {
-        if (file_exists('../' . $img['image_path'])) {
-            unlink('../' . $img['image_path']);
+        if (!empty($img['image_path']) && is_file('../' . $img['image_path'])) {
+            @unlink('../' . $img['image_path']);
         }
         $pdo->prepare("DELETE FROM page_images WHERE id = ?")->execute([$id]);
     }

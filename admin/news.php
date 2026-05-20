@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
                 
                 // Si ya había imagen, borrarla
-                if ($image_path && file_exists('../' . $image_path)) {
+                if (!empty($image_path) && is_file('../' . $image_path)) {
                     @unlink('../' . $image_path);
                 }
                 
@@ -116,7 +116,7 @@ if ($action == 'delete_img' && isset($_GET['img_id']) && isset($_GET['news_id'])
     $stmt->execute([$img_id]);
     $path = $stmt->fetchColumn();
     
-    if ($path && file_exists('../' . $path)) {
+    if (!empty($path) && is_file('../' . $path)) {
         @unlink('../' . $path);
     }
     
@@ -136,7 +136,7 @@ if ($action == 'delete' && isset($_GET['id'])) {
     $stmt = $pdo->prepare("SELECT image_path FROM news_events WHERE id = ?");
     $stmt->execute([$id]);
     $image_path = $stmt->fetchColumn();
-    if ($image_path && file_exists('../' . $image_path)) {
+    if (!empty($image_path) && is_file('../' . $image_path)) {
         @unlink('../' . $image_path);
     }
     
@@ -145,7 +145,7 @@ if ($action == 'delete' && isset($_GET['id'])) {
     $stmt->execute([$id]);
     $gallery_imgs = $stmt->fetchAll(PDO::FETCH_COLUMN);
     foreach ($gallery_imgs as $gpath) {
-        if ($gpath && file_exists('../' . $gpath)) {
+        if (!empty($gpath) && is_file('../' . $gpath)) {
             @unlink('../' . $gpath);
         }
     }
