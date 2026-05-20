@@ -200,6 +200,60 @@
         }, 10000);
     </script>
 
+    <!-- Modal para Detalles de Noticias/Eventos -->
+    <div id="newsDetailModal" class="news-modal" onclick="closeNewsModal(event)">
+        <div class="news-modal-content">
+            <button class="news-modal-close" onclick="closeNewsModalDirect()"><i class="fas fa-times"></i></button>
+            <div id="modalImageContainer">
+                <img id="modalImage" class="news-modal-img" src="" alt="">
+            </div>
+            <div class="news-modal-body">
+                <div id="modalDate" class="news-modal-date"></div>
+                <h2 id="modalTitle" class="news-modal-title"></h2>
+                <div id="modalText" class="news-modal-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openNewsModal(data) {
+        const modal = document.getElementById('newsDetailModal');
+        const modalImageContainer = document.getElementById('modalImageContainer');
+        const modalImage = document.getElementById('modalImage');
+        const modalDate = document.getElementById('modalDate');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalText = document.getElementById('modalText');
+        
+        if (data.image) {
+            modalImage.src = data.image;
+            modalImage.alt = data.title;
+            modalImageContainer.style.display = 'block';
+        } else {
+            modalImageContainer.style.display = 'none';
+        }
+        
+        modalDate.innerHTML = (data.isEvent ? '<i class="fas fa-calendar-alt" style="color:var(--accent);"></i> Evento: ' : '<i class="fas fa-newspaper" style="color:var(--primary);"></i> Noticia: ') + data.date;
+        modalTitle.textContent = data.title;
+        modalText.innerHTML = data.content;
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeNewsModal(event) {
+        const modal = document.getElementById('newsDetailModal');
+        if (event.target === modal) {
+            closeNewsModalDirect();
+        }
+    }
+
+    function closeNewsModalDirect() {
+        const modal = document.getElementById('newsDetailModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    </script>
+
     <!-- Modal para maximizar banners -->
     <div id="bannerModal" style="display:none; position:fixed; z-index:99999; left:0; top:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.9); align-items:center; justify-content:center; cursor:zoom-out;" onclick="this.style.display='none'">
         <span style="position:absolute; top:20px; right:40px; color:white; font-size:40px; font-weight:bold; cursor:pointer;">&times;</span>

@@ -45,6 +45,7 @@ function adminHeader($title = "Admin Panel") {
                 <a href="categories.php" class="nav-link"><i class="fas fa-folder-tree"></i> Categorías</a>
                 <a href="pages.php" class="nav-link"><i class="fas fa-file-alt"></i> Páginas</a>
                 <a href="images.php" class="nav-link"><i class="fas fa-images"></i> Galería</a>
+                <a href="news.php" class="nav-link"><i class="fas fa-newspaper"></i> Noticias / Eventos</a>
                 <a href="users.php" class="nav-link"><i class="fas fa-users-cog"></i> Usuarios</a>
                 <div class="nav-divider"></div>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>

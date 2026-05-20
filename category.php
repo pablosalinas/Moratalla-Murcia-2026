@@ -92,6 +92,51 @@ require_once 'inc/header.php';
             </div>
         <?php endif; ?>
 
+        <!-- Noticias y Eventos de esta Categoría -->
+        <?php
+        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE category_id = ? AND is_active_category = 1 AND is_active_home = 0 ORDER BY event_date DESC, id DESC");
+        $stmtNews->execute([$id]);
+        $categoryNews = $stmtNews->fetchAll();
+        
+        if (count($categoryNews) > 0):
+        ?>
+            <h3 style="margin-bottom: 2rem; margin-top: 3rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--accent); padding-left: 1.2rem;">Noticias y Eventos de la Sección</h3>
+            <div class="news-grid" style="margin-bottom: 4rem;">
+                <?php foreach ($categoryNews as $news): 
+                    $isEvent = !empty($news['event_date']);
+                    $dateText = $isEvent ? date('d/m/Y', strtotime($news['event_date'])) : date('d/m/Y', strtotime($news['created_at']));
+                    $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
+                    ?>
+                    <div class="news-card" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
+                        'title' => $news['title'],
+                        'date' => $dateText,
+                        'isEvent' => $isEvent,
+                        'image' => $news['image_path'] ? $news['image_path'] : '',
+                        'content' => nl2br($news['content'])
+                    ])); ?>)">
+                        <div class="news-card-img-wrapper">
+                            <span class="news-badge <?php echo $isEvent ? 'event' : ''; ?>">
+                                <?php echo $isEvent ? '<i class="fas fa-calendar-alt"></i> Evento' : '<i class="fas fa-newspaper"></i> Noticia'; ?>
+                            </span>
+                            <?php if ($news['image_path']): ?>
+                                <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                            <?php else: ?>
+                                <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.2);">
+                                    <i class="<?php echo $isEvent ? 'fas fa-calendar-alt' : 'fas fa-newspaper'; ?>" style="font-size: 4rem;"></i>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="news-card-body">
+                            <div class="news-card-date"><?php echo $dateText; ?></div>
+                            <h3 class="news-card-title"><?php echo htmlspecialchars($news['title']); ?></h3>
+                            <p class="news-card-excerpt"><?php echo htmlspecialchars($excerpt); ?></p>
+                            <div class="news-card-more">Leer más <i class="fas fa-arrow-right"></i></div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
         <?php if (count($pages) > 0): ?>
             <h3 style="margin-bottom: 2rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--primary); padding-left: 1.2rem;">Páginas en esta sección</h3>
             <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">

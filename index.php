@@ -6,20 +6,52 @@ require_once 'inc/header.php';
 
 <div class="container main-content" style="margin-top: 2rem;">
     <div class="content-card">
-        <h2 style="font-size: 2.2rem; color: var(--primary); margin-bottom: 2rem; text-align: center;">Secciones Destacadas</h2>
+        <h2 style="font-size: 2.2rem; color: var(--primary); margin-bottom: 2rem; text-align: center;">Noticias y Eventos Destacados</h2>
         
-        <div class="sections-grid">
+        <div class="news-grid">
             <?php
-            $stmt = $pdo->query("SELECT * FROM categories WHERE parent_id IS NULL AND sort_order > 0 AND is_visible = 1 ORDER BY sort_order ASC");
-            while ($cat = $stmt->fetch()) {
+            $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 ORDER BY event_date DESC, id DESC");
+            $hasNews = false;
+            while ($news = $stmt->fetch()) {
+                $hasNews = true;
+                $isEvent = !empty($news['event_date']);
+                $dateText = $isEvent ? date('d/m/Y', strtotime($news['event_date'])) : date('d/m/Y', strtotime($news['created_at']));
+                $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
                 ?>
-                <a href="category.php?id=<?php echo $cat['id']; ?>" class="section-link">
-                    <i class="<?php echo getCategoryIcon($cat['name']); ?>"></i>
-                    <div>
-                        <div style="font-size: 1.1rem;"><?php echo htmlspecialchars($cat['name']); ?></div>
-                        <small style="font-weight: 400; color: var(--text-light); font-size: 0.75rem;">Explorar sección</small>
+                <div class="news-card" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
+                    'title' => $news['title'],
+                    'date' => $dateText,
+                    'isEvent' => $isEvent,
+                    'image' => $news['image_path'] ? $news['image_path'] : '',
+                    'content' => nl2br($news['content'])
+                ])); ?>)">
+                    <div class="news-card-img-wrapper">
+                        <span class="news-badge <?php echo $isEvent ? 'event' : ''; ?>">
+                            <?php echo $isEvent ? '<i class="fas fa-calendar-alt"></i> Evento' : '<i class="fas fa-newspaper"></i> Noticia'; ?>
+                        </span>
+                        <?php if ($news['image_path']): ?>
+                            <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                        <?php else: ?>
+                            <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.2);">
+                                <i class="<?php echo $isEvent ? 'fas fa-calendar-alt' : 'fas fa-newspaper'; ?>" style="font-size: 4rem;"></i>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                </a>
+                    <div class="news-card-body">
+                        <div class="news-card-date"><?php echo $dateText; ?></div>
+                        <h3 class="news-card-title"><?php echo htmlspecialchars($news['title']); ?></h3>
+                        <p class="news-card-excerpt"><?php echo htmlspecialchars($excerpt); ?></p>
+                        <div class="news-card-more">Leer más <i class="fas fa-arrow-right"></i></div>
+                    </div>
+                </div>
+                <?php
+            }
+            if (!$hasNews) {
+                ?>
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-light); font-style: italic;">
+                    <i class="fas fa-info-circle" style="font-size: 2rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+                    No hay noticias o eventos destacados en este momento.
+                </div>
                 <?php
             }
             ?>
