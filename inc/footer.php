@@ -222,14 +222,19 @@
         <button class="news-carousel-btn prev" onclick="prevNewsCarousel()"><i class="fas fa-chevron-left"></i></button>
         <button class="news-carousel-btn next" onclick="nextNewsCarousel()"><i class="fas fa-chevron-right"></i></button>
         <div class="news-carousel-container">
-            <img id="newsCarouselImg" class="news-carousel-img" src="" alt="">
+            <img id="newsCarouselImg" class="news-carousel-img" src="" alt="" style="transition: opacity 0.3s ease;">
             <div id="newsCarouselCounter" class="news-carousel-counter"></div>
+            <!-- Indicador de Tiempo Visual -->
+            <div style="position: absolute; bottom: -2rem; display: flex; gap: 0.5rem; color: white; opacity: 0.6; font-size: 0.9rem; left: 50%; transform: translateX(-50%); white-space: nowrap;">
+                <i class="fas fa-play" style="font-size: 0.7rem; margin-top: 3px;"></i> Reproducción Automática (4s)
+            </div>
         </div>
     </div>
 
     <script>
     let currentCarouselImages = [];
     let currentCarouselIndex = 0;
+    let newsCarouselInterval;
 
     function openNewsModal(data) {
         const modal = document.getElementById('newsDetailModal');
@@ -326,26 +331,40 @@
         currentCarouselIndex = index;
         updateCarouselState();
         document.getElementById('newsCarouselOverlay').classList.add('active');
+        startNewsCarouselAutoplay();
+    }
+
+    function startNewsCarouselAutoplay() {
+        clearInterval(newsCarouselInterval);
+        newsCarouselInterval = setInterval(() => {
+            nextNewsCarousel();
+        }, 4000);
     }
 
     function updateCarouselState() {
         const imgElement = document.getElementById('newsCarouselImg');
         const counterElement = document.getElementById('newsCarouselCounter');
         
-        imgElement.src = currentCarouselImages[currentCarouselIndex];
-        counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
+        imgElement.style.opacity = 0;
+        setTimeout(() => {
+            imgElement.src = currentCarouselImages[currentCarouselIndex];
+            imgElement.style.opacity = 1;
+            counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
+        }, 150);
     }
 
     function prevNewsCarousel() {
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = (currentCarouselIndex - 1 + currentCarouselImages.length) % currentCarouselImages.length;
         updateCarouselState();
+        startNewsCarouselAutoplay(); // Reset timer on manual interaction
     }
 
     function nextNewsCarousel() {
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = (currentCarouselIndex + 1) % currentCarouselImages.length;
         updateCarouselState();
+        startNewsCarouselAutoplay(); // Reset timer on manual interaction
     }
 
     function closeNewsCarousel(event) {
@@ -357,7 +376,18 @@
 
     function closeNewsCarouselDirect() {
         document.getElementById('newsCarouselOverlay').classList.remove('active');
+        clearInterval(newsCarouselInterval);
     }
+    
+    // Navegación con teclado para carrusel de noticias
+    document.addEventListener('keydown', (e) => {
+        const overlay = document.getElementById('newsCarouselOverlay');
+        if (overlay && overlay.classList.contains('active')) {
+            if (e.key === 'ArrowRight') nextNewsCarousel();
+            if (e.key === 'ArrowLeft') prevNewsCarousel();
+            if (e.key === 'Escape') closeNewsCarouselDirect();
+        }
+    });
     </script>
 
     <!-- Modal para maximizar banners -->
