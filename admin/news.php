@@ -4,6 +4,7 @@ require_once 'inc/auth.php';
 checkAuth();
 require_once '../config.php';
 require_once 'inc/layout.php';
+require_once 'inc/image_helper.php';
 
 $pdo = getDB();
 $action = $_GET['action'] ?? 'list';
@@ -54,46 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $filename = uniqid('news_') . '_' . basename($_FILES['news_image']['name']);
                 $targetFile = $uploadDir . $filename;
                 
-                if (move_uploaded_file($_FILES['news_image']['tmp_name'], $targetFile)) {
+                if (processUploadedImage($_FILES['news_image']['tmp_name'], $targetFile, true, 1200, 85)) {
                     $image_path = 'uploads/news/' . $filename;
-                    
-                    // Aplicar marca de agua si GD está disponible
-                    $watermarkText = 'www.moratalla-murcia.com';
-                    $info = @getimagesize($targetFile);
-                    if ($info !== false) {
-                        $mime = $info['mime'];
-                        $imgRes = null;
-                        switch ($mime) {
-                            case 'image/jpeg': $imgRes = @imagecreatefromjpeg($targetFile); break;
-                            case 'image/png': $imgRes = @imagecreatefrompng($targetFile); break;
-                            case 'image/gif': $imgRes = @imagecreatefromgif($targetFile); break;
-                        }
-                        
-                        if ($imgRes) {
-                            $fontSize = 5;
-                            $width = imagesx($imgRes);
-                            $height = imagesy($imgRes);
-                            $textColor = imagecolorallocate($imgRes, 255, 255, 255);
-                            $shadowColor = imagecolorallocate($imgRes, 0, 0, 0);
-                            
-                            $textWidth = imagefontwidth($fontSize) * strlen($watermarkText);
-                            $textHeight = imagefontheight($fontSize);
-                            $x = $width - $textWidth - 15;
-                            $y = $height - $textHeight - 15;
-                            
-                            if ($x > 0 && $y > 0) {
-                                imagestring($imgRes, $fontSize, $x + 1, $y + 1, $watermarkText, $shadowColor);
-                                imagestring($imgRes, $fontSize, $x, $y, $watermarkText, $textColor);
-                            }
-                            
-                            switch ($mime) {
-                                case 'image/jpeg': @imagejpeg($imgRes, $targetFile, 90); break;
-                                case 'image/png': @imagepng($imgRes, $targetFile); break;
-                                case 'image/gif': @imagegif($imgRes, $targetFile); break;
-                            }
-                            @imagedestroy($imgRes);
-                        }
-                    }
                 }
             }
             
@@ -120,46 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $filename = uniqid('newsg_') . '_' . basename($files['name'][$i]);
                         $targetFile = $uploadDir . $filename;
                         
-                        if (move_uploaded_file($files['tmp_name'][$i], $targetFile)) {
+                        if (processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85)) {
                             $dbPath = 'uploads/news/' . $filename;
-                            
-                            // Aplicar marca de agua si GD está disponible
-                            $watermarkText = 'www.moratalla-murcia.com';
-                            $info = @getimagesize($targetFile);
-                            if ($info !== false) {
-                                $mime = $info['mime'];
-                                $imgRes = null;
-                                switch ($mime) {
-                                    case 'image/jpeg': $imgRes = @imagecreatefromjpeg($targetFile); break;
-                                    case 'image/png': $imgRes = @imagecreatefrompng($targetFile); break;
-                                    case 'image/gif': $imgRes = @imagecreatefromgif($targetFile); break;
-                                }
-                                
-                                if ($imgRes) {
-                                    $fontSize = 5;
-                                    $width = imagesx($imgRes);
-                                    $height = imagesy($imgRes);
-                                    $textColor = imagecolorallocate($imgRes, 255, 255, 255);
-                                    $shadowColor = imagecolorallocate($imgRes, 0, 0, 0);
-                                    
-                                    $textWidth = imagefontwidth($fontSize) * strlen($watermarkText);
-                                    $textHeight = imagefontheight($fontSize);
-                                    $x = $width - $textWidth - 15;
-                                    $y = $height - $textHeight - 15;
-                                    
-                                    if ($x > 0 && $y > 0) {
-                                        imagestring($imgRes, $fontSize, $x + 1, $y + 1, $watermarkText, $shadowColor);
-                                        imagestring($imgRes, $fontSize, $x, $y, $watermarkText, $textColor);
-                                    }
-                                    
-                                    switch ($mime) {
-                                        case 'image/jpeg': @imagejpeg($imgRes, $targetFile, 90); break;
-                                        case 'image/png': @imagepng($imgRes, $targetFile); break;
-                                        case 'image/gif': @imagegif($imgRes, $targetFile); break;
-                                    }
-                                    @imagedestroy($imgRes);
-                                }
-                            }
                             
                             $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order) VALUES (?, ?, ?)");
                             $stmtImg->execute([$news_id, $dbPath, 0]);

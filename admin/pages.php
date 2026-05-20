@@ -4,6 +4,7 @@ require_once 'inc/auth.php';
 checkAuth();
 require_once '../config.php';
 require_once 'inc/layout.php';
+require_once 'inc/image_helper.php';
 
 $pdo = getDB();
 $action = $_GET['action'] ?? 'list';
@@ -36,46 +37,7 @@ if ($action == 'save') {
         $filename = uniqid() . '_' . basename($_FILES['gallery_image']['name']);
         $targetFile = $uploadDir . $filename;
         
-        if (move_uploaded_file($_FILES['gallery_image']['tmp_name'], $targetFile)) {
-            // Aplicar marca de agua
-            $watermarkText = 'www.moratalla-murcia.com';
-            $info = getimagesize($targetFile);
-            if ($info !== false) {
-                $mime = $info['mime'];
-                $imgRes = null;
-                switch ($mime) {
-                    case 'image/jpeg': $imgRes = imagecreatefromjpeg($targetFile); break;
-                    case 'image/png': $imgRes = imagecreatefrompng($targetFile); break;
-                    case 'image/gif': $imgRes = imagecreatefromgif($targetFile); break;
-                }
-                
-                if ($imgRes) {
-                    $fontSize = 5; // Fuente más grande nativa de GD (1 a 5)
-                    $width = imagesx($imgRes);
-                    $height = imagesy($imgRes);
-                    $textColor = imagecolorallocate($imgRes, 255, 255, 255); // Blanco
-                    $shadowColor = imagecolorallocate($imgRes, 0, 0, 0); // Sombra negra
-                    
-                    // Posición esquina inferior derecha
-                    $textWidth = imagefontwidth($fontSize) * strlen($watermarkText);
-                    $textHeight = imagefontheight($fontSize);
-                    $x = $width - $textWidth - 10;
-                    $y = $height - $textHeight - 10;
-                    
-                    // Sombra
-                    imagestring($imgRes, $fontSize, $x + 1, $y + 1, $watermarkText, $shadowColor);
-                    // Texto blanco
-                    imagestring($imgRes, $fontSize, $x, $y, $watermarkText, $textColor);
-                    
-                    switch ($mime) {
-                        case 'image/jpeg': imagejpeg($imgRes, $targetFile, 90); break;
-                        case 'image/png': imagepng($imgRes, $targetFile); break;
-                        case 'image/gif': imagegif($imgRes, $targetFile); break;
-                    }
-                    imagedestroy($imgRes);
-                }
-            }
-
+        if (processUploadedImage($_FILES['gallery_image']['tmp_name'], $targetFile, true, 1200, 85)) {
             $dbPath = 'uploads/galerias/' . $filename;
             $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover) VALUES (?, ?, 0)");
             $stmtImg->execute([$id, $dbPath]);

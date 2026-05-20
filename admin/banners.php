@@ -26,82 +26,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $tmpName = $_FILES['banner_image']['tmp_name'];
                 
-                // Función auxiliar para optimizar y redimensionar
-                function createResponsiveImage($source, $dest, $maxWidth, $quality = 80) {
-                    if (!function_exists('getimagesize') || !function_exists('imagecreatefromjpeg')) {
-                        return false;
-                    }
-                    
-                    $info = @getimagesize($source);
-                    if (!$info) return false;
-                    
-                    $mime = $info['mime'];
-                    switch ($mime) {
-                        case 'image/jpeg': $img = @imagecreatefromjpeg($source); break;
-                        case 'image/png': $img = @imagecreatefrompng($source); break;
-                        case 'image/webp': 
-                            if (!function_exists('imagecreatefromwebp')) return false;
-                            $img = @imagecreatefromwebp($source); 
-                            break;
-                        case 'image/gif': $img = @imagecreatefromgif($source); break;
-                        default: return false;
-                    }
-                    
-                    if (!$img) return false;
-                    
-                    $width = imagesx($img);
-                    $height = imagesy($img);
-                    
-                    // Si la imagen es más pequeña que el máximo, no la ampliamos
-                    if ($width > $maxWidth) {
-                        $newWidth = $maxWidth;
-                        $newHeight = floor($height * ($maxWidth / $width));
-                    } else {
-                        $newWidth = $width;
-                        $newHeight = $height;
-                    }
-                    
-                    $newImg = imagecreatetruecolor($newWidth, $newHeight);
-                    
-                    // Preservar transparencia
-                    if ($mime == 'image/png' || $mime == 'image/webp' || $mime == 'image/gif') {
-                        imagealphablending($newImg, false);
-                        imagesavealpha($newImg, true);
-                        $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
-                        imagefilledrectangle($newImg, 0, 0, $newWidth, $newHeight, $transparent);
-                    }
-                    
-                    imagecopyresampled($newImg, $img, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-                    
-                    // Guardar como original type o convertir a jpg para uniformidad
-                    if ($mime == 'image/png') {
-                        imagepng($newImg, $dest, 8);
-                    } elseif ($mime == 'image/webp') {
-                        imagewebp($newImg, $dest, $quality);
-                    } elseif ($mime == 'image/gif') {
-                        imagegif($newImg, $dest);
-                    } else {
-                        imagejpeg($newImg, $dest, $quality);
-                    }
-                    
-                    imagedestroy($img);
-                    imagedestroy($newImg);
-                    return true;
-                }
-                
+                require_once 'inc/image_helper.php';
+
                 $desktopFilename = $baseFilename . '_desktop.' . $ext;
                 $mobileFilename = $baseFilename . '_mobile.' . $ext;
                 
                 $desktopPath = $targetDir . $desktopFilename;
                 $mobilePath = $targetDir . $mobileFilename;
                 
-                $successDesktop = createResponsiveImage($tmpName, $desktopPath, 1920, 80);
-                $successMobile = createResponsiveImage($tmpName, $mobilePath, 768, 75);
+                // Hacer una copia del temp porque processUploadedImage borra el origen por defecto
+                $tmpNameMobile = $tmpName . '_mobile';
+                copy($tmpName, $tmpNameMobile);
                 
-                // Fallback si algo falla
-                if (!$successDesktop && move_uploaded_file($tmpName, $desktopPath)) {
+                $successDesktop = processUploadedImage($tmpName, $desktopPath, true, 1920, 85);
+                $successMobile = processUploadedImage($tmpNameMobile, $mobilePath, true, 768, 80);
+                
+                // Si la principal falla, intentar un move básico (fallback extremo)
+                if (!$successDesktop && @move_uploaded_file($tmpName, $desktopPath)) {
                     $successDesktop = true;
-                    copy($desktopPath, $mobilePath);
+                    @copy($desktopPath, $mobilePath);
                 }
 
                 if ($successDesktop) {
