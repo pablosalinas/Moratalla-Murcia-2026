@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $image_path = $stmt->fetchColumn();
             }
             
-            // Subida de imagen
+            // Subida de imagen principal
             if (isset($_FILES['news_image']) && $_FILES['news_image']['error'] == UPLOAD_ERR_OK) {
                 $uploadDir = '../uploads/news/';
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -100,16 +100,107 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($action == 'add') {
                 $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, event_date, is_active_home, category_id, is_active_category) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$title, $content, $image_path, $event_date, $is_active_home, $category_id, $is_active_category]);
+                $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
-                $action = 'list';
             } else {
                 $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ? WHERE id = ?");
                 $stmt->execute([$title, $content, $image_path, $event_date, $is_active_home, $category_id, $is_active_category, $id]);
+                $news_id = $id;
                 $msg = "Noticia/Evento actualizado con éxito.";
-                $action = 'list';
             }
+
+            // Procesar imágenes adicionales de la galería (para add y edit)
+            if (isset($_FILES['gallery_images'])) {
+                $files = $_FILES['gallery_images'];
+                $uploadDir = '../uploads/news/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                
+                for ($i = 0; $i < count($files['name']); $i++) {
+                    if ($files['error'][$i] == UPLOAD_ERR_OK) {
+                        $filename = uniqid('newsg_') . '_' . basename($files['name'][$i]);
+                        $targetFile = $uploadDir . $filename;
+                        
+                        if (move_uploaded_file($files['tmp_name'][$i], $targetFile)) {
+                            $dbPath = 'uploads/news/' . $filename;
+                            
+                            // Aplicar marca de agua si GD está disponible
+                            $watermarkText = 'www.moratalla-murcia.com';
+                            $info = @getimagesize($targetFile);
+                            if ($info !== false) {
+                                $mime = $info['mime'];
+                                $imgRes = null;
+                                switch ($mime) {
+                                    case 'image/jpeg': $imgRes = @imagecreatefromjpeg($targetFile); break;
+                                    case 'image/png': $imgRes = @imagecreatefrompng($targetFile); break;
+                                    case 'image/gif': $imgRes = @imagecreatefromgif($targetFile); break;
+                                }
+                                
+                                if ($imgRes) {
+                                    $fontSize = 5;
+                                    $width = imagesx($imgRes);
+                                    $height = imagesy($imgRes);
+                                    $textColor = imagecolorallocate($imgRes, 255, 255, 255);
+                                    $shadowColor = imagecolorallocate($imgRes, 0, 0, 0);
+                                    
+                                    $textWidth = imagefontwidth($fontSize) * strlen($watermarkText);
+                                    $textHeight = imagefontheight($fontSize);
+                                    $x = $width - $textWidth - 15;
+                                    $y = $height - $textHeight - 15;
+                                    
+                                    if ($x > 0 && $y > 0) {
+                                        imagestring($imgRes, $fontSize, $x + 1, $y + 1, $watermarkText, $shadowColor);
+                                        imagestring($imgRes, $fontSize, $x, $y, $watermarkText, $textColor);
+                                    }
+                                    
+                                    switch ($mime) {
+                                        case 'image/jpeg': @imagejpeg($imgRes, $targetFile, 90); break;
+                                        case 'image/png': @imagepng($imgRes, $targetFile); break;
+                                        case 'image/gif': @imagegif($imgRes, $targetFile); break;
+                                    }
+                                    @imagedestroy($imgRes);
+                                }
+                            }
+                            
+                            $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order) VALUES (?, ?, ?)");
+                            $stmtImg->execute([$news_id, $dbPath, 0]);
+                        }
+                    }
+                }
+            }
+
+            // Actualizar órdenes de ordenación de la galería existente
+            if (isset($_POST['sort_order']) && is_array($_POST['sort_order'])) {
+                foreach ($_POST['sort_order'] as $imgId => $orderVal) {
+                    $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ? WHERE id = ?");
+                    $stmtOrder->execute([(int)$orderVal, (int)$imgId]);
+                }
+            }
+
+            $action = 'list';
         }
     }
+}
+
+// PROCESAR ELIMINACIÓN DE IMAGEN DE GALERÍA (GET)
+if ($action == 'delete_img' && isset($_GET['img_id']) && isset($_GET['news_id'])) {
+    $img_id = $_GET['img_id'];
+    $news_id = $_GET['news_id'];
+    
+    // Obtener ruta de la imagen
+    $stmt = $pdo->prepare("SELECT image_path FROM news_images WHERE id = ?");
+    $stmt->execute([$img_id]);
+    $path = $stmt->fetchColumn();
+    
+    if ($path && file_exists('../' . $path)) {
+        @unlink('../' . $path);
+    }
+    
+    $stmt = $pdo->prepare("DELETE FROM news_images WHERE id = ?");
+    $stmt->execute([$img_id]);
+    
+    $msg = "Imagen eliminada de la galería.";
+    header("Location: news.php?action=edit&id=" . $news_id);
+    exit;
 }
 
 // PROCESAR ELIMINACIÓN (GET)
@@ -122,6 +213,16 @@ if ($action == 'delete' && isset($_GET['id'])) {
     $image_path = $stmt->fetchColumn();
     if ($image_path && file_exists('../' . $image_path)) {
         @unlink('../' . $image_path);
+    }
+    
+    // Borrar imágenes de la galería asociadas de la base de datos y disco
+    $stmt = $pdo->prepare("SELECT image_path FROM news_images WHERE news_id = ?");
+    $stmt->execute([$id]);
+    $gallery_imgs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($gallery_imgs as $gpath) {
+        if ($gpath && file_exists('../' . $gpath)) {
+            @unlink('../' . $gpath);
+        }
     }
     
     $stmt = $pdo->prepare("DELETE FROM news_events WHERE id = ?");
@@ -298,6 +399,42 @@ adminHeader("Noticias y Eventos");
                         <label for="is_active_category" style="font-weight: 600; color: var(--text); cursor: pointer; user-select: none;">Mostrar en la categoría seleccionada (cuando no esté visible o activa en Inicio)</label>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Galería de Imágenes Adicionales -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--gray-200);">
+                <h4 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-images"></i> Galería de Imágenes Adicionales</h4>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Subir Imágenes de Galería</label>
+                    <input type="file" name="gallery_images[]" multiple accept="image/*" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Puedes seleccionar múltiples archivos de imagen para la galería de esta noticia (serán procesados con marca de agua).</small>
+                </div>
+                
+                <?php if ($action == 'edit' && !empty($news_data['id'])): 
+                    $stmtImg = $pdo->prepare("SELECT * FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+                    $stmtImg->execute([$news_data['id']]);
+                    $gallery = $stmtImg->fetchAll();
+                    if (count($gallery) > 0):
+                ?>
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imágenes de la Galería Actual (Ajustar Orden y Borrar)</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <?php foreach ($gallery as $gimg): ?>
+                            <div style="border: 1px solid var(--gray-200); border-radius: 8px; padding: 0.5rem; background: var(--gray-100); text-align: center; position: relative;">
+                                <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
+                                    <span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>
+                                    <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
+                                </div>
+                                <a href="news.php?action=delete_img&img_id=<?php echo $gimg['id']; ?>&news_id=<?php echo $news_data['id']; ?>" 
+                                   style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" 
+                                   onclick="return confirm('¿Eliminar esta imagen de la galería?')">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; endif; ?>
             </div>
             
             <div style="display: flex; gap: 10px; margin-top: 2.5rem; border-top: 1px solid var(--gray-200); padding-top: 1.5rem;">

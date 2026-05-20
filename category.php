@@ -106,13 +106,19 @@ require_once 'inc/header.php';
                     $isEvent = !empty($news['event_date']);
                     $dateText = $isEvent ? date('d/m/Y', strtotime($news['event_date'])) : date('d/m/Y', strtotime($news['created_at']));
                     $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
+                    
+                    // Obtener imágenes adicionales de galería
+                    $stmtG = $pdo->prepare("SELECT image_path FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+                    $stmtG->execute([$news['id']]);
+                    $gallery = $stmtG->fetchAll(PDO::FETCH_COLUMN);
                     ?>
                     <div class="news-card" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
                         'title' => $news['title'],
                         'date' => $dateText,
                         'isEvent' => $isEvent,
                         'image' => $news['image_path'] ? $news['image_path'] : '',
-                        'content' => nl2br($news['content'])
+                        'content' => nl2br($news['content']),
+                        'gallery' => $gallery
                     ])); ?>)">
                         <div class="news-card-img-wrapper">
                             <span class="news-badge <?php echo $isEvent ? 'event' : ''; ?>">

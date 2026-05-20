@@ -211,11 +211,28 @@
                 <div id="modalDate" class="news-modal-date"></div>
                 <h2 id="modalTitle" class="news-modal-title"></h2>
                 <div id="modalText" class="news-modal-text"></div>
+                
+                <!-- Galería de imágenes adicionales -->
+                <div id="modalGalleryContainer" style="display: none;"></div>
             </div>
         </div>
     </div>
 
+    <!-- Lightbox Carousel para Noticias -->
+    <div id="newsCarouselOverlay" class="news-carousel-overlay" onclick="closeNewsCarousel(event)">
+        <button class="news-carousel-close" onclick="closeNewsCarouselDirect()"><i class="fas fa-times"></i></button>
+        <button class="news-carousel-btn prev" onclick="prevNewsCarousel()"><i class="fas fa-chevron-left"></i></button>
+        <button class="news-carousel-btn next" onclick="nextNewsCarousel()"><i class="fas fa-chevron-right"></i></button>
+        <div class="news-carousel-container">
+            <img id="newsCarouselImg" class="news-carousel-img" src="" alt="">
+            <div id="newsCarouselCounter" class="news-carousel-counter"></div>
+        </div>
+    </div>
+
     <script>
+    let currentCarouselImages = [];
+    let currentCarouselIndex = 0;
+
     function openNewsModal(data) {
         const modal = document.getElementById('newsDetailModal');
         const modalImageContainer = document.getElementById('modalImageContainer');
@@ -223,6 +240,7 @@
         const modalDate = document.getElementById('modalDate');
         const modalTitle = document.getElementById('modalTitle');
         const modalText = document.getElementById('modalText');
+        const galleryContainer = document.getElementById('modalGalleryContainer');
         
         if (data.image) {
             modalImage.src = data.image;
@@ -235,6 +253,39 @@
         modalDate.innerHTML = (data.isEvent ? '<i class="fas fa-calendar-alt" style="color:var(--accent);"></i> Evento: ' : '<i class="fas fa-newspaper" style="color:var(--primary);"></i> Noticia: ') + data.date;
         modalTitle.textContent = data.title;
         modalText.innerHTML = data.content;
+        
+        // Cargar galería
+        galleryContainer.innerHTML = '';
+        currentCarouselImages = [];
+        
+        if (data.image) {
+            currentCarouselImages.push(data.image);
+        }
+        
+        if (data.gallery && data.gallery.length > 0) {
+            data.gallery.forEach(img => {
+                currentCarouselImages.push(img);
+            });
+        }
+        
+        if (currentCarouselImages.length > 0) {
+            let galleryHtml = '<h4 style="font-size:1.15rem; color:var(--primary); margin-top:2.5rem; margin-bottom:1rem; border-left:4px solid var(--accent); padding-left:0.6rem; font-weight:700;"><i class="fas fa-images"></i> Galería de Imágenes</h4>';
+            
+            // Botón opcional para iniciar carrusel
+            galleryHtml += '<button class="btn-news-carousel" style="margin-bottom: 1.5rem;" onclick="openNewsCarousel(0)"><i class="fas fa-play"></i> Ver en Carrusel</button>';
+            
+            galleryHtml += '<div class="news-gallery-grid">';
+            currentCarouselImages.forEach((img, idx) => {
+                // Mostrar las imágenes de la galería
+                galleryHtml += '<img class="news-gallery-thumb" src="' + img + '" onclick="openNewsCarousel(' + idx + ')" alt="Imagen de galería">';
+            });
+            galleryHtml += '</div>';
+            
+            galleryContainer.innerHTML = galleryHtml;
+            galleryContainer.style.display = 'block';
+        } else {
+            galleryContainer.style.display = 'none';
+        }
         
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -251,6 +302,45 @@
         const modal = document.getElementById('newsDetailModal');
         modal.classList.remove('active');
         document.body.style.overflow = '';
+    }
+
+    // Funciones del Lightbox Carousel
+    function openNewsCarousel(index) {
+        if (currentCarouselImages.length === 0) return;
+        currentCarouselIndex = index;
+        updateCarouselState();
+        document.getElementById('newsCarouselOverlay').classList.add('active');
+    }
+
+    function updateCarouselState() {
+        const imgElement = document.getElementById('newsCarouselImg');
+        const counterElement = document.getElementById('newsCarouselCounter');
+        
+        imgElement.src = currentCarouselImages[currentCarouselIndex];
+        counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
+    }
+
+    function prevNewsCarousel() {
+        if (currentCarouselImages.length === 0) return;
+        currentCarouselIndex = (currentCarouselIndex - 1 + currentCarouselImages.length) % currentCarouselImages.length;
+        updateCarouselState();
+    }
+
+    function nextNewsCarousel() {
+        if (currentCarouselImages.length === 0) return;
+        currentCarouselIndex = (currentCarouselIndex + 1) % currentCarouselImages.length;
+        updateCarouselState();
+    }
+
+    function closeNewsCarousel(event) {
+        const overlay = document.getElementById('newsCarouselOverlay');
+        if (event.target === overlay) {
+            closeNewsCarouselDirect();
+        }
+    }
+
+    function closeNewsCarouselDirect() {
+        document.getElementById('newsCarouselOverlay').classList.remove('active');
     }
     </script>
 
