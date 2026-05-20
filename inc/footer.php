@@ -266,6 +266,11 @@
         
         if (data.gallery && data.gallery.length > 0) {
             hasGalleryFiles = true;
+            data.gallery.forEach(img => {
+                if (!img.toLowerCase().endsWith('.pdf')) {
+                    currentCarouselImages.push(img);
+                }
+            });
         }
         
         if (hasGalleryFiles || currentCarouselImages.length > 1) { // Mostrar si hay más de 1 imagen, o si hay archivos extra
