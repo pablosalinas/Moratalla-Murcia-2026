@@ -14,6 +14,8 @@ if (isset($_POST['download_backup'])) {
     $sqlDump .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
 
     try {
+        set_time_limit(0); // Evitar timeout para zips grandes
+        
         // Obtener todas las tablas
         $tables = [];
         $stmt = $pdo->query('SHOW TABLES');
@@ -22,18 +24,14 @@ if (isset($_POST['download_backup'])) {
         }
 
         foreach ($tables as $table) {
-            // Generar esquema (CREATE TABLE)
             $stmt = $pdo->query("SHOW CREATE TABLE `$table`");
             $createRow = $stmt->fetch(PDO::FETCH_NUM);
             $sqlDump .= "-- Estructura de la tabla `$table`\n";
             $sqlDump .= "DROP TABLE IF EXISTS `$table`;\n";
             $sqlDump .= $createRow[1] . ";\n\n";
 
-            // Generar datos (INSERT INTO)
             $stmt = $pdo->query("SELECT * FROM `$table`");
-            $rowCount = $stmt->rowCount();
-            
-            if ($rowCount > 0) {
+            if ($stmt->rowCount() > 0) {
                 $sqlDump .= "-- Datos de la tabla `$table`\n";
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $keys = array_keys($row);
@@ -53,21 +51,49 @@ if (isset($_POST['download_backup'])) {
                 $sqlDump .= "\n";
             }
         }
-
         $sqlDump .= "SET FOREIGN_KEY_CHECKS = 1;\n";
 
-        // Forzar la descarga del archivo
-        $filename = 'backup_db_' . date('Y_m_d_His') . '.sql';
-        header('Content-Type: application/sql; charset=utf-8');
+        // Crear ZIP temporal
+        $zipFile = sys_get_temp_dir() . '/backup_' . date('Y_m_d_His') . '.zip';
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE) !== TRUE) {
+            throw new Exception("No se pudo crear el archivo ZIP.");
+        }
+
+        // Añadir base de datos al ZIP
+        $zip->addFromString('database.sql', $sqlDump);
+
+        // Añadir carpeta uploads al ZIP
+        $uploadsDir = realpath(__DIR__ . '/../uploads');
+        if ($uploadsDir !== false && is_dir($uploadsDir)) {
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($uploadsDir),
+                RecursiveIteratorIterator::LEAVES_ONLY
+            );
+
+            foreach ($files as $name => $file) {
+                if (!$file->isDir()) {
+                    $filePath = $file->getRealPath();
+                    $relativePath = 'uploads/' . substr($filePath, strlen($uploadsDir) + 1);
+                    $zip->addFile($filePath, $relativePath);
+                }
+            }
+        }
+        $zip->close();
+
+        // Enviar ZIP al usuario
+        $filename = 'backup_completo_moratalla_' . date('Y_m_d_His') . '.zip';
+        header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . strlen($sqlDump));
+        header('Content-Length: ' . filesize($zipFile));
         header('Pragma: no-cache');
         header('Expires: 0');
         
-        echo $sqlDump;
+        readfile($zipFile);
+        unlink($zipFile); // Borrar temporal
         exit;
 
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         $error = "Error al generar la copia de seguridad: " . $e->getMessage();
     }
 }
@@ -87,24 +113,24 @@ adminHeader("Copia de Seguridad");
 <?php endif; ?>
 
 <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <h2 style="margin-top: 0; color: #1e293b;">Descargar Backup Completo</h2>
+    <h2 style="margin-top: 0; color: #1e293b;">Descargar Backup Completo (ZIP)</h2>
     <p style="color: #64748b; line-height: 1.6; margin-bottom: 1.5rem;">
-        Esta herramienta te permite generar y descargar un archivo <strong>.sql</strong> con toda la estructura (tablas) y los datos actuales de la base de datos de producción. 
-        Este archivo sirve para poder restaurar la web en caso de emergencia o para crear copias locales.
+        Esta herramienta te permite generar y descargar un archivo comprimido <strong>.zip</strong> que incluye toda la base de datos (<strong>database.sql</strong>) y todos los archivos subidos al servidor (carpeta <strong>uploads</strong> con imágenes de noticias, asociaciones, etc.). 
+        Este archivo sirve para poder restaurar la web al completo en caso de emergencia.
     </p>
     
     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid var(--primary); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
         <h4 style="margin-top: 0; margin-bottom: 0.5rem; color: #334155;"><i class="fas fa-info-circle"></i> Información del proceso</h4>
         <ul style="margin: 0; padding-left: 1.5rem; color: #475569;">
-            <li>El proceso puede tardar unos segundos dependiendo del tamaño de los datos (noticias, citas, etc.).</li>
+            <li>El proceso puede tardar unos segundos dependiendo del tamaño de las imágenes y datos (noticias, citas, etc.).</li>
             <li>No cierres la página hasta que la descarga del archivo haya comenzado.</li>
             <li>Guarda el archivo descargado en un lugar seguro.</li>
         </ul>
     </div>
 
-    <form method="POST" action="backup.php" onsubmit="this.querySelector('button').innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i> Generando...'; this.querySelector('button').style.opacity = '0.7';">
+    <form method="POST" action="backup.php" onsubmit="this.querySelector('button').innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i> Generando ZIP...'; this.querySelector('button').style.opacity = '0.7';">
         <button type="submit" name="download_backup" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-            <i class="fas fa-download"></i> Generar y Descargar SQL
+            <i class="fas fa-file-archive"></i> Generar y Descargar Backup
         </button>
     </form>
 </div>
