@@ -832,3 +832,17 @@ body {
     font-size: 0.9rem;
     font-weight: 500;
 }
+
+/* PROTECCION ANTI-COPIA DE IMAGENES */
+img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}

@@ -349,5 +349,14 @@
         <span style="position:absolute; top:20px; right:40px; color:white; font-size:40px; font-weight:bold; cursor:pointer;">&times;</span>
         <img id="bannerModalImg" src="" style="max-width:95vw; max-height:90vh; object-fit:contain; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
     </div>
+
+    <!-- PROTECCION ANTI-COPIA DE IMAGENES -->
+    <script>
+    document.addEventListener('contextmenu', function(e) {
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault();
+        }
+    });
+    </script>
 </body>
 </html>
