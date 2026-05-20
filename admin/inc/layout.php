@@ -51,6 +51,7 @@ function adminHeader($title = "Admin Panel") {
                 <div class="nav-divider"></div>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>
                 <a href="banners.php" class="nav-link"><i class="fas fa-image"></i> Banner Interactivo</a>
+                <a href="backup.php" class="nav-link"><i class="fas fa-database"></i> Copia de Seguridad</a>
                 <div class="nav-divider"></div>
                 <div style="padding: 0 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
                     <a href="logout.php?redirect=../index.php" class="nav-link-btn" style="background: var(--primary); color: white;"><i class="fas fa-external-link-alt"></i> Ver Web</a>
