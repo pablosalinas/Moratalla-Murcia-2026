@@ -11,6 +11,54 @@ $action = $_GET['action'] ?? 'list';
 $msg = "";
 $error = "";
 
+// PROCESAR AJAX UPLOAD
+if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
+    $news_id = (int)$_POST['news_id'];
+    $response = ['success' => false, 'files' => []];
+    
+    if (isset($_FILES['gallery_images'])) {
+        $files = $_FILES['gallery_images'];
+        $uploadDir = '../uploads/news/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        
+        for ($i = 0; $i < count($files['name']); $i++) {
+            if ($files['error'][$i] == UPLOAD_ERR_OK) {
+                $filename = uniqid('newsg_') . '_' . basename($files['name'][$i]);
+                $targetFile = $uploadDir . $filename;
+                $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                
+                $success = false;
+                if ($fileExt === 'pdf') {
+                    $success = move_uploaded_file($files['tmp_name'][$i], $targetFile);
+                } else {
+                    $success = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
+                }
+                
+                if ($success) {
+                    $dbPath = 'uploads/news/' . $filename;
+                    $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order) VALUES (?, ?, ?)");
+                    $stmtImg->execute([$news_id, $dbPath, 0]);
+                    $newId = $pdo->lastInsertId();
+                    
+                    $response['files'][] = [
+                        'id' => $newId,
+                        'path' => $dbPath,
+                        'is_pdf' => ($fileExt === 'pdf')
+                    ];
+                }
+            }
+        }
+        if (count($response['files']) > 0) {
+            $response['success'] = true;
+        }
+    }
+    
+    ob_clean(); // Limpiar cualquier output previo
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit;
+}
+
 // PROCESAR ACCIONES DE GUARDADO (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action == 'add' || $action == 'edit') {
@@ -55,8 +103,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $filename = uniqid('news_') . '_' . basename($_FILES['news_image']['name']);
                 $targetFile = $uploadDir . $filename;
                 
-                if (processUploadedImage($_FILES['news_image']['tmp_name'], $targetFile, true, 1200, 85)) {
-                    $image_path = 'uploads/news/' . $filename;
+                $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                
+                if ($fileExt === 'pdf') {
+                    if (move_uploaded_file($_FILES['news_image']['tmp_name'], $targetFile)) {
+                        $image_path = 'uploads/news/' . $filename;
+                    }
+                } else {
+                    if (processUploadedImage($_FILES['news_image']['tmp_name'], $targetFile, true, 1200, 85)) {
+                        $image_path = 'uploads/news/' . $filename;
+                    }
                 }
             }
             
@@ -83,7 +139,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $filename = uniqid('newsg_') . '_' . basename($files['name'][$i]);
                         $targetFile = $uploadDir . $filename;
                         
-                        if (processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85)) {
+                        $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                        
+                        $success = false;
+                        if ($fileExt === 'pdf') {
+                            $success = move_uploaded_file($files['tmp_name'][$i], $targetFile);
+                        } else {
+                            $success = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
+                        }
+                        
+                        if ($success) {
                             $dbPath = 'uploads/news/' . $filename;
                             
                             $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order) VALUES (?, ?, ?)");
@@ -289,12 +354,16 @@ adminHeader("Noticias y Eventos");
                     <small style="color: #666; display: block; margin-top: 0.4rem;">Indica la fecha si esta noticia corresponde a un evento futuro o pasado.</small>
                 </div>
                 <div>
-                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imagen Principal</label>
-                    <input type="file" name="news_image" accept="image/*" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imagen Principal o Documento PDF</label>
+                    <input type="file" name="news_image" accept="image/*,application/pdf" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
                     <?php if ($news_data['image_path']): ?>
                         <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 10px;">
-                            <img src="../<?php echo htmlspecialchars($news_data['image_path']); ?>" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;">
-                            <small style="color: #666;">Imagen actual. Si subes otra, se reemplazará.</small>
+                            <?php if(strtolower(pathinfo($news_data['image_path'], PATHINFO_EXTENSION)) == 'pdf'): ?>
+                                <div style="width: 80px; height: 50px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px;"><i class="fas fa-file-pdf fa-2x"></i></div>
+                            <?php else: ?>
+                                <img src="../<?php echo htmlspecialchars($news_data['image_path']); ?>" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;">
+                            <?php endif; ?>
+                            <small style="color: #666;">Archivo actual. Si subes otro, se reemplazará.</small>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -331,22 +400,26 @@ adminHeader("Noticias y Eventos");
                 <h4 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-images"></i> Galería de Imágenes Adicionales</h4>
                 
                 <div style="margin-bottom: 1.5rem;">
-                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Subir Imágenes de Galería</label>
-                    <input type="file" name="gallery_images[]" multiple accept="image/*" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                    <small style="color: #666; display: block; margin-top: 0.4rem;">Puedes seleccionar múltiples archivos de imagen para la galería de esta noticia (serán procesados con marca de agua).</small>
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Subir Imágenes o PDFs de Galería</label>
+                    <input type="file" id="ajaxGalleryUpload" name="gallery_images[]" multiple accept="image/*,application/pdf" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Puedes seleccionar múltiples archivos para la galería de esta noticia (las imágenes serán procesadas con marca de agua, los PDFs se adjuntarán tal cual).</small>
+                    <div id="ajaxUploadProgress" style="display:none; margin-top:10px; color:var(--primary); font-size:0.95rem; font-weight:bold;"><i class="fas fa-spinner fa-spin"></i> Subiendo y procesando archivos, por favor espere...</div>
                 </div>
                 
-                <?php if ($action == 'edit' && !empty($news_data['id'])): 
-                    $stmtImg = $pdo->prepare("SELECT * FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
-                    $stmtImg->execute([$news_data['id']]);
-                    $gallery = $stmtImg->fetchAll();
-                    if (count($gallery) > 0):
-                ?>
+                <?php if ($action == 'edit' && !empty($news_data['id'])): ?>
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imágenes de la Galería Actual (Ajustar Orden y Borrar)</label>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; margin-top: 1rem;">
-                        <?php foreach ($gallery as $gimg): ?>
+                    <div id="galleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <?php 
+                        $stmtImg = $pdo->prepare("SELECT * FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+                        $stmtImg->execute([$news_data['id']]);
+                        $gallery = $stmtImg->fetchAll();
+                        foreach ($gallery as $gimg): ?>
                             <div style="border: 1px solid var(--gray-200); border-radius: 8px; padding: 0.5rem; background: var(--gray-100); text-align: center; position: relative;">
-                                <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">
+                                <?php if(strtolower(pathinfo($gimg['image_path'], PATHINFO_EXTENSION)) == 'pdf'): ?>
+                                    <div style="width: 100%; height: 80px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px; margin-bottom: 0.5rem;"><i class="fas fa-file-pdf fa-2x"></i></div>
+                                <?php else: ?>
+                                    <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">
+                                <?php endif; ?>
                                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">
                                     <span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>
                                     <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
@@ -359,7 +432,7 @@ adminHeader("Noticias y Eventos");
                             </div>
                         <?php endforeach; ?>
                     </div>
-                <?php endif; endif; ?>
+                <?php endif; ?>
             </div>
             
             <div style="display: flex; gap: 10px; margin-top: 2.5rem; border-top: 1px solid var(--gray-200); padding-top: 1.5rem;">
@@ -368,6 +441,82 @@ adminHeader("Noticias y Eventos");
             </div>
         </form>
     </div>
+    
+    <script>
+    document.getElementById('ajaxGalleryUpload').addEventListener('change', function(e) {
+        const newsId = '<?php echo $news_data['id'] ?? ''; ?>';
+        // Si no hay newsId es que estamos creando una nueva noticia, en ese caso 
+        // las imágenes se subirán al darle a Guardar Todo por el form normal.
+        if (!newsId) return; 
+        
+        const files = e.target.files;
+        if (files.length === 0) return;
+        
+        const formData = new FormData();
+        formData.append('ajax_upload', '1');
+        formData.append('news_id', newsId);
+        
+        for (let i = 0; i < files.length; i++) {
+            formData.append('gallery_images[]', files[i]);
+        }
+        
+        const progress = document.getElementById('ajaxUploadProgress');
+        progress.style.display = 'block';
+        
+        fetch('news.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            progress.style.display = 'none';
+            if (data.success) {
+                // Insertar nuevas miniaturas al vuelo sin recargar la página
+                const grid = document.getElementById('galleryGrid');
+                if (grid) {
+                    data.files.forEach(file => {
+                        let content = '';
+                        if (file.is_pdf) {
+                            content = '<div style="width: 100%; height: 80px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px; margin-bottom: 0.5rem;"><i class="fas fa-file-pdf fa-2x"></i></div>';
+                        } else {
+                            content = '<img src="../' + file.path + '" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">';
+                        }
+                        
+                        const div = document.createElement('div');
+                        div.style.cssText = 'border: 1px solid #10b981; border-radius: 8px; padding: 0.5rem; background: #ecfdf5; text-align: center; position: relative; animation: highlight 2s ease-out;';
+                        div.innerHTML = content + 
+                            '<div style="display: flex; align-items: center; justify-content: space-between; gap: 5px;">' +
+                            '<span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>' +
+                            '<input type="number" name="sort_order[' + file.id + ']" value="0" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
+                            '</div>' +
+                            '<a href="news.php?action=delete_img&img_id=' + file.id + '&news_id=' + newsId + '" style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" onclick="return confirm(\'¿Eliminar esta imagen de la galería?\')"><i class="fas fa-times"></i></a>';
+                        
+                        grid.appendChild(div);
+                    });
+                }
+                
+                // Limpiar input para permitir subir la misma imagen si hubo error
+                e.target.value = '';
+                
+                // Mostrar alert opcional o feedback toast si hubiera
+                alert('¡Archivos subidos y adjuntados con éxito a la galería!');
+            } else {
+                alert('Hubo un problema al subir los archivos.');
+            }
+        })
+        .catch(err => {
+            progress.style.display = 'none';
+            console.error(err);
+            alert('Error de conexión al intentar subir los archivos.');
+        });
+    });
+    </script>
+    <style>
+    @keyframes highlight {
+        from { background: #6ee7b7; border-color: #059669; }
+        to { background: #ecfdf5; border-color: #10b981; }
+    }
+    </style>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

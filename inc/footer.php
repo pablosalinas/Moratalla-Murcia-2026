@@ -204,9 +204,7 @@
     <div id="newsDetailModal" class="news-modal" onclick="closeNewsModal(event)">
         <div class="news-modal-content">
             <button class="news-modal-close" onclick="closeNewsModalDirect()"><i class="fas fa-times"></i></button>
-            <div id="modalImageContainer">
-                <img id="modalImage" class="news-modal-img" src="" alt="">
-            </div>
+            <div id="modalImageContainer"></div>
             <div class="news-modal-body">
                 <div id="modalDate" class="news-modal-date"></div>
                 <h2 id="modalTitle" class="news-modal-title"></h2>
@@ -236,15 +234,17 @@
     function openNewsModal(data) {
         const modal = document.getElementById('newsDetailModal');
         const modalImageContainer = document.getElementById('modalImageContainer');
-        const modalImage = document.getElementById('modalImage');
         const modalDate = document.getElementById('modalDate');
         const modalTitle = document.getElementById('modalTitle');
         const modalText = document.getElementById('modalText');
         const galleryContainer = document.getElementById('modalGalleryContainer');
         
         if (data.image) {
-            modalImage.src = data.image;
-            modalImage.alt = data.title;
+            if (data.image.toLowerCase().endsWith('.pdf')) {
+                modalImageContainer.innerHTML = '<iframe src="' + data.image + '" style="width:100%; height:60vh; border:none; border-radius: 8px 8px 0 0;"></iframe>';
+            } else {
+                modalImageContainer.innerHTML = '<img id="modalImage" class="news-modal-img" src="' + data.image + '" alt="' + data.title + '">';
+            }
             modalImageContainer.style.display = 'block';
         } else {
             modalImageContainer.style.display = 'none';
@@ -256,31 +256,42 @@
         
         // Cargar galería
         galleryContainer.innerHTML = '';
-        currentCarouselImages = [];
+        currentCarouselImages = []; // Solo para imágenes
         
-        if (data.image) {
+        let hasGalleryFiles = false;
+        
+        if (data.image && !data.image.toLowerCase().endsWith('.pdf')) {
             currentCarouselImages.push(data.image);
         }
         
         if (data.gallery && data.gallery.length > 0) {
-            data.gallery.forEach(img => {
-                currentCarouselImages.push(img);
-            });
+            hasGalleryFiles = true;
         }
         
-        if (currentCarouselImages.length > 0) {
-            let galleryHtml = '<h4 style="font-size:1.15rem; color:var(--primary); margin-top:2.5rem; margin-bottom:1rem; border-left:4px solid var(--accent); padding-left:0.6rem; font-weight:700;"><i class="fas fa-images"></i> Galería de Imágenes</h4>';
+        if (hasGalleryFiles || currentCarouselImages.length > 1) { // Mostrar si hay más de 1 imagen, o si hay archivos extra
+            let galleryHtml = '<h4 style="font-size:1.15rem; color:var(--primary); margin-top:2.5rem; margin-bottom:1rem; border-left:4px solid var(--accent); padding-left:0.6rem; font-weight:700;"><i class="fas fa-images"></i> Galería / Documentos</h4>';
             
-            // Botón opcional para iniciar carrusel
-            galleryHtml += '<button class="btn-news-carousel" style="margin-bottom: 1.5rem;" onclick="openNewsCarousel(0)"><i class="fas fa-play"></i> Ver en Carrusel</button>';
+            if (currentCarouselImages.length > 0) {
+                galleryHtml += '<button class="btn-news-carousel" style="margin-bottom: 1.5rem;" onclick="openNewsCarousel(0)"><i class="fas fa-play"></i> Ver en Carrusel</button>';
+            }
             
             galleryHtml += '<div class="news-gallery-grid">';
-            currentCarouselImages.forEach((img, idx) => {
-                // Mostrar las imágenes de la galería
-                galleryHtml += '<img class="news-gallery-thumb" src="' + img + '" onclick="openNewsCarousel(' + idx + ')" alt="Imagen de galería">';
-            });
-            galleryHtml += '</div>';
             
+            // Recorrer todos los archivos para mostrarlos (imágenes + PDFs)
+            let allFiles = [];
+            if (data.image) allFiles.push(data.image);
+            if (data.gallery) allFiles = allFiles.concat(data.gallery);
+            
+            allFiles.forEach(file => {
+                if (file.toLowerCase().endsWith('.pdf')) {
+                    galleryHtml += '<a href="' + file + '" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; text-decoration:none; border-radius:8px; border: 1px solid #f87171;"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">Abrir PDF</span></a>';
+                } else {
+                    let cIndex = currentCarouselImages.indexOf(file);
+                    galleryHtml += '<img class="news-gallery-thumb" src="' + file + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">';
+                }
+            });
+            
+            galleryHtml += '</div>';
             galleryContainer.innerHTML = galleryHtml;
             galleryContainer.style.display = 'block';
         } else {
