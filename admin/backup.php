@@ -82,6 +82,10 @@ if (isset($_POST['download_backup'])) {
         $zip->close();
 
         // Enviar ZIP al usuario
+        if (isset($_POST['download_token'])) {
+            setcookie('download_token', $_POST['download_token'], time() + 3600, '/');
+        }
+        
         $filename = 'backup_completo_moratalla_' . date('Y_m_d_His') . '.zip';
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -128,12 +132,45 @@ adminHeader("Copia de Seguridad");
         </ul>
     </div>
 
-    <form method="POST" action="backup.php" onsubmit="this.querySelector('button').innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i> Generando ZIP...'; this.querySelector('button').style.opacity = '0.7';">
-        <button type="submit" name="download_backup" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+    <form method="POST" action="backup.php" id="backupForm">
+        <input type="hidden" name="download_token" id="downloadToken">
+        <button type="submit" id="backupBtn" name="download_backup" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s;">
             <i class="fas fa-file-archive"></i> Generar y Descargar Backup
         </button>
     </form>
 </div>
+
+<script>
+document.getElementById('backupForm').addEventListener('submit', function(e) {
+    var btn = document.getElementById('backupBtn');
+    var token = Date.now().toString();
+    document.getElementById('downloadToken').value = token;
+    
+    // Cambiar estado visual
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando ZIP, por favor espere...';
+    btn.style.opacity = '0.8';
+    btn.style.pointerEvents = 'none';
+    
+    // Comprobar la cookie cada 1 segundo
+    var pollTimer = setInterval(function() {
+        if (document.cookie.indexOf('download_token=' + token) !== -1) {
+            clearInterval(pollTimer);
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Copia descargada con éxito!';
+            btn.style.backgroundColor = '#10b981'; // Verde éxito
+            btn.style.borderColor = '#10b981';
+            btn.style.opacity = '1';
+            
+            // Restaurar el botón original después de 5 segundos
+            setTimeout(function() {
+                btn.innerHTML = '<i class="fas fa-file-archive"></i> Generar y Descargar Backup';
+                btn.style.backgroundColor = '';
+                btn.style.borderColor = '';
+                btn.style.pointerEvents = 'auto';
+            }, 5000);
+        }
+    }, 1000);
+});
+</script>
 
 <?php
 adminFooter();
