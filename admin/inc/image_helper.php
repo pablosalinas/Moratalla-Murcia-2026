@@ -80,8 +80,8 @@ function processUploadedImage($sourcePath, $targetPath, $addWatermark = true, $m
         $watermarkText = "moratalla-murcia.com";
         $fontFile = __DIR__ . '/fonts/Roboto-Regular.ttf';
         
-        // Tamaño de fuente dinámico: ~3% del ancho de la imagen (mínimo 14px)
-        $fontSize = max(14, intval($newWidth * 0.03));
+        // Tamaño de fuente dinámico: ~1.5% del ancho de la imagen (mínimo 10px) - Reducido a la mitad a petición
+        $fontSize = max(10, intval($newWidth * 0.015));
         
         // Colores
         $white = imagecolorallocate($optimizedImage, 255, 255, 255);
@@ -93,8 +93,8 @@ function processUploadedImage($sourcePath, $targetPath, $addWatermark = true, $m
             $textWidth = abs($bbox[2] - $bbox[0]);
             $textHeight = abs($bbox[5] - $bbox[3]);
             
-            // Margen (3% del ancho, mínimo 15px)
-            $margin = max(15, intval($newWidth * 0.03));
+            // Margen (1.5% del ancho, mínimo 10px) - También reducido para que no quede flotando muy arriba
+            $margin = max(10, intval($newWidth * 0.015));
             
             // Posición (esquina inferior derecha)
             $x = $newWidth - $textWidth - $margin;

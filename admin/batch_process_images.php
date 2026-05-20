@@ -90,7 +90,10 @@ if (isset($_POST['start']) || $isCLI) {
     }
 
     $uploadsDir = realpath(__DIR__ . '/../uploads');
-    processDirectory($uploadsDir);
+    $assetsImagesDir = realpath(__DIR__ . '/../assets/images');
+    
+    if ($uploadsDir) processDirectory($uploadsDir);
+    if ($assetsImagesDir) processDirectory($assetsImagesDir);
 
     $summary = "\n--- Resumen Final ---\n";
     $summary .= "Imágenes procesadas y optimizadas: $processedCount\n";
