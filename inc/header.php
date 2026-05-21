@@ -25,8 +25,11 @@ try {
     $randomQuote = $quoteStmt->fetch();
     if ($randomQuote) {
         $authorText = !empty($randomQuote['author']) ? " — " . $randomQuote['author'] : "";
-        $spacer = str_repeat("\xc2\xa0", 15);
-        $tickerText .= $spacer . "\"" . $randomQuote['phrase'] . "\"" . $authorText;
+        $spacer = str_repeat("&nbsp;", 15);
+        $quoteHtml = "<span style=\"color: var(--accent); font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.5);\">\"" . htmlspecialchars($randomQuote['phrase']) . "\"" . htmlspecialchars($authorText) . "</span>";
+        $finalTickerHtml = htmlspecialchars($tickerText) . $spacer . $quoteHtml;
+    } else {
+        $finalTickerHtml = htmlspecialchars($tickerText);
     }
 } catch (Exception $e) {
     // Evitar romper la página si hay algún error
@@ -126,9 +129,9 @@ function renderHorizontalMenu($parentId = null) {
 <body>
     <div class="ticker-wrapper">
         <div class="ticker-content">
-            <span><?php echo htmlspecialchars($tickerText); ?></span>
-            <span><?php echo htmlspecialchars($tickerText); ?></span>
-            <span><?php echo htmlspecialchars($tickerText); ?></span>
+            <span><?php echo isset($finalTickerHtml) ? $finalTickerHtml : htmlspecialchars($tickerText); ?></span>
+            <span><?php echo isset($finalTickerHtml) ? $finalTickerHtml : htmlspecialchars($tickerText); ?></span>
+            <span><?php echo isset($finalTickerHtml) ? $finalTickerHtml : htmlspecialchars($tickerText); ?></span>
         </div>
     </div>
 
