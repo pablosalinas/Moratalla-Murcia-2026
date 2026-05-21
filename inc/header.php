@@ -110,7 +110,7 @@ function renderHorizontalMenu($parentId = null) {
     <meta property="og:title" content="<?php echo htmlspecialchars($finalTitle); ?>">
     <meta property="og:description" content="<?php echo htmlspecialchars($finalDesc); ?>">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://www.moratalla-murcia.com/uploads/theme/logo.jpg">
+    <meta property="og:image" content="https://www.moratalla-murcia.com/moratalla/uploads/theme/logo.jpg">
     <?php $currentUrl = "https://www.moratalla-murcia.com" . $_SERVER['REQUEST_URI']; ?>
     <meta property="og:url" content="<?php echo $currentUrl; ?>">
     <link rel="canonical" href="<?php echo $currentUrl; ?>" />
@@ -121,7 +121,7 @@ function renderHorizontalMenu($parentId = null) {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "Moratalla Murcia - Patrimonio Histórico Digital",
-      "url": "https://www.moratalla-murcia.com/",
+      "url": "https://www.moratalla-murcia.com/moratalla/",
       "description": "<?php echo htmlspecialchars($defaultDesc); ?>",
       "keywords": "Moratalla, Turismo Moratalla, Patrimonio Moratalla, Historia Moratalla",
       "publisher": {
@@ -129,7 +129,7 @@ function renderHorizontalMenu($parentId = null) {
         "name": "moratalla-murcia.com",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://www.moratalla-murcia.com/uploads/theme/logo.jpg"
+          "url": "https://www.moratalla-murcia.com/moratalla/uploads/theme/logo.jpg"
         }
       }
     }

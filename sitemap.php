@@ -7,7 +7,7 @@ header('Content-Type: application/xml; charset=utf-8');
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
-$baseUrl = 'https://www.moratalla-murcia.com/';
+$baseUrl = 'https://www.moratalla-murcia.com/moratalla/';
 
 // Helper function to add URLs
 function addUrl($url, $lastmod = null, $changefreq = 'weekly', $priority = '0.5') {
