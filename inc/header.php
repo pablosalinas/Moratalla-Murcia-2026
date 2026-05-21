@@ -75,6 +75,9 @@ function renderHorizontalMenu($parentId = null) {
             $hasChildren = $stmtChild->fetchColumn() > 0;
             
             $url = "category.php?id={$cat['id']}";
+            if (mb_strtolower(trim($cat['name']), 'UTF-8') === 'contacto') {
+                $url = "contacto.php";
+            }
             
             echo "<li>";
             echo "<a href='{$url}'>";
