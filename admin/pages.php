@@ -142,6 +142,22 @@ if ($action == 'list') {
             </tbody>
         </table>
     </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const term = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#tableBody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    });
+    </script>
     <?php
 } else if ($action == 'edit' || $action == 'add') {
     $page = ['id' => '', 'title' => '', 'category_id' => '', 'content' => ''];
@@ -262,21 +278,6 @@ if ($action == 'list') {
             </div>
         <?php endif; ?>
     </div>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('keyup', function() {
-                const term = this.value.toLowerCase();
-                const rows = document.querySelectorAll('#tableBody tr');
-                rows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(term) ? '' : 'none';
-                });
-            });
-        }
-    });
-    </script>
     <?php
 }
 adminFooter(); ?>
