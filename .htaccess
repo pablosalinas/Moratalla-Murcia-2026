@@ -1,0 +1,9 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Redirigir moratalla-murcia.com/moratalla a la página principal
+RewriteRule ^moratalla/?$ / [R=301,L]
+
+# Sitemap
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+</IfModule>
