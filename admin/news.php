@@ -248,6 +248,10 @@ adminHeader("Noticias y Eventos");
             <a href="?action=add" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-plus"></i> Nueva Noticia / Evento</a>
         </div>
 
+        <div style="margin-bottom: 1rem;">
+            <input type="text" id="searchInput" placeholder="Buscar por título, fecha o sección..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
+        </div>
+
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
@@ -314,6 +318,25 @@ adminHeader("Noticias y Eventos");
             </table>
         </div>
     </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const term = this.value.toLowerCase();
+                const rows = document.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    // Solo ocultar si la fila tiene celdas de datos, no el mensaje de vacío
+                    if(row.cells.length > 1) {
+                        row.style.display = text.includes(term) ? '' : 'none';
+                    }
+                });
+            });
+        }
+    });
+    </script>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
     $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'is_active_home' => 1, 'category_id' => '', 'is_active_category' => 0];
