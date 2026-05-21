@@ -80,14 +80,21 @@ $newContent = <<<HTML
 HTML;
 
 try {
-    // ID 279 corresponde a "Situacion geografica"
-    $stmt = $pdo->prepare("UPDATE pages SET content = :content WHERE id = 279");
+    // Buscar la página por título por si el ID es distinto en producción
+    $stmt = $pdo->prepare("UPDATE pages SET content = :content WHERE title LIKE '%Situacion geografica%'");
     $stmt->execute(['content' => $newContent]);
     
-    echo "<h1>¡Éxito!</h1>";
-    echo "<p style='color: green;'>La página 'Situación' se ha actualizado correctamente en la base de datos con mapas interactivos de Google Maps.</p>";
-    echo "<p>Los acentos han sido corregidos y el diseño HTML rústico ha sido reemplazado por la versión premium.</p>";
-    echo "<p><strong>Recuerda borrar este archivo (fix_mapas.php) de tu servidor por seguridad.</strong></p>";
+    $rowCount = $stmt->rowCount();
+    
+    if ($rowCount > 0) {
+        echo "<h1>¡Éxito!</h1>";
+        echo "<p style='color: green;'>La página 'Situación' se ha actualizado correctamente en la base de datos con mapas interactivos de Google Maps.</p>";
+        echo "<p>Los acentos han sido corregidos y el diseño HTML rústico ha sido reemplazado por la versión premium.</p>";
+        echo "<p><strong>Recuerda borrar este archivo (fix_mapas.php) de tu servidor por seguridad.</strong></p>";
+    } else {
+        echo "<h1>Aviso</h1>";
+        echo "<p style='color: orange;'>El script se ejecutó sin errores, pero no se encontró ninguna página con el título 'Situacion geografica' o el contenido ya estaba actualizado.</p>";
+    }
 } catch(Exception $e) {
     echo "<h1>Error</h1>";
     echo "<p style='color: red;'>" . htmlspecialchars($e->getMessage()) . "</p>";
