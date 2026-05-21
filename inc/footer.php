@@ -409,7 +409,7 @@
     <!-- Modal para maximizar banners -->
     <div id="bannerModal" style="display:none; position:fixed; z-index:99999; left:0; top:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.9); align-items:center; justify-content:center; cursor:zoom-out;" onclick="this.style.display='none'">
         <span style="position:absolute; top:20px; right:40px; color:white; font-size:40px; font-weight:bold; cursor:pointer;">&times;</span>
-        <img id="bannerModalImg" src="" style="max-width:95vw; max-height:90vh; object-fit:contain; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <img id="bannerModalImg" src="" style="width: 80vw; height: 80vh; max-width: 900px; object-fit: contain; image-rendering: high-quality; border-radius: 12px; box-shadow: 0 10px 50px rgba(0,0,0,0.8); background: rgba(0,0,0,0.3);">
     </div>
 
     <!-- PROTECCION ANTI-COPIA DE IMAGENES -->
