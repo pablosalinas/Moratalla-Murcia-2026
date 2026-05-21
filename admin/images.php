@@ -10,11 +10,11 @@ $pdo = getDB();
 // Procesar actualización de imagen
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_image') {
     $img_id = (int)$_POST['image_id'];
-    $caption = $_POST['caption'] ?? '';
-    $sort_order = (int)($_POST['sort_order'] ?? 0);
+    $caption = isset($_POST['caption']) ? $_POST['caption'] : '';
+    $sort_order = (int)(isset($_POST['sort_order']) ? $_POST['sort_order'] : 0);
     $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     $is_cover = isset($_POST['is_cover']) ? 1 : 0;
-    $current_page = (int)($_POST['current_page'] ?? 1);
+    $current_page = (int)(isset($_POST['current_page']) ? $_POST['current_page'] : 1);
 
     // Si se marca como portada, desmarcar las demás de ESA MISMA PÁGINA
     if ($is_cover) {
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Procesar eliminación de imagen (Opcional, pero útil)
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
-    $current_page = (int)($_GET['page'] ?? 1);
+    $current_page = (int)(isset($_GET['page']) ? $_GET['page'] : 1);
     
     $stmt = $pdo->prepare("SELECT image_path FROM page_images WHERE id = ?");
     $stmt->execute([$id]);
@@ -54,24 +54,16 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-// --- Paginación ---
-$limit = 50;
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$offset = ($page - 1) * $limit;
-
-$totalImages = $pdo->query("SELECT COUNT(*) FROM page_images")->fetchColumn();
-$totalPages = ceil($totalImages / $limit);
-
 // Consulta
+$page = 1;
+$totalImages = $pdo->query("SELECT COUNT(*) FROM page_images")->fetchColumn();
+
 $stmt = $pdo->prepare("
     SELECT pi.*, p.title as page_title, p.id as real_page_id 
     FROM page_images pi 
     LEFT JOIN pages p ON pi.page_id = p.id 
-    ORDER BY pi.id DESC 
-    LIMIT ? OFFSET ?
+    ORDER BY pi.id DESC
 ");
-$stmt->bindValue(1, $limit, PDO::PARAM_INT);
-$stmt->bindValue(2, $offset, PDO::PARAM_INT);
 $stmt->execute();
 $images = $stmt->fetchAll();
 
@@ -134,7 +126,7 @@ adminHeader("Galería General");
 
                     <div>
                         <label style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem; display: block;">Descripción (Pie de foto)</label>
-                        <input type="text" name="caption" value="<?php echo htmlspecialchars($row['caption'] ?? ''); ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.9rem;" placeholder="Sin descripción...">
+                        <input type="text" name="caption" value="<?php echo htmlspecialchars(isset($row['caption']) ? $row['caption'] : ''); ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.9rem;" placeholder="Sin descripción...">
                     </div>
 
                     <div style="display: flex; gap: 1rem; align-items: center;">
@@ -165,31 +157,7 @@ adminHeader("Galería General");
         <?php endforeach; ?>
     </div>
 
-    <!-- Paginación -->
-    <?php if ($totalPages > 1): ?>
-    <div style="margin-top: 3rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
-        <?php if ($page > 1): ?>
-            <a href="images.php?page=1" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-double-left"></i></a>
-            <a href="images.php?page=<?php echo $page - 1; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-left"></i></a>
-        <?php endif; ?>
 
-        <?php 
-        $startPage = max(1, $page - 2);
-        $endPage = min($totalPages, $page + 2);
-        for ($i = $startPage; $i <= $endPage; $i++): 
-        ?>
-            <a href="images.php?page=<?php echo $i; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: <?php echo $i === $page ? 'var(--primary)' : 'white'; ?>; color: <?php echo $i === $page ? 'white' : 'var(--text)'; ?>; border: 1px solid var(--gray-300);"><?php echo $i; ?></a>
-        <?php endfor; ?>
-
-        <?php if ($page < $totalPages): ?>
-            <a href="images.php?page=<?php echo $page + 1; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-right"></i></a>
-            <a href="images.php?page=<?php echo $totalPages; ?>" class="btn-modern" style="padding: 0.5rem 1rem; background: white; border: 1px solid var(--gray-300); color: var(--text);"><i class="fas fa-angle-double-right"></i></a>
-        <?php endif; ?>
-    </div>
-    <div style="text-align: center; margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
-        Página <?php echo $page; ?> de <?php echo $totalPages; ?>
-    </div>
-    <?php endif; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
