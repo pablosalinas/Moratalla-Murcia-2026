@@ -6,9 +6,10 @@ $newContent = <<<HTML
 <div class="content-card">
     <div style="text-align: center; margin-bottom: 2rem;">
         <h2 style="color: var(--primary); font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Moratalla</h2>
-        <a href="Images/situacion.jpg" target="_blank" style="display: inline-block; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);">
-            <img src="Images/situacion.jpg" alt="Mapa de Situación" style="max-width: 100%; height: auto; display: block; border: 3px solid var(--primary);">
-        </a>
+        <!-- Mapa interactivo de Google Maps de Moratalla -->
+        <div style="border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); border: 3px solid var(--primary); width: 100%; height: 400px; max-width: 800px; margin: 0 auto;">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d100344.20454645218!2d-2.029805988022791!3d38.18843254992661!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd6505ab3e9f45f9%3A0xc3924db16f4fc448!2s30440%20Moratalla%2C%20Murcia!5e0!3m2!1ses!2ses!4v1716290000000!5m2!1ses!2ses" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
     </div>
 
     <div class="html-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text);">
@@ -25,6 +26,7 @@ $newContent = <<<HTML
         </div>
 
         <h3 style="color: var(--primary-dark); margin-top: 3rem; margin-bottom: 1rem; border-bottom: 2px solid var(--gray-200); padding-bottom: 0.5rem;">Distancias Kilométricas</h3>
+        <p style="font-size: 0.95rem; color: var(--text-light); margin-bottom: 2rem;"><i class="fas fa-info-circle"></i> Haz clic en cualquier población para ver la ruta directa desde Moratalla en Google Maps.</p>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
             <div>
@@ -37,15 +39,15 @@ $newContent = <<<HTML
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>Campo Béjar</td><td style="text-align: right;">14</td></tr>
-                        <tr><td>Benízar</td><td style="text-align: right;">32</td></tr>
-                        <tr><td>Calar de la Santa</td><td style="text-align: right;">32</td></tr>
-                        <tr><td>Campo de San Juan</td><td style="text-align: right;">21</td></tr>
-                        <tr><td>Cañada de la Cruz</td><td style="text-align: right;">57</td></tr>
-                        <tr><td>El Sabinar</td><td style="text-align: right;">28</td></tr>
-                        <tr><td>La Rogativa</td><td style="text-align: right;">45</td></tr>
-                        <tr><td>Mazuza</td><td style="text-align: right;">40</td></tr>
-                        <tr><td>Otos</td><td style="text-align: right;">37</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Campo+Béjar,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Campo Béjar</a></td><td style="text-align: right;">14</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Benízar,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Benízar</a></td><td style="text-align: right;">32</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Calar+de+la+Santa,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Calar de la Santa</a></td><td style="text-align: right;">32</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Campo+de+San+Juan,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Campo de San Juan</a></td><td style="text-align: right;">21</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Cañada+de+la+Cruz,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Cañada de la Cruz</a></td><td style="text-align: right;">57</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=El+Sabinar,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>El Sabinar</a></td><td style="text-align: right;">28</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=La+Rogativa,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>La Rogativa</a></td><td style="text-align: right;">45</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Mazuza,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Mazuza</a></td><td style="text-align: right;">40</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Otos,+Moratalla,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Otos</a></td><td style="text-align: right;">37</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -60,15 +62,15 @@ $newContent = <<<HTML
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>Bullas</td><td style="text-align: right;">33</td></tr>
-                        <tr><td>Calasparra</td><td style="text-align: right;">19</td></tr>
-                        <tr><td>Caravaca de la Cruz</td><td style="text-align: right;">13</td></tr>
-                        <tr><td>Cehegín</td><td style="text-align: right;">20</td></tr>
-                        <tr><td>Cieza</td><td style="text-align: right;">57</td></tr>
-                        <tr><td>Hellín</td><td style="text-align: right;">75</td></tr>
-                        <tr><td>Lorca</td><td style="text-align: right;">71</td></tr>
-                        <tr><td>Mula</td><td style="text-align: right;">47</td></tr>
-                        <tr><td>Socovos (Albacete)</td><td style="text-align: right;">36</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Bullas,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Bullas</a></td><td style="text-align: right;">33</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Calasparra,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Calasparra</a></td><td style="text-align: right;">19</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Caravaca+de+la+Cruz,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Caravaca de la Cruz</a></td><td style="text-align: right;">13</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Cehegín,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Cehegín</a></td><td style="text-align: right;">20</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Cieza,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Cieza</a></td><td style="text-align: right;">57</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Hellín,+Albacete" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Hellín</a></td><td style="text-align: right;">75</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Lorca,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Lorca</a></td><td style="text-align: right;">71</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Mula,+Murcia" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Mula</a></td><td style="text-align: right;">47</td></tr>
+                        <tr><td><a href="https://www.google.com/maps/dir/?api=1&origin=Moratalla,+Murcia&destination=Socovos,+Albacete" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;"><i class="fas fa-map-marker-alt" style="color: var(--accent); margin-right: 5px;"></i>Socovos (Albacete)</a></td><td style="text-align: right;">36</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -83,7 +85,7 @@ try {
     $stmt->execute(['content' => $newContent]);
     
     echo "<h1>¡Éxito!</h1>";
-    echo "<p style='color: green;'>La página 'Situación' se ha actualizado correctamente en la base de datos.</p>";
+    echo "<p style='color: green;'>La página 'Situación' se ha actualizado correctamente en la base de datos con mapas interactivos.</p>";
     echo "<p>Los acentos han sido corregidos y el diseño HTML rústico ha sido reemplazado por la versión premium.</p>";
     echo "<p><strong>Recuerda borrar este archivo (fix_situacion.php) por seguridad.</strong></p>";
 } catch(Exception $e) {

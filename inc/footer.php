@@ -67,9 +67,10 @@
         <div class="container" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-size: 0.85rem; opacity: 0.7; text-align: center;">
             <p><a href="admin/index.php" style="color: inherit; text-decoration: none; outline: none; -webkit-tap-highlight-color: transparent; position: relative; z-index: 999; display: inline-block; padding: 20px; margin: -20px;">&copy;</a> Pablo Salinas Marín</p>
             <p>www.moratalla-murcia.com</p>
-            <p>1998 - 2026</p>
+            <p>1998 - <?php echo date('Y'); ?></p>
             <div style="margin-top: 2rem; max-width: 800px; font-size: 0.75rem; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
-                <p><strong>Protección de Datos:</strong> En cumplimiento de la normativa vigente en materia de protección de datos personales, le informamos que moratalla-murcia.com trata la información facilitada con el fin de gestionar la difusión cultural e histórica del proyecto. Puede ejercer sus derechos de acceso, rectificación, limitación y supresión de datos dirigiéndose al correo electrónico de contacto: <a href="mailto:pablosalinas@moratalla-murcia.com" style="color: white; text-decoration: underline;">pablosalinas@moratalla-murcia.com</a>.</p>
+                <?php $footerAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com'; ?>
+                <p><strong>Protección de Datos:</strong> En cumplimiento de la normativa vigente en materia de protección de datos personales, le informamos que moratalla-murcia.com trata la información facilitada con el fin de gestionar la difusión cultural e histórica del proyecto. Puede ejercer sus derechos de acceso, rectificación, limitación y supresión de datos dirigiéndose al correo electrónico de contacto: <a href="mailto:<?php echo htmlspecialchars($footerAdminEmail); ?>" style="color: white; text-decoration: underline;"><?php echo htmlspecialchars($footerAdminEmail); ?></a>.</p>
             </div>
         </div>
     </footer>

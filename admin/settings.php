@@ -8,11 +8,16 @@ $pdo = getDB();
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $tickerText = $_POST['ticker_text'] ?? '';
-    $tickerSpeed = $_POST['ticker_speed'] ?? '30';
+    $tickerText = isset($_POST['ticker_text']) ? $_POST['ticker_text'] : '';
+    $tickerSpeed = isset($_POST['ticker_speed']) ? $_POST['ticker_speed'] : '30';
+    $adminEmail = isset($_POST['admin_email']) ? trim($_POST['admin_email']) : '';
     
     $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('ticker_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$tickerText, $tickerText]);
     $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('ticker_speed', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$tickerSpeed, $tickerSpeed]);
+    
+    if (!empty($adminEmail)) {
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('admin_email', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$adminEmail, $adminEmail]);
+    }
     
     $message = "Configuración actualizada con éxito.";
 }
@@ -21,8 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-$currentTicker = $settings['ticker_text'] ?? '';
-$currentSpeed = $settings['ticker_speed'] ?? '30';
+$currentTicker = isset($settings['ticker_text']) ? $settings['ticker_text'] : '';
+$currentSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : '30';
+$currentAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com';
 
 adminHeader("Configuración General");
 ?>
@@ -38,6 +44,12 @@ adminHeader("Configuración General");
     <?php endif; ?>
 
     <form method="POST" style="margin-top: 2rem;">
+        <div style="margin-bottom: 2.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Correo Electrónico del Administrador</label>
+            <input type="email" name="admin_email" value="<?php echo htmlspecialchars($currentAdminEmail); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;" placeholder="admin@moratalla-murcia.com">
+            <small style="color: #666; display: block; margin-top: 0.5rem;">Este es el correo donde se recibirán los mensajes de contacto y el que aparecerá en la política de privacidad.</small>
+        </div>
+
         <div style="margin-bottom: 2.5rem;">
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Texto Móvil (Cabecera)</label>
             <input type="text" name="ticker_text" value="<?php echo htmlspecialchars($currentTicker); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;" placeholder="Escribe aquí el texto que se moverá en la cabecera...">

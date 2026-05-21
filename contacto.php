@@ -30,7 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensajeError = "La respuesta a la suma de seguridad es incorrecta. Eres humano, ¿verdad?";
     } else {
         // Enviar el correo
-        $to = "pablosalinas@moratalla-murcia.com";
+        $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
+        $settings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        $adminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com';
+        
+        $to = $adminEmail;
         $subject = "Nuevo mensaje de contacto desde moratalla-murcia.com";
         
         $body = "Has recibido un nuevo mensaje desde el formulario de contacto de la web.\n\n";
@@ -41,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $body .= "MENSAJE:\n";
         $body .= "$mensaje\n";
         
-        $headers = "From: pablosalinas@moratalla-murcia.com\r\n";
+        $headers = "From: " . $adminEmail . "\r\n";
         $headers .= "Reply-To: $email\r\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
         
