@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Determinar si estamos en localhost
         $isLocalhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
         
-        if (mail($to, $subject, $body, $headers)) {
+        if (mail($to, $subject, $body, $headers, "-f" . $adminEmail)) {
             $mensajeExito = "¡Gracias por contactar con nosotros, $nombre! Tu mensaje se ha enviado correctamente. Te responderemos lo antes posible a $email.";
             // Limpiar datos para evitar doble envío
             $nombre = $telefono = $email = $mensaje = "";
