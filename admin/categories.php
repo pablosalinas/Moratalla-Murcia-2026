@@ -134,6 +134,27 @@ function renderCategoryTree($parentId = null, $depth = 0) {
             </div>
         </div>
         <?php
+        
+        // Mostrar páginas que cuelgan de esta categoría
+        $stmtPages = $pdo->prepare("SELECT id, title FROM pages WHERE category_id = ? ORDER BY title ASC");
+        $stmtPages->execute([$cat['id']]);
+        while ($page = $stmtPages->fetch()) {
+            $pagePadding = ($depth + 1) * 25;
+            ?>
+            <div class="tree-item" style="padding-left: <?php echo $pagePadding; ?>px; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 0.6rem 1rem; border-radius: 8px; border: 1px dashed var(--gray-200); transition: all 0.2s;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: var(--gray-300); font-weight: bold;">&mdash;</span>
+                    <i class="fas fa-file-alt" style="color: #64748b; font-size: 1rem;"></i>
+                    <strong style="color: #334155; font-weight: 500;"><?php echo htmlspecialchars($page['title']); ?></strong>
+                    <span class="badge" style="font-size: 0.65rem; background: #e2e8f0; color: #475569;">Página</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a href="pages.php?action=edit&id=<?php echo $page['id']; ?>" class="btn btn-sm" style="background: white; border: 1px solid #cbd5e1; color: #475569; padding: 0.3rem 0.6rem; font-size: 0.75rem;"><i class="fas fa-edit"></i> Editar</a>
+                </div>
+            </div>
+            <?php
+        }
+        
         renderCategoryTree($cat['id'], $depth + 1);
     }
     
