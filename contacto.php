@@ -15,11 +15,11 @@ $mensajeError = "";
 
 // Procesar formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nombre = trim($_POST['nombre'] ?? '');
-    $telefono = trim($_POST['telefono'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $mensaje = trim($_POST['mensaje'] ?? '');
-    $captcha = trim($_POST['captcha'] ?? '');
+    $nombre = trim(isset($_POST['nombre']) ? $_POST['nombre'] : '');
+    $telefono = trim(isset($_POST['telefono']) ? $_POST['telefono'] : '');
+    $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
+    $mensaje = trim(isset($_POST['mensaje']) ? $_POST['mensaje'] : '');
+    $captcha = trim(isset($_POST['captcha']) ? $_POST['captcha'] : '');
     
     // Validaciones
     if (empty($nombre) || empty($email) || empty($mensaje) || empty($captcha)) {
@@ -63,7 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nombre = $telefono = $email = $mensaje = "";
             } else {
                 $error = error_get_last();
-                $mensajeError = "Ha ocurrido un error interno del servidor al intentar enviar el correo. Por favor, inténtalo más tarde. (Detalle: " . ($error['message'] ?? 'Desconocido') . ")";
+                $errorMsg = isset($error['message']) ? $error['message'] : 'Desconocido';
+                $mensajeError = "Ha ocurrido un error interno del servidor al intentar enviar el correo. Por favor, inténtalo más tarde. (Detalle: " . $errorMsg . ")";
             }
         }
     }
@@ -115,22 +116,22 @@ require_once 'inc/header.php';
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
                 <div>
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary-dark);">Nombre y Apellidos <span style="color: #e74c3c;">*</span></label>
-                    <input type="text" name="nombre" required value="<?php echo htmlspecialchars($nombre ?? ''); ?>" placeholder="Ej: María García" style="width: 100%; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; transition: border-color 0.3s; outline: none;">
+                    <input type="text" name="nombre" required value="<?php echo htmlspecialchars(isset($nombre) ? $nombre : ''); ?>" placeholder="Ej: María García" style="width: 100%; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; transition: border-color 0.3s; outline: none;">
                 </div>
                 <div>
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary-dark);">Teléfono (Opcional)</label>
-                    <input type="tel" name="telefono" value="<?php echo htmlspecialchars($telefono ?? ''); ?>" placeholder="Ej: 600 123 456" style="width: 100%; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; transition: border-color 0.3s; outline: none;">
+                    <input type="tel" name="telefono" value="<?php echo htmlspecialchars(isset($telefono) ? $telefono : ''); ?>" placeholder="Ej: 600 123 456" style="width: 100%; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; transition: border-color 0.3s; outline: none;">
                 </div>
             </div>
 
             <div>
                 <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary-dark);">Correo Electrónico <span style="color: #e74c3c;">*</span></label>
-                <input type="email" name="email" required value="<?php echo htmlspecialchars($email ?? ''); ?>" placeholder="tu@correo.com" style="width: 100%; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; transition: border-color 0.3s; outline: none;">
+                <input type="email" name="email" required value="<?php echo htmlspecialchars(isset($email) ? $email : ''); ?>" placeholder="tu@correo.com" style="width: 100%; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; transition: border-color 0.3s; outline: none;">
             </div>
 
             <div>
                 <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary-dark);">Mensaje <span style="color: #e74c3c;">*</span></label>
-                <textarea name="mensaje" required placeholder="Escribe aquí tu consulta o comentario..." style="width: 100%; height: 180px; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; resize: vertical; transition: border-color 0.3s; outline: none;"><?php echo htmlspecialchars($mensaje ?? ''); ?></textarea>
+                <textarea name="mensaje" required placeholder="Escribe aquí tu consulta o comentario..." style="width: 100%; height: 180px; padding: 1rem; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; font-family: inherit; resize: vertical; transition: border-color 0.3s; outline: none;"><?php echo htmlspecialchars(isset($mensaje) ? $mensaje : ''); ?></textarea>
             </div>
 
             <div style="background: var(--bg-alt); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--gray-300);">
