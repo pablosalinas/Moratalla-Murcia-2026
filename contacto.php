@@ -41,16 +41,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $body .= "MENSAJE:\n";
         $body .= "$mensaje\n";
         
-        $headers = "From: no-reply@moratalla-murcia.com\r\n";
+        $headers = "From: pablosalinas@moratalla-murcia.com\r\n";
         $headers .= "Reply-To: $email\r\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        
+        // Determinar si estamos en localhost
+        $isLocalhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
         
         if (mail($to, $subject, $body, $headers)) {
             $mensajeExito = "¡Gracias por contactar con nosotros, $nombre! Tu mensaje se ha enviado correctamente. Te responderemos lo antes posible a $email.";
             // Limpiar datos para evitar doble envío
             $nombre = $telefono = $email = $mensaje = "";
         } else {
-            $mensajeError = "Ha ocurrido un error interno del servidor al intentar enviar el correo. Por favor, inténtalo más tarde.";
+            if ($isLocalhost) {
+                // Simulación en local guardando en archivo
+                $logFile = __DIR__ . '/scratch/local_mail_' . time() . '.txt';
+                if (!is_dir(__DIR__ . '/scratch')) mkdir(__DIR__ . '/scratch', 0777, true);
+                file_put_contents($logFile, "TO: $to\nSUBJECT: $subject\nHEADERS:\n$headers\nBODY:\n$body");
+                
+                $mensajeExito = "[MODO LOCAL] El correo se ha 'enviado' simuladamente y guardado en $logFile.";
+                $nombre = $telefono = $email = $mensaje = "";
+            } else {
+                $error = error_get_last();
+                $mensajeError = "Ha ocurrido un error interno del servidor al intentar enviar el correo. Por favor, inténtalo más tarde. (Detalle: " . ($error['message'] ?? 'Desconocido') . ")";
+            }
         }
     }
 }
