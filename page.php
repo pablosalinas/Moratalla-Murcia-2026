@@ -345,4 +345,30 @@ if ($isSinglePageCategory) {
     });
 </script>
 
+<script>
+    // Interceptar clics en cualquier imagen dentro del contenido de la página para abrirla en el modal
+    document.addEventListener('DOMContentLoaded', function () {
+        const contentImages = document.querySelectorAll('.html-content img');
+        contentImages.forEach(img => {
+            const parentA = img.closest('a');
+            if (parentA) {
+                parentA.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (typeof openBannerModal === 'function') {
+                        openBannerModal(img.src);
+                    }
+                });
+            } else {
+                img.style.cursor = 'pointer';
+                img.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (typeof openBannerModal === 'function') {
+                        openBannerModal(img.src);
+                    }
+                });
+            }
+        });
+    });
+</script>
+
 <?php require_once 'inc/footer.php'; ?>
