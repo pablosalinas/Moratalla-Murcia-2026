@@ -49,27 +49,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $headers .= "Reply-To: " . $email . "\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\n";
         
-        // Determinar si estamos en localhost
-        $isLocalhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
-        
-        if (mail($to, $subject, $body, $headers, "-f no-reply@moratalla-murcia.com")) {
-            $mensajeExito = "¡Gracias por contactar con nosotros, $nombre! Tu mensaje se ha enviado correctamente. Te responderemos lo antes posible a $email.";
+        // 1. Guardar siempre en la base de datos (solución robusta)
+        try {
+            $stmt = $pdo->prepare("INSERT INTO contact_messages (name, phone, email, message) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$nombre, $telefono, $email, $mensaje]);
+            
+            $mensajeExito = "¡Gracias por contactar con nosotros, $nombre! Tu mensaje se ha guardado correctamente. Te responderemos lo antes posible a $email.";
+            
+            // 2. Intentar enviar el correo electrónico (ignorar el resultado si falla por restricciones del servidor)
+            @mail($to, $subject, $body, $headers, "-f no-reply@moratalla-murcia.com");
+            
+            // Simulación en local para depuración
+            $isLocalhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
+            if ($isLocalhost) {
+                $logFile = __DIR__ . '/scratch/local_mail_' . time() . '.txt';
+                if (!is_dir(__DIR__ . '/scratch')) @mkdir(__DIR__ . '/scratch', 0777, true);
+                @file_put_contents($logFile, "TO: $to\nSUBJECT: $subject\nHEADERS:\n$headers\nBODY:\n$body");
+            }
+            
             // Limpiar datos para evitar doble envío
             $nombre = $telefono = $email = $mensaje = "";
-        } else {
-            if ($isLocalhost) {
-                // Simulación en local guardando en archivo
-                $logFile = __DIR__ . '/scratch/local_mail_' . time() . '.txt';
-                if (!is_dir(__DIR__ . '/scratch')) mkdir(__DIR__ . '/scratch', 0777, true);
-                file_put_contents($logFile, "TO: $to\nSUBJECT: $subject\nHEADERS:\n$headers\nBODY:\n$body");
-                
-                $mensajeExito = "[MODO LOCAL] El correo se ha 'enviado' simuladamente y guardado en $logFile.";
-                $nombre = $telefono = $email = $mensaje = "";
-            } else {
-                $error = error_get_last();
-                $errorMsg = isset($error['message']) ? $error['message'] : 'Desconocido';
-                $mensajeError = "Ha ocurrido un error interno del servidor al intentar enviar el correo. Por favor, inténtalo más tarde. (Detalle: " . $errorMsg . ")";
-            }
+        } catch (Exception $e) {
+            $mensajeError = "Ha ocurrido un error interno de base de datos al guardar tu mensaje. Por favor, inténtalo de nuevo.";
         }
     }
 }
