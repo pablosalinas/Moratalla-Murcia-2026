@@ -7,14 +7,14 @@ require_once 'inc/layout.php';
 require_once 'inc/image_helper.php';
 
 $pdo = getDB();
-$action = $_GET['action'] ?? 'list';
+$action = isset($_GET['action']) ? $_GET['action'] : 'list';
 
 // Procesado de guardado
 if ($action == 'save') {
-    $id = $_POST['id'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $category_id = $_POST['category_id'] ?? null;
-    $content = $_POST['content'] ?? '';
+    $id = isset($_POST['id']) ? $_POST['id'] : '';
+    $title = isset($_POST['title']) ? $_POST['title'] : '';
+    $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
+    $content = isset($_POST['content']) ? $_POST['content'] : '';
     
     if (empty($category_id)) $category_id = null;
 
@@ -49,14 +49,14 @@ if ($action == 'save') {
 }
 
 if ($action == 'save_gallery') {
-    $page_id = $_POST['page_id'] ?? null;
-    $images_data = $_POST['images'] ?? [];
+    $page_id = isset($_POST['page_id']) ? $_POST['page_id'] : null;
+    $images_data = isset($_POST['images']) ? $_POST['images'] : [];
     
     if ($page_id) {
         $stmtUpdate = $pdo->prepare("UPDATE page_images SET caption = ?, sort_order = ?, is_visible = ? WHERE id = ? AND page_id = ?");
         foreach ($images_data as $img_id => $data) {
-            $caption = $data['caption'] ?? '';
-            $sort_order = (int)($data['sort_order'] ?? 0);
+            $caption = isset($data['caption']) ? $data['caption'] : '';
+            $sort_order = (int)(isset($data['sort_order']) ? $data['sort_order'] : 0);
             $is_visible = isset($data['is_visible']) ? 1 : 0;
             $stmtUpdate->execute([$caption, $sort_order, $is_visible, $img_id, $page_id]);
         }
@@ -66,8 +66,8 @@ if ($action == 'save_gallery') {
 }
 
 if ($action == 'delete_img') {
-    $img_id = $_GET['img_id'] ?? null;
-    $page_id = $_GET['page_id'] ?? null;
+    $img_id = isset($_GET['img_id']) ? $_GET['img_id'] : null;
+    $page_id = isset($_GET['page_id']) ? $_GET['page_id'] : null;
     if ($img_id && $page_id) {
         $stmt = $pdo->prepare("SELECT image_path FROM page_images WHERE id=?");
         $stmt->execute([$img_id]);
@@ -78,6 +78,27 @@ if ($action == 'delete_img') {
         $pdo->prepare("DELETE FROM page_images WHERE id=?")->execute([$img_id]);
     }
     header("Location: pages.php?action=edit&id=$page_id");
+    exit;
+}
+
+if ($action == 'delete') {
+    $id = isset($_GET['id']) ? $_GET['id'] : null;
+    if ($id) {
+        // Borrar imágenes físicas y de base de datos
+        $stmt = $pdo->prepare("SELECT image_path FROM page_images WHERE page_id=?");
+        $stmt->execute([$id]);
+        $images = $stmt->fetchAll();
+        foreach ($images as $img) {
+            if (!empty($img['image_path']) && is_file('../' . $img['image_path'])) {
+                @unlink('../' . $img['image_path']);
+            }
+        }
+        $pdo->prepare("DELETE FROM page_images WHERE page_id=?")->execute([$id]);
+        
+        // Borrar página
+        $pdo->prepare("DELETE FROM pages WHERE id=?")->execute([$id]);
+    }
+    header("Location: pages.php?msg=" . urlencode("Página borrada correctamente."));
     exit;
 }
 
@@ -109,6 +130,7 @@ if ($action == 'list') {
                     echo "<td>
                             <a href='?action=edit&id={$row['id']}' class='btn btn-sm btn-primary'>Editar y Galería</a>
                             <a href='../page.php?id={$row['id']}' target='_blank' class='btn btn-sm' style='background: #eee;'><i class='fas fa-eye'></i> Ver</a>
+                            <a href='?action=delete&id={$row['id']}' onclick=\"return confirm('¿Estás totalmente seguro de que quieres borrar esta página y todas sus fotos? Esta acción no se puede deshacer.');\" class='btn btn-sm' style='background: #ef4444; color: white;'><i class='fas fa-trash'></i> Borrar</a>
                           </td>";
                     echo "</tr>";
                 }
@@ -217,7 +239,7 @@ if ($action == 'list') {
                                 </div>
                                 <div>
                                     <label style="font-size: 0.8rem; font-weight: 600; display: block;">Descripción / Título de la obra</label>
-                                    <textarea name="images[<?php echo $img['id']; ?>][caption]" style="width: 100%; height: 60px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem;"><?php echo htmlspecialchars($img['caption'] ?? ''); ?></textarea>
+                                    <textarea name="images[<?php echo $img['id']; ?>][caption]" style="width: 100%; height: 60px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem;"><?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?></textarea>
                                 </div>
                                 <div style="text-align: right; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; margin-top: 0.5rem;">
                                     <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto?');" style="color: #d32f2f; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
