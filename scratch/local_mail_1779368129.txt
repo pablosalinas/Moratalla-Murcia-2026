@@ -1,0 +1,17 @@
+TO: pablosalinas@moratalla-murcia.com
+SUBJECT: Nuevo mensaje de contacto desde moratalla-murcia.com
+HEADERS:
+From: no-reply@moratalla-murcia.com
+Reply-To: pablosalinasmarin@gmail.com
+Content-Type: text/plain; charset=UTF-8
+
+BODY:
+Has recibido un nuevo mensaje desde el formulario de contacto de la web.
+
+DATOS DEL REMITENTE:
+Nombre: Pablo Salinas Marín
+Teléfono: 679873616
+Correo: pablosalinasmarin@gmail.com
+
+MENSAJE:
+sfasdf
