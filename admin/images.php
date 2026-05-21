@@ -90,8 +90,11 @@ adminHeader("Galería General");
     <?php if (isset($_GET['msg']) && $_GET['msg'] === 'deleted'): ?>
         <div class="alert alert-success">Imagen eliminada permanentemente.</div>
     <?php endif; ?>
+    <div style="margin-bottom: 1rem;">
+        <input type="text" id="searchInput" placeholder="Buscar por título de página, ID o descripción de foto..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
+    </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+    <div id="imageGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
         <?php foreach ($images as $row): ?>
             <div class="image-item" style="background: var(--bg-alt); border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; position: relative; display: flex; flex-direction: column;">
                 
@@ -183,6 +186,24 @@ adminHeader("Galería General");
     </div>
     <?php endif; ?>
 
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const term = this.value.toLowerCase();
+            const items = document.querySelectorAll('#imageGrid .image-item');
+            items.forEach(item => {
+                // Para capturar también los inputs (caption)
+                const textInputs = Array.from(item.querySelectorAll('input[type="text"]')).map(i => i.value).join(' ').toLowerCase();
+                const textContent = item.textContent.toLowerCase();
+                const text = textContent + ' ' + textInputs;
+                
+                item.style.display = text.includes(term) ? 'flex' : 'none';
+            });
+        });
+    }
+});
+</script>
 
 <?php adminFooter(); ?>

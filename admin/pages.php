@@ -112,6 +112,10 @@ if ($action == 'list') {
             <a href="?action=add" class="btn btn-primary"><i class="fas fa-plus"></i> Añadir Nueva Página</a>
         </div>
 
+        <div style="margin-bottom: 1rem;">
+            <input type="text" id="searchInput" placeholder="Buscar por título o categoría..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
+        </div>
+
         <table id="pagesTable" style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--gray-200); text-align: left;">
@@ -120,7 +124,7 @@ if ($action == 'list') {
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tableBody">
                 <?php
                 $stmt = $pdo->query("SELECT p.*, c.name as cat_name FROM pages p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC, p.title ASC LIMIT 100");
                 while ($row = $stmt->fetch()) {
@@ -258,6 +262,21 @@ if ($action == 'list') {
             </div>
         <?php endif; ?>
     </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const term = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#tableBody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    });
+    </script>
     <?php
 }
 adminFooter(); ?>

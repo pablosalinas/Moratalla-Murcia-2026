@@ -186,8 +186,11 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
             </div>
             <a href="?action=add" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-plus"></i> Nueva Categoría</a>
         </div>
+        <div style="margin-bottom: 1rem;">
+            <input type="text" id="searchInput" placeholder="Buscar categoría..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
+        </div>
 
-        <div class="tree-container" style="background: var(--gray-100); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--gray-200);">
+        <div class="tree-container" id="categoryTree" style="background: var(--gray-100); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--gray-200);">
             <?php renderCategoryTree(); ?>
         </div>
     </div>
@@ -252,4 +255,19 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
     </div>
 <?php endif; ?>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const term = this.value.toLowerCase();
+                const items = document.querySelectorAll('#categoryTree .tree-item');
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(term) ? 'flex' : 'none';
+                });
+            });
+        }
+    });
+    </script>
 <?php adminFooter(); ?>
