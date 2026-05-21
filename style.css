@@ -75,7 +75,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 140px;
+    height: 90px;
     padding: 0 4rem;
 }
 
@@ -86,11 +86,11 @@ body {
 }
 
 .logo img.main-site-logo {
-    height: 110px;
+    height: 70px;
     width: auto;
     display: block;
     border: 3px solid var(--primary);
-    padding: 5px;
+    padding: 3px;
     background: white;
     border-radius: 8px;
 }
@@ -140,7 +140,7 @@ body {
 .nav-menu::-webkit-scrollbar { display: none; }
 
 .nav-menu li { position: relative; white-space: nowrap; }
-.nav-menu > li > a { padding: 1.2rem 1.5rem; text-decoration: none; color: var(--text); font-weight: 600; font-size: 0.9rem; transition: var(--transition); border-bottom: 3px solid transparent; display: block; }
+.nav-menu > li > a { padding: 0.8rem 1.2rem; text-decoration: none; color: var(--text); font-weight: 600; font-size: 0.9rem; transition: var(--transition); border-bottom: 3px solid transparent; display: block; }
 .nav-menu > li:hover > a { color: var(--primary); background: rgba(27, 67, 50, 0.05); border-bottom: 3px solid var(--accent); }
 
 /* Dropdowns */
@@ -159,8 +159,8 @@ body {
 
 .main-banner-swiper {
     width: 100%;
-    height: 380px; /* Altura ajustada para mostrar 5 imágenes como cinta */
-    min-height: 250px;
+    height: 280px; /* Altura más compactada para ordenadores */
+    min-height: 200px;
 }
 
 .main-banner-swiper .swiper-slide {
