@@ -275,7 +275,12 @@ adminHeader("Noticias y Eventos");
                         <tr style="border-bottom: 1px solid var(--gray-200); transition: background-color 0.2s;">
                             <td style="padding: 1rem;">
                                 <?php if ($row['image_path']): ?>
-                                    <img src="../<?php echo htmlspecialchars($row['image_path']); ?>" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                    <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                        <img src="../<?php echo htmlspecialchars($row['image_path']); ?>" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                        <div style="font-family: monospace; font-size: 0.6rem; color: #777; word-break: break-all; max-width: 120px; line-height: 1.1;">
+                                            /<?php echo htmlspecialchars($row['image_path']); ?>
+                                        </div>
+                                    </div>
                                 <?php else: ?>
                                     <div style="width: 60px; height: 40px; background: var(--gray-200); display: flex; align-items: center; justify-content: center; border-radius: 4px; color: var(--text-light); font-size: 0.7rem;">Sin foto</div>
                                 <?php endif; ?>
@@ -442,10 +447,13 @@ adminHeader("Noticias y Eventos");
                         foreach ($gallery as $gimg): ?>
                             <div style="border: 1px solid var(--gray-200); border-radius: 8px; padding: 0.5rem; background: var(--gray-100); text-align: center; position: relative;">
                                 <?php if(strtolower(pathinfo($gimg['image_path'], PATHINFO_EXTENSION)) == 'pdf'): ?>
-                                    <div style="width: 100%; height: 80px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px; margin-bottom: 0.5rem;"><i class="fas fa-file-pdf fa-2x"></i></div>
+                                    <div style="width: 100%; height: 80px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px; margin-bottom: 0.2rem;"><i class="fas fa-file-pdf fa-2x"></i></div>
                                 <?php else: ?>
-                                    <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">
+                                    <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.2rem;">
                                 <?php endif; ?>
+                                <div style="font-family: monospace; font-size: 0.6rem; color: #666; word-break: break-all; text-align: center; line-height: 1.1; margin-bottom: 0.5rem;">
+                                    /<?php echo htmlspecialchars($gimg['image_path']); ?>
+                                </div>
                                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 0.3rem;">
                                     <span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>
                                     <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">

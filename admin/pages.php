@@ -243,7 +243,12 @@ if ($action == 'list') {
                             ?>
                             <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
                                 <div style="display: flex; gap: 1rem;">
-                                    <img src="../<?php echo $img['image_path']; ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; max-width: 120px;">
+                                        <img src="../<?php echo $img['image_path']; ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+                                        <div style="font-family: monospace; font-size: 0.65rem; color: #666; margin-top: 0.3rem; word-break: break-all; text-align: center; line-height: 1.1;">
+                                            /<?php echo htmlspecialchars($img['image_path']); ?>
+                                        </div>
+                                    </div>
                                     <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
                                         <div style="display: flex; gap: 1rem; align-items: center;">
                                             <div style="flex: 1;">

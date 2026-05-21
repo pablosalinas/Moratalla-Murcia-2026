@@ -109,16 +109,21 @@ adminHeader("Galería General");
                     <?php endif; ?>
                 </div>
 
-                <!-- Info Origen -->
+                <!-- Info Origen y Ruta -->
                 <div style="padding: 0.75rem; border-bottom: 1px solid var(--gray-200); font-size: 0.85rem; background: white;">
-                    <?php if (empty($row['real_page_id'])): ?>
-                        <span style="color: #d9534f; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Huérfana (Página <?php echo $row['page_id']; ?> borrada)</span>
-                    <?php else: ?>
-                        <i class="fas fa-file-alt" style="color: var(--primary);"></i> 
-                        <a href="pages.php?edit=<?php echo $row['real_page_id']; ?>" style="color: var(--primary); text-decoration: none; font-weight: 600;" title="Editar página a la que pertenece">
-                            <?php echo htmlspecialchars($row['page_title']); ?>
-                        </a>
-                    <?php endif; ?>
+                    <div style="margin-bottom: 0.5rem;">
+                        <?php if (empty($row['real_page_id'])): ?>
+                            <span style="color: #d9534f; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Huérfana (Página <?php echo $row['page_id']; ?> borrada)</span>
+                        <?php else: ?>
+                            <i class="fas fa-file-alt" style="color: var(--primary);"></i> 
+                            <a href="pages.php?edit=<?php echo $row['real_page_id']; ?>" style="color: var(--primary); text-decoration: none; font-weight: 600;" title="Editar página a la que pertenece">
+                                <?php echo htmlspecialchars($row['page_title']); ?>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    <div style="font-family: monospace; font-size: 0.75rem; color: #666; background: #f8f9fa; padding: 0.4rem; border-radius: 4px; border: 1px solid #e9ecef; word-break: break-all;">
+                        <i class="fas fa-hdd" style="color: #999;"></i> /<?php echo htmlspecialchars($row['image_path']); ?>
+                    </div>
                 </div>
 
                 <!-- Formulario de Edición Rápida -->
