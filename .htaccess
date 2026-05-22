@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteBase /moratalla/
 
 # Sitemap
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
@@ -7,6 +8,9 @@ RewriteRule ^sitemap\.xml$ sitemap.php [L]
 # Si el archivo no existe (!-f) y el directorio no existe (!-d)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-# Redirigir a la carpeta principal (inicio)
-RewriteRule ^(.*)$ /moratalla/ [R=301,L]
+# Redirigir a la carpeta principal usando URL absoluta (necesario en IONOS)
+RewriteRule ^(.*)$ https://www.moratalla-murcia.com/moratalla/ [R=301,L]
 </IfModule>
+
+# Fallback nativo (ruta interna) para anular la página de error por defecto de IONOS
+ErrorDocument 404 /moratalla/index.php
