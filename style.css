@@ -895,10 +895,14 @@ img {
     transform: translateX(-50%) translateY(-10px);
     background: rgba(0, 0, 0, 0.85);
     color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
+    padding: 10px 15px;
+    border-radius: 15px;
     font-size: 0.85rem;
-    white-space: nowrap;
+    max-width: 250px;
+    width: max-content;
+    text-align: center;
+    line-height: 1.4;
+    white-space: normal;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
