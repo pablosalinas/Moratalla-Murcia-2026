@@ -62,11 +62,11 @@ if ($isSinglePageCategory) {
 }
 ?>
 
-<section class="hero-page" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; padding: 5rem 0; text-align: center; color: white;">
+<section class="hero-page" style="background: linear-gradient(135deg, rgba(27,67,50,0.85) 0%, rgba(8,28,21,0.95) 100%), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding: 3rem 0; text-align: center; color: white; border-bottom: 4px solid var(--accent);">
     <div class="container">
-        <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 2rem; border-radius: 20px; display: inline-block; border: 1px solid rgba(255,255,255,0.2);">
-            <p style="opacity: 0.9; margin-bottom: 0.5rem; color: white; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-folder-open" style="color: var(--accent);"></i> <?php echo htmlspecialchars($page['cat_name']); ?></p>
-            <h2 style="color: white; font-size: 2.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.3);"><?php echo htmlspecialchars($page['title']); ?></h2>
+        <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 1.5rem 3rem; border-radius: 15px; display: inline-block; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <p style="opacity: 0.9; margin-bottom: 0.3rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-folder-open" style="color: var(--accent);"></i> <?php echo htmlspecialchars($page['cat_name']); ?></p>
+            <h2 style="color: white; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;"><?php echo htmlspecialchars($page['title']); ?></h2>
         </div>
     </div>
 </section>
