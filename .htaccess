@@ -4,3 +4,6 @@ RewriteEngine On
 # Sitemap
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 </IfModule>
+
+# Redirigir páginas no encontradas (Error 404) al inicio de la web
+ErrorDocument 404 https://www.moratalla-murcia.com/moratalla/
