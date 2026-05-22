@@ -94,7 +94,7 @@ require_once 'inc/header.php';
 
         <!-- Noticias y Eventos de esta Categoría -->
         <?php
-        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE category_id = ? AND is_active_category = 1 AND is_active_home = 0 ORDER BY event_date DESC, id DESC");
+        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE category_id = ? AND is_active_category = 1 ORDER BY event_date DESC, id DESC");
         $stmtNews->execute([$id]);
         $categoryNews = $stmtNews->fetchAll();
         
