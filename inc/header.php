@@ -82,8 +82,13 @@ function renderHorizontalMenu($parentId = null) {
                 $url = "contacto.php";
             }
             
+            $hintAttr = "";
+            if (!empty($cat['show_hint']) && !empty($cat['hint_text'])) {
+                $hintAttr = " data-hint='" . htmlspecialchars($cat['hint_text'], ENT_QUOTES) . "'";
+            }
+            
             echo "<li>";
-            echo "<a href='{$url}'>";
+            echo "<a href='{$url}'{$hintAttr}>";
             echo htmlspecialchars($cat['name']);
             if ($hasChildren) echo " <i class='fas fa-angle-" . ($parentId === null ? 'down' : 'right') . "'></i>";
             echo "</a>";

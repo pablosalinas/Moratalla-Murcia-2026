@@ -43,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $slug = isset($_POST['slug']) ? trim($_POST['slug']) : '';
         $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
         $is_visible = isset($_POST['is_visible']) ? 1 : 0;
+        $hint_text = isset($_POST['hint_text']) ? trim($_POST['hint_text']) : null;
+        $show_hint = isset($_POST['show_hint']) ? 1 : 0;
         
         if (empty($parent_id)) {
             $parent_id = null;
@@ -72,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $stmt = $pdo->prepare("INSERT INTO categories (name, parent_id, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?)");
-                $stmt->execute([$name, $parent_id, $slug, $sort_order, $is_visible]);
+                $stmt = $pdo->prepare("INSERT INTO categories (name, parent_id, slug, sort_order, is_visible, hint_text, show_hint) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$name, $parent_id, $slug, $sort_order, $is_visible, $hint_text, $show_hint]);
                 $msg = "Categoría creada con éxito.";
                 $action = 'list';
             } else {
@@ -81,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($parent_id == $id) {
                     $parent_id = null;
                 }
-                $stmt = $pdo->prepare("UPDATE categories SET name = ?, parent_id = ?, slug = ?, sort_order = ?, is_visible = ? WHERE id = ?");
-                $stmt->execute([$name, $parent_id, $slug, $sort_order, $is_visible, $id]);
+                $stmt = $pdo->prepare("UPDATE categories SET name = ?, parent_id = ?, slug = ?, sort_order = ?, is_visible = ?, hint_text = ?, show_hint = ? WHERE id = ?");
+                $stmt->execute([$name, $parent_id, $slug, $sort_order, $is_visible, $hint_text, $show_hint, $id]);
                 $msg = "Categoría modificada con éxito.";
                 $action = 'list';
             }
@@ -217,7 +219,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
     </div>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $cat_data = ['id' => '', 'name' => '', 'parent_id' => '', 'slug' => '', 'sort_order' => 0, 'is_visible' => 1];
+    $cat_data = ['id' => '', 'name' => '', 'parent_id' => '', 'slug' => '', 'sort_order' => 0, 'is_visible' => 1, 'hint_text' => '', 'show_hint' => 0];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM categories WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -261,6 +263,17 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
                 <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Orden de Visualización</label>
                 <input type="number" name="sort_order" required value="<?php echo (int)($cat_data['sort_order']); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem;">
                 <small style="color: #666; display: block; margin-top: 0.4rem;">Define la posición de esta categoría en los listados y menús. Las categorías raíz con orden mayor a 0 se listan en el Inicio.</small>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Texto del Hint (Globo animado)</label>
+                <textarea name="hint_text" rows="3" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem;"><?php echo htmlspecialchars($cat_data['hint_text'] ?? ''); ?></textarea>
+                <small style="color: #666; display: block; margin-top: 0.4rem;">Texto descriptivo que aparecerá al pasar el ratón por encima del menú.</small>
+            </div>
+
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" name="show_hint" id="show_hint" value="1" <?php echo (!empty($cat_data['show_hint']) ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
+                <label for="show_hint" style="font-weight: 600; color: var(--primary); cursor: pointer; user-select: none;">¿Mostrar Hint al pasar el ratón?</label>
             </div>
 
             <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 10px;">
