@@ -3,7 +3,10 @@ RewriteEngine On
 
 # Sitemap
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
-</IfModule>
 
-# Redirigir páginas no encontradas (Error 404) al inicio de la web
-ErrorDocument 404 https://www.moratalla-murcia.com/moratalla/
+# Si el archivo no existe (!-f) y el directorio no existe (!-d)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Redirigir a la carpeta principal (inicio)
+RewriteRule ^(.*)$ /moratalla/ [R=301,L]
+</IfModule>
