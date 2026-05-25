@@ -7,6 +7,8 @@
     <meta name="description" content="Juega al juego tradicional del Truque contra la computadora o contra un amigo localmente.">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="icon" href="https://www.moratalla-murcia.com/moratalla/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="https://www.moratalla-murcia.com/moratalla/favicon.ico" type="image/x-icon">
 </head>
 <body>
 
@@ -14,9 +16,9 @@
     <header>
         <h1><svg viewBox="0 0 100 100" style="width: 28px; height: 28px; display: inline-block; vertical-align: middle; margin-right: 8px;"><circle cx="50" cy="50" r="42" fill="#ffe875" stroke="#d4af37" stroke-width="6"/><circle cx="50" cy="50" r="28" fill="none" stroke="#d4af37" stroke-width="4" stroke-dasharray="8 4"/><circle cx="50" cy="50" r="10" fill="#f1c40f"/></svg>EL TRUQUE</h1>
         <div class="header-buttons">
-            <a href="https://www.moratalla-murcia.com" class="btn-secondary btn-home-link" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i class="fas fa-home"></i> moratalla-murcia.com</a>
+            <a href="https://www.moratalla-murcia.com" class="btn-secondary btn-home-link" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><img src="https://www.moratalla-murcia.com/moratalla/uploads/theme/logo2.jpg" alt="Logo" style="height: 18px; width: auto; border-radius: 2px; vertical-align: middle;"> moratalla-murcia.com</a>
             <button id="btn-rules" class="btn-secondary" onclick="openRulesModal()">Reglas del Juego</button>
-            <a href="reglas_truque.pdf" download class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-file-pdf" style="margin-right: 6px; color: #ff7675;"></i>Descargar PDF</a>
+            <a href="reglas_truque.pdf" download class="btn-secondary btn-pdf-download" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-file-pdf" style="margin-right: 6px; color: #ff7675;"></i>Descargar PDF</a>
             <button id="btn-new-game" class="btn-secondary" onclick="resetGame(true)">Nueva Partida</button>
         </div>
     </header>
@@ -152,9 +154,24 @@
             <!-- Controls overlay between center and P1 hand -->
             <div class="controls-area">
                 <div class="status-bar" id="status-message">Repartiendo cartas...</div>
+                
+                <!-- Custom Envido Selector (hidden by default) -->
+                <div id="envido-selector" class="envido-selector-container" style="display: none;">
+                    <div class="selector-title">Envidar Chinas (Máx: <span id="envido-max-val">50</span>)</div>
+                    <div class="selector-controls">
+                        <button class="selector-btn" onclick="adjustEnvidoChinas(-1)">-</button>
+                        <span id="envido-selected-chinas" class="selected-chinas-val">2 chinas (Envido)</span>
+                        <button class="selector-btn" onclick="adjustEnvidoChinas(1)">+</button>
+                    </div>
+                    <div class="selector-actions">
+                        <button class="btn-confirm" onclick="confirmCustomEnvido()">Cantar</button>
+                        <button class="btn-cancel" onclick="cancelCustomEnvido()">Cancelar</button>
+                    </div>
+                </div>
+
                 <div class="action-buttons">
-                    <button id="btn-envido" class="btn-action bid-envite" onclick="handleAction('envido')">Envido (2)</button>
-                    <button id="btn-quique" class="btn-action bid-envite" onclick="handleAction('quique')">Quique (5)</button>
+                    <button id="btn-envido" class="btn-action bid-envite" onclick="openEnvidoSelector()">Envido (2)</button>
+                    <button id="btn-quique" class="btn-action bid-envite" onclick="handleAction('quique')">Quinqué (5)</button>
                     <button id="btn-falta" class="btn-action bid-envite" onclick="handleAction('falta')">La Falta</button>
                     
                     <button id="btn-truco" class="btn-action bid-truque" onclick="handleAction('truco')">Truco (3)</button>
@@ -213,6 +230,14 @@
                     <li>Cartas normales: Su número (As vale 1)</li>
                 </ul>
                 <p><em>Puntuación máxima: 43 puntos ("El Amo"). En caso de empate, gana el jugador que es "Mano".</em></p>
+                
+                <h3>Apuestas del Envite</h3>
+                <p>El Envite se puede cantar con las siguientes apuestas:</p>
+                <ul>
+                    <li><strong>Envido:</strong> Permite apostar cualquier cantidad de chinas hasta el máximo de La Falta, indicando chinas individuales o pares (ej: 2 pares = 4 chinas).</li>
+                    <li><strong>Quinqué:</strong> Apuesta fija de 5 chinas.</li>
+                    <li><strong>La Falta:</strong> Apuesta el número de chinas que le faltan para ganar al jugador que lidera la partida.</li>
+                </ul>
 
                 <h3>Fase 2: El Truque</h3>
                 <p>Se juegan las 3 cartas en 3 rondas (Primeras, Segundas, Terceras). El que gane 2 de 3 gana la mano.</p>

@@ -20,6 +20,8 @@ let enviteState = 'none'; // 'none', 'envido', 'envido-yo-tambien', 'quique', 'f
 let enviteChinas = 0;
 let enviteProposer = 0;
 let enviteChinasPending = 0; // chinas in play during negotiation
+let enviteChinasPrevious = 1;
+let customEnvidoValue = 2;
 let envitePointsCalculated = false;
 
 // Truque State
@@ -512,6 +514,7 @@ function startNewHand() {
     enviteState = 'none';
     enviteChinas = 0;
     enviteChinasPending = 0;
+    enviteChinasPrevious = 1;
     enviteProposer = 0;
     envitePointsCalculated = false;
 
@@ -721,7 +724,7 @@ function updateActionButtons() {
             btnEnvido.disabled = false;
             btnEnvido.innerText = "Envido (2)";
             btnQuique.disabled = false;
-            btnQuique.innerText = "Quique (5)";
+            btnQuique.innerText = "Quinqué (5)";
             btnFalta.disabled = false;
             btnFalta.innerText = "La Falta";
             
@@ -734,20 +737,23 @@ function updateActionButtons() {
             btnNoQuiero.disabled = false;
             btnNoQuiero.innerText = "No Quiero";
 
-            // Only allow raising to a higher category
-            if (enviteState === 'envido') {
+            const maxScore = Math.max(p1Score, p2Score);
+            const faltaChinas = Math.max(2, 50 - maxScore);
+
+            // Allow custom raise if we haven't reached Falta yet
+            if (enviteChinasPending < faltaChinas) {
                 btnEnvido.disabled = false;
-                btnEnvido.innerText = "Envido También (4)";
+                btnEnvido.innerText = "Envido Más";
+            }
+            
+            // Allow Quinqué if current bet is less than 5
+            if (enviteChinasPending < 5) {
                 btnQuique.disabled = false;
-                btnQuique.innerText = "Quique (5)";
-                btnFalta.disabled = false;
-                btnFalta.innerText = "La Falta";
-            } else if (enviteState === 'envido-yo-tambien') {
-                btnQuique.disabled = false;
-                btnQuique.innerText = "Quique (5)";
-                btnFalta.disabled = false;
-                btnFalta.innerText = "La Falta";
-            } else if (enviteState === 'quique') {
+                btnQuique.innerText = "Quinqué (5)";
+            }
+
+            // Always allow raising to Falta (if current bet is not already Falta)
+            if (enviteChinasPending < faltaChinas) {
                 btnFalta.disabled = false;
                 btnFalta.innerText = "La Falta";
             }
@@ -853,36 +859,58 @@ function handleAction(action) {
 // ENVITE PHASE LOGIC
 // ==========================================
 
-function executeEnviteAction(player, action) {
+function getParText(chinas) {
+    if (chinas === 2) return ' - Envido';
+    if (chinas === 5) return ' - Quinqué';
+    if (chinas % 2 === 0) {
+        const pares = chinas / 2;
+        return ` - ${pares} ${pares === 1 ? 'par' : 'pares'}`;
+    }
+    return '';
+}
+
+function executeEnviteAction(player, action, customChinas = null) {
     const opponent = player === 1 ? 2 : 1;
     const opponentName = opponent === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
     const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
 
+    // Close custom envido selector UI if active
+    const selector = document.getElementById('envido-selector');
+    if (selector) selector.style.display = 'none';
+    const actBtns = document.querySelector('.action-buttons');
+    if (actBtns) actBtns.style.display = 'flex';
+
     if (action === 'envido') {
+        const bidVal = customChinas || 2;
         if (enviteState === 'none') {
             enviteState = 'envido';
-            enviteChinasPending = 2;
+            enviteChinasPrevious = 1;
+            enviteChinasPending = bidVal;
             enviteProposer = player;
-            addLog(`${playerName} canta ENVIDO (2 chinas).`, 'action');
+            addLog(`${playerName} canta ENVIDO (${enviteChinasPending} china${enviteChinasPending === 1 ? '' : 's'}${getParText(enviteChinasPending)}).`, 'action');
             changeTurnEnvite(opponent);
-        } else if (enviteState === 'envido') {
+        } else {
             enviteState = 'envido-yo-tambien';
-            enviteChinasPending = 4;
+            enviteChinasPrevious = enviteChinasPending;
+            enviteChinasPending = bidVal;
             enviteProposer = player;
-            addLog(`${playerName} dice ENVIDO YO TAMBIÉN (4 chinas).`, 'action');
+            addLog(`${playerName} dice ENVIDO MÁS (${enviteChinasPending} china${enviteChinasPending === 1 ? '' : 's'}${getParText(enviteChinasPending)}).`, 'action');
             changeTurnEnvite(opponent);
         }
     } else if (action === 'quique') {
+        const bidVal = 5;
         enviteState = 'quique';
-        enviteChinasPending = 5;
+        enviteChinasPrevious = enviteState === 'none' ? 1 : enviteChinasPending;
+        enviteChinasPending = bidVal;
         enviteProposer = player;
-        addLog(`${playerName} canta QUIQUE (5 chinas).`, 'action');
+        addLog(`${playerName} canta QUINQUÉ (5 chinas).`, 'action');
         changeTurnEnvite(opponent);
     } else if (action === 'falta') {
         enviteState = 'falta';
-        // Falta calculation: max points needed to win by the leader
         const maxScore = Math.max(p1Score, p2Score);
-        enviteChinasPending = Math.max(2, 50 - maxScore);
+        const faltaChinas = Math.max(2, 50 - maxScore);
+        enviteChinasPrevious = enviteState === 'none' ? 1 : enviteChinasPending;
+        enviteChinasPending = faltaChinas;
         enviteProposer = player;
         addLog(`${playerName} envida LA FALTA (${enviteChinasPending} chinas).`, 'action');
         changeTurnEnvite(opponent);
@@ -911,14 +939,9 @@ function executeEnviteAction(player, action) {
             enviteState = 'declined';
             
             // Winner gets previous bet (or 1 china if it was the initial bet)
-            let wonChinas = 1;
-            if (enviteState === 'envido-yo-tambien') wonChinas = 2; // declined a 4-china raise
-            if (enviteState === 'quique' && enviteChinasPending > 5) wonChinas = 2; // if raised to quique from envido
-            if (enviteState === 'falta') {
-                if (enviteChinasPending > 5) wonChinas = 2; // fallback
-            }
+            const wonChinas = enviteChinasPrevious;
 
-            addLog(`El Envite se cierra. El proponente gana ${wonChinas} china(s).`, 'system');
+            addLog(`El Envite se cierra. El proponente gana ${wonChinas} china${wonChinas === 1 ? '' : 's'}.`, 'system');
             awardChinas(opponent, wonChinas);
             startTruquePhase();
         }
@@ -1424,25 +1447,31 @@ function cpuEnviteTurn() {
     if (enviteState === 'accepted' || enviteState === 'declined' || enviteState === 'passed') return;
 
     const cpuPts = calculateEnviteScore(p2Hand);
+    const maxScore = Math.max(p1Score, p2Score);
+    const faltaChinas = Math.max(2, 50 - maxScore);
     
     // AI Strategy parameters
     const random = Math.random();
     
     if (enviteState === 'none') {
         if (cpuPts >= 38) {
-            // Excellent score, bid Envite or Falta
+            // Excellent score, bid custom Envido, Quinqué or Falta
             if (cpuPts >= 41 && random > 0.4) {
                 executeEnviteAction(2, 'falta');
+            } else if (random > 0.7 && faltaChinas >= 4) {
+                executeEnviteAction(2, 'envido', 4); // 2 pares
+            } else if (random > 0.4 && faltaChinas >= 5) {
+                executeEnviteAction(2, 'quique'); // Quinqué (5)
             } else {
-                executeEnviteAction(2, 'envido');
+                executeEnviteAction(2, 'envido', 2); // Envido (2)
             }
         } else if (cpuPts >= 33 && random > 0.6) {
             // Good score, bid Envido
-            executeEnviteAction(2, 'envido');
+            executeEnviteAction(2, 'envido', 2);
         } else if (random > 0.92) {
             // Bluff Envido (8% chance)
             addLog("La Computadora decide meter un embuste...", 'system');
-            executeEnviteAction(2, 'envido');
+            executeEnviteAction(2, 'envido', 2);
         } else {
             // Pass
             executeEnviteAction(2, 'no-quiero');
@@ -1453,23 +1482,30 @@ function cpuEnviteTurn() {
 
         if (cpuPts >= 38) {
             // Accept always, raise sometimes
-            if (cpuPts >= 41 && enviteState === 'envido' && random > 0.4) {
-                executeEnviteAction(2, 'envido'); // raises to Envido Yo También
+            if (pending < faltaChinas && random > 0.5) {
+                const raiseVal = Math.min(pending + 2, faltaChinas);
+                executeEnviteAction(2, 'envido', raiseVal);
             } else {
                 executeEnviteAction(2, 'quiero');
             }
         } else if (cpuPts >= 33) {
-            // Medium-high, accept small bets, fold to Falta
-            if (enviteState === 'falta') {
-                if (random > 0.8) executeEnviteAction(2, 'quiero');
-                else executeEnviteAction(2, 'no-quiero');
+            // Medium-high, accept small bets, fold to large bets
+            if (pending > 4) {
+                if (pending === faltaChinas) {
+                    if (random > 0.85) executeEnviteAction(2, 'quiero');
+                    else executeEnviteAction(2, 'no-quiero');
+                } else {
+                    if (random > 0.7) executeEnviteAction(2, 'quiero');
+                    else executeEnviteAction(2, 'no-quiero');
+                }
             } else {
                 executeEnviteAction(2, 'quiero');
             }
         } else {
             // Low score. Mostly fold, very rare bluff raise
-            if (random > 0.95 && enviteState === 'envido') {
-                executeEnviteAction(2, 'envido'); // Bluff raise
+            if (pending <= 2 && random > 0.96) {
+                const raiseVal = Math.min(pending + 2, faltaChinas);
+                executeEnviteAction(2, 'envido', raiseVal); // Bluff raise
             } else {
                 executeEnviteAction(2, 'no-quiero');
             }
@@ -1673,6 +1709,80 @@ function showGameOverModal(title, icon, desc) {
     document.getElementById('game-over-title').innerText = title;
     document.getElementById('game-over-desc').innerText = desc;
     document.getElementById('modal-game-over').classList.add('active');
+}
+
+// --- Custom Envido Selector Handlers ---
+function openEnvidoSelector() {
+    const maxScore = Math.max(p1Score, p2Score);
+    const faltaChinas = Math.max(2, 50 - maxScore);
+
+    // Initial value:
+    // If no bet: start at 2
+    // If raising: start at enviteChinasPending + 2 (but cap at La Falta)
+    if (enviteState === 'none') {
+        customEnvidoValue = 2;
+    } else {
+        customEnvidoValue = Math.min(enviteChinasPending + 2, faltaChinas);
+        if (customEnvidoValue <= enviteChinasPending) {
+            customEnvidoValue = faltaChinas;
+        }
+    }
+
+    document.getElementById('envido-max-val').innerText = faltaChinas;
+    
+    // Hide action buttons, show custom selector
+    document.querySelector('.action-buttons').style.display = 'none';
+    document.getElementById('envido-selector').style.display = 'flex';
+    
+    updateCustomEnvidoUI();
+}
+
+function adjustEnvidoChinas(diff) {
+    const maxScore = Math.max(p1Score, p2Score);
+    const faltaChinas = Math.max(2, 50 - maxScore);
+    
+    const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
+    
+    let newVal = customEnvidoValue + diff;
+    if (newVal < minVal) newVal = minVal;
+    if (newVal > faltaChinas) newVal = faltaChinas;
+    
+    customEnvidoValue = newVal;
+    updateCustomEnvidoUI();
+}
+
+function updateCustomEnvidoUI() {
+    const display = document.getElementById('envido-selected-chinas');
+    let text = `${customEnvidoValue} china${customEnvidoValue === 1 ? '' : 's'}`;
+    
+    // Add slang for specific numbers of chinas
+    if (customEnvidoValue === 2) {
+        text += ' (Envido)';
+    } else if (customEnvidoValue === 5) {
+        text += ' (Quinqué)';
+    } else {
+        // Show pares if even
+        if (customEnvidoValue % 2 === 0) {
+            const pares = customEnvidoValue / 2;
+            text += ` (${pares} ${pares === 1 ? 'par' : 'pares'})`;
+        }
+    }
+    display.innerText = text;
+}
+
+function confirmCustomEnvido() {
+    // Hide custom selector, show action buttons
+    document.getElementById('envido-selector').style.display = 'none';
+    document.querySelector('.action-buttons').style.display = 'flex';
+    
+    // Call the original action handler with the custom value!
+    executeEnviteAction(activePlayer, 'envido', customEnvidoValue);
+}
+
+function cancelCustomEnvido() {
+    // Hide custom selector, show action buttons
+    document.getElementById('envido-selector').style.display = 'none';
+    document.querySelector('.action-buttons').style.display = 'flex';
 }
 
 // --- Bootstrap ---
