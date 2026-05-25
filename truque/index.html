@@ -16,11 +16,25 @@
     <header>
         <h1><svg viewBox="0 0 100 100" style="width: 28px; height: 28px; display: inline-block; vertical-align: middle; margin-right: 8px;"><circle cx="50" cy="50" r="42" fill="#ffe875" stroke="#d4af37" stroke-width="6"/><circle cx="50" cy="50" r="28" fill="none" stroke="#d4af37" stroke-width="4" stroke-dasharray="8 4"/><circle cx="50" cy="50" r="10" fill="#f1c40f"/></svg>EL TRUQUE</h1>
         <div class="header-buttons">
-            <a href="https://www.moratalla-murcia.com" class="btn-secondary btn-home-link" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><img src="https://www.moratalla-murcia.com/moratalla/uploads/theme/logo2.jpg" alt="Logo" style="height: 18px; width: auto; border-radius: 2px; vertical-align: middle;"> moratalla-murcia.com</a>
-            <button id="btn-rules" class="btn-secondary" onclick="openRulesModal()">Reglas del Juego</button>
-            <a href="reglas_truque.pdf" download class="btn-secondary btn-pdf-download" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-file-pdf" style="margin-right: 6px; color: #ff7675;"></i>Descargar PDF</a>
-            <button id="btn-download-history" class="btn-secondary" onclick="downloadGameHistory()"><i class="fas fa-save" style="margin-right: 6px; color: #55efc4;"></i>Guardar Historial</button>
-            <button id="btn-new-game" class="btn-secondary" onclick="resetGame(true)">Nueva Partida</button>
+            <a href="https://www.moratalla-murcia.com" class="btn-secondary btn-home-link" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                <img src="https://www.moratalla-murcia.com/moratalla/uploads/theme/logo2.jpg" alt="Logo" style="height: 18px; width: auto; border-radius: 2px; vertical-align: middle;"> 
+                <span class="btn-text">moratalla-murcia.com</span>
+            </a>
+            <button id="btn-rules" class="btn-secondary" onclick="openRulesModal()">
+                <i class="fas fa-book" style="margin-right: 4px;"></i><span class="btn-text">Reglas del Juego</span><span class="btn-text-short">Reglas</span>
+            </button>
+            <a href="reglas_truque.pdf" download class="btn-secondary btn-pdf-download" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                <i class="fas fa-file-pdf" style="margin-right: 4px; color: #ff7675;"></i><span class="btn-text">Descargar PDF</span><span class="btn-text-short">PDF</span>
+            </a>
+            <button id="btn-download-history" class="btn-secondary" onclick="downloadGameHistory()">
+                <i class="fas fa-save" style="margin-right: 4px; color: #55efc4;"></i><span class="btn-text">Guardar Historial</span><span class="btn-text-short">Log</span>
+            </button>
+            <button id="btn-open-replay" class="btn-secondary" onclick="openReplayModal()">
+                <i class="fas fa-play-circle" style="margin-right: 4px; color: #74b9ff;"></i><span class="btn-text">Reproducir</span><span class="btn-text-short">Play</span>
+            </button>
+            <button id="btn-new-game" class="btn-secondary" onclick="resetGame(true)">
+                <i class="fas fa-sync-alt" style="margin-right: 4px; color: #ffe875;"></i><span class="btn-text">Nueva Partida</span><span class="btn-text-short">Nueva</span>
+            </button>
         </div>
     </header>
 
@@ -261,6 +275,79 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeRulesModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Replay Modal -->
+    <div id="modal-replay" class="modal">
+        <div class="modal-content replay-modal-content">
+            <div class="replay-modal-header">
+                <h2><i class="fas fa-play-circle"></i> Reproductor de Partidas</h2>
+                <div class="hand-selector-container">
+                    <label for="replay-hand-select">Mano:</label>
+                    <select id="replay-hand-select" onchange="loadReplayHand(this.value)"></select>
+                </div>
+                <button class="modal-close" onclick="closeReplayModal()">&times;</button>
+            </div>
+            
+            <div class="replay-modal-body">
+                <!-- Replay Board (Visual Representation) -->
+                <div class="replay-board">
+                    <div class="replay-player-zone opponent">
+                        <div class="replay-zone-title">Oponente (CPU)</div>
+                        <div id="replay-hand-p2" class="replay-cards-hand"></div>
+                    </div>
+                    
+                    <div class="replay-center-zone">
+                        <div class="replay-guia-slot">
+                            <span class="replay-slot-title">Guía</span>
+                            <div id="replay-card-guia" class="replay-card-slot"></div>
+                        </div>
+                        <div class="replay-table-slots">
+                            <div class="replay-played-slot">
+                                <span class="replay-slot-title">J1</span>
+                                <div id="replay-played-p1" class="replay-card-slot"></div>
+                            </div>
+                            <div class="replay-played-slot">
+                                <span class="replay-slot-title">P2/CPU</span>
+                                <div id="replay-played-p2" class="replay-card-slot"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="replay-player-zone player">
+                        <div class="replay-zone-title">Jugador 1</div>
+                        <div id="replay-hand-p1" class="replay-cards-hand"></div>
+                    </div>
+                </div>
+
+                <!-- Replay Logs & Info -->
+                <div class="replay-side-panel">
+                    <h3>Registro de Acciones</h3>
+                    <div id="replay-logs-container" class="replay-logs"></div>
+                    <div id="replay-score-info" class="replay-score-info"></div>
+                </div>
+            </div>
+
+            <!-- Replay Controls Footer -->
+            <div class="replay-modal-footer">
+                <div class="replay-controls">
+                    <button class="btn btn-replay" onclick="replayFirstStep()" title="Primer paso"><i class="fas fa-fast-backward"></i></button>
+                    <button class="btn btn-replay" onclick="replayPrevStep()" title="Paso anterior"><i class="fas fa-step-backward"></i></button>
+                    <button id="btn-replay-play" class="btn btn-replay btn-play" onclick="toggleReplayPlay()" title="Reproducir/Pausar"><i class="fas fa-play"></i></button>
+                    <button class="btn btn-replay" onclick="replayNextStep()" title="Siguiente paso"><i class="fas fa-step-forward"></i></button>
+                    <button class="btn btn-replay" onclick="replayLastStep()" title="Último paso"><i class="fas fa-fast-forward"></i></button>
+                </div>
+                <div class="replay-speed">
+                    <label for="replay-speed-select">Velocidad:</label>
+                    <select id="replay-speed-select" onchange="adjustReplaySpeed(this.value)">
+                        <option value="3000">Lento (3s)</option>
+                        <option value="2000" selected>Normal (2s)</option>
+                        <option value="1000">Rápido (1s)</option>
+                    </select>
+                </div>
+                <button class="btn btn-close-replay" onclick="closeReplayModal()">Cerrar</button>
             </div>
         </div>
     </div>

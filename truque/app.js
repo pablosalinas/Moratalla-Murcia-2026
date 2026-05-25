@@ -11,6 +11,12 @@ let gameMode = 'pvc'; // 'pvc' (vs CPU) or 'pvp' (vs Player 2 Local)
 let gameHistory = [];
 let handCount = 0;
 
+// Replay State
+let replayHandIndex = 0;
+let replayStepIndex = 0;
+let replayInterval = null;
+let replaySpeed = 2000;
+
 // Scores
 let p1Score = 0;
 let p2Score = 0;
@@ -502,11 +508,26 @@ function addLog(message, type = 'system') {
     logBox.appendChild(msgDiv);
     logBox.scrollTop = logBox.scrollHeight;
 
-    // Save to active hand history logs
+    // Save to active hand history logs with state snapshot
     if (typeof gameHistory !== 'undefined' && gameHistory.length > 0) {
-        gameHistory[gameHistory.length - 1].logs.push({
+        const activeHand = gameHistory[gameHistory.length - 1];
+        activeHand.logs.push({
             timestamp: new Date().toLocaleTimeString(),
-            message: message
+            message: message,
+            state: {
+                p1Hand: p1Hand ? p1Hand.map(c => c ? { ...c } : null) : [],
+                p2Hand: p2Hand ? p2Hand.map(c => c ? { ...c } : null) : [],
+                p1PlayedCard: p1PlayedCard ? { ...p1PlayedCard } : null,
+                p2PlayedCard: p2PlayedCard ? { ...p2PlayedCard } : null,
+                p1PlayedTaped: typeof p1PlayedTaped !== 'undefined' ? p1PlayedTaped : false,
+                p2PlayedTaped: typeof p2PlayedTaped !== 'undefined' ? p2PlayedTaped : false,
+                trickWinners: typeof trickWinners !== 'undefined' ? [...trickWinners] : [],
+                enviteState: typeof enviteState !== 'undefined' ? enviteState : 'none',
+                enviteChinasPending: typeof enviteChinasPending !== 'undefined' ? enviteChinasPending : 0,
+                truqueLevel: typeof truqueLevel !== 'undefined' ? truqueLevel : 0,
+                truqueChinasPending: typeof truqueChinasPending !== 'undefined' ? truqueChinasPending : 1,
+                activePlayer: typeof activePlayer !== 'undefined' ? activePlayer : 1
+            }
         });
     }
 }
@@ -1872,6 +1893,201 @@ function downloadGameHistory() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+// --- Replay Modal Functions ---
+function openReplayModal() {
+    if (gameHistory.length === 0) {
+        alert('No hay historial de partida registrado para reproducir.');
+        return;
+    }
+    
+    // Stop active replay if any
+    stopReplayInterval();
+
+    const modal = document.getElementById('modal-replay');
+    modal.classList.add('active');
+    
+    // Populate select
+    const select = document.getElementById('replay-hand-select');
+    select.innerHTML = '';
+    gameHistory.forEach((hand, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.innerText = `Mano ${hand.handNumber}`;
+        select.appendChild(opt);
+    });
+    
+    // Load first hand
+    loadReplayHand(0);
+}
+
+function closeReplayModal() {
+    stopReplayInterval();
+    document.getElementById('modal-replay').classList.remove('active');
+}
+
+function loadReplayHand(handIdx) {
+    stopReplayInterval();
+    replayHandIndex = parseInt(handIdx);
+    replayStepIndex = 0;
+    
+    const hand = gameHistory[replayHandIndex];
+    if (!hand) return;
+    
+    // Update logs list
+    const logsContainer = document.getElementById('replay-logs-container');
+    logsContainer.innerHTML = '';
+    
+    hand.logs.forEach((log, idx) => {
+        const item = document.createElement('div');
+        item.className = 'replay-log-item';
+        item.id = `replay-log-item-${idx}`;
+        item.innerText = log.message;
+        item.addEventListener('click', () => selectReplayStep(idx));
+        logsContainer.appendChild(item);
+    });
+    
+    // Score info
+    const scoreInfo = document.getElementById('replay-score-info');
+    const p2Label = gameMode === 'pvc' ? 'CPU' : 'Jugador 2';
+    if (hand.finalScores) {
+        scoreInfo.innerText = `Resultado Mano: J1: ${hand.finalScores.p1Score} | ${p2Label}: ${hand.finalScores.p2Score}`;
+    } else {
+        scoreInfo.innerText = 'Mano en curso...';
+    }
+    
+    selectReplayStep(0);
+}
+
+function selectReplayStep(stepIdx) {
+    replayStepIndex = stepIdx;
+    const hand = gameHistory[replayHandIndex];
+    if (!hand || !hand.logs[replayStepIndex]) return;
+    
+    // Highlight log item
+    const items = document.querySelectorAll('.replay-log-item');
+    items.forEach(it => it.classList.remove('active'));
+    
+    const activeItem = document.getElementById(`replay-log-item-${replayStepIndex}`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+        activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    
+    // Get state at this step
+    const state = hand.logs[replayStepIndex].state;
+    if (!state) return;
+    
+    // Save current active game's guiaCard
+    const tempGuia = guiaCard;
+    // Set global to the replay's guiaCard for styling
+    guiaCard = hand.guiaCard;
+    
+    // Render Guia card
+    const guiaContainer = document.getElementById('replay-card-guia');
+    guiaContainer.innerHTML = '';
+    if (hand.guiaCard) {
+        guiaContainer.appendChild(createCardElement(hand.guiaCard, false));
+    }
+    
+    // Render hands
+    const p1Container = document.getElementById('replay-hand-p1');
+    const p2Container = document.getElementById('replay-hand-p2');
+    p1Container.innerHTML = '';
+    p2Container.innerHTML = '';
+    
+    state.p1Hand.forEach(card => {
+        if (card) {
+            p1Container.appendChild(createCardElement(card, false));
+        }
+    });
+    
+    state.p2Hand.forEach(card => {
+        if (card) {
+            // Replay reveals CPU cards as face up to analyze strategy!
+            p2Container.appendChild(createCardElement(card, false));
+        }
+    });
+    
+    // Render played cards
+    const playedP1 = document.getElementById('replay-played-p1');
+    const playedP2 = document.getElementById('replay-played-p2');
+    playedP1.innerHTML = '';
+    playedP2.innerHTML = '';
+    
+    if (state.p1PlayedCard) {
+        const cardEl = createCardElement(state.p1PlayedCard, false);
+        if (state.p1PlayedTaped) {
+            cardEl.classList.add('taped');
+        }
+        playedP1.appendChild(cardEl);
+    }
+    if (state.p2PlayedCard) {
+        const cardEl = createCardElement(state.p2PlayedCard, false);
+        if (state.p2PlayedTaped) {
+            cardEl.classList.add('taped');
+        }
+        playedP2.appendChild(cardEl);
+    }
+    
+    // Restore original guiaCard
+    guiaCard = tempGuia;
+}
+
+function replayFirstStep() {
+    selectReplayStep(0);
+}
+
+function replayLastStep() {
+    const hand = gameHistory[replayHandIndex];
+    if (hand) {
+        selectReplayStep(hand.logs.length - 1);
+    }
+}
+
+function replayPrevStep() {
+    if (replayStepIndex > 0) {
+        selectReplayStep(replayStepIndex - 1);
+    }
+}
+
+function replayNextStep() {
+    const hand = gameHistory[replayHandIndex];
+    if (hand && replayStepIndex < hand.logs.length - 1) {
+        selectReplayStep(replayStepIndex + 1);
+    } else {
+        stopReplayInterval();
+    }
+}
+
+function toggleReplayPlay() {
+    const btn = document.getElementById('btn-replay-play');
+    if (replayInterval) {
+        stopReplayInterval();
+    } else {
+        btn.innerHTML = '<i class="fas fa-pause"></i>';
+        replayInterval = setInterval(replayNextStep, replaySpeed);
+    }
+}
+
+function stopReplayInterval() {
+    const btn = document.getElementById('btn-replay-play');
+    if (replayInterval) {
+        clearInterval(replayInterval);
+        replayInterval = null;
+    }
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-play"></i>';
+    }
+}
+
+function adjustReplaySpeed(val) {
+    replaySpeed = parseInt(val);
+    if (replayInterval) {
+        stopReplayInterval();
+        toggleReplayPlay(); // restart with new speed
+    }
 }
 
 // --- Bootstrap ---
