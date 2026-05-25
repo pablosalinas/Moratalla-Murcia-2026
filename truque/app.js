@@ -446,21 +446,20 @@ function getCardCenterHtml(number, suit) {
     return '';
 }
 
-// --- Render Card HTML Element ---
 function createCardElement(card, isOpponent = false, onClickHandler = null) {
-    const isGuia = guiaCard && card.suit === guiaCard.suit && [1, 5, 12, 11, 10].includes(card.number);
+    const isGuia = !isOpponent && guiaCard && card.suit === guiaCard.suit && [1, 5, 12, 11, 10].includes(card.number);
     
     const cardDiv = document.createElement('div');
     cardDiv.className = 'card';
     cardDiv.id = card.id;
 
-    if (isGuia) {
-        cardDiv.classList.add('guia-card');
-    }
-
-    if (isOpponent && gameMode === 'pvc') {
+    if (isOpponent) {
         cardDiv.classList.add('back');
         return cardDiv;
+    }
+
+    if (isGuia) {
+        cardDiv.classList.add('guia-card');
     }
 
     // Set the inner pinta border
@@ -656,7 +655,8 @@ function renderHands(hideAll = false) {
     // Player 1 Hand
     p1Hand.forEach(card => {
         if (card) {
-            const cardEl = createCardElement(card, false, (gameMode === 'pvp' && activePlayer !== 1) ? null : playerPlayCard);
+            const isOpponentCard = (gameMode === 'pvp' && activePlayer !== 1);
+            const cardEl = createCardElement(card, isOpponentCard, isOpponentCard ? null : playerPlayCard);
             // Disable click if it's not their turn in PvP or we are in Envite phase
             if (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') {
                 cardEl.classList.add('disabled');
@@ -675,7 +675,8 @@ function renderHands(hideAll = false) {
                 p2Container.appendChild(createCardElement(card, true));
             } else {
                 // PvP Local
-                const cardEl = createCardElement(card, false, (activePlayer !== 2) ? null : playerPlayCard);
+                const isOpponentCard = (activePlayer !== 2);
+                const cardEl = createCardElement(card, isOpponentCard, isOpponentCard ? null : playerPlayCard);
                 if (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') {
                     cardEl.classList.add('disabled');
                 }
