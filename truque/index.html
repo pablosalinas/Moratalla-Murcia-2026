@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego del Truque - Baraja Española</title>
+    <meta name="description" content="Juega al juego tradicional del Truque contra la computadora o contra un amigo localmente.">
+    <link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <h1><svg viewBox="0 0 100 100" style="width: 28px; height: 28px; display: inline-block; vertical-align: middle; margin-right: 8px;"><circle cx="50" cy="50" r="42" fill="#ffe875" stroke="#d4af37" stroke-width="6"/><circle cx="50" cy="50" r="28" fill="none" stroke="#d4af37" stroke-width="4" stroke-dasharray="8 4"/><circle cx="50" cy="50" r="10" fill="#f1c40f"/></svg>EL TRUQUE</h1>
+        <div class="header-buttons">
+            <button id="btn-rules" class="btn-secondary" onclick="openRulesModal()">Reglas del Juego</button>
+            <a href="reglas_truque.pdf" download class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Descargar PDF</a>
+            <button id="btn-new-game" class="btn-secondary" onclick="resetGame(true)">Nueva Partida</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="game-container">
+        
+        <!-- Sidebar Panel (Scores & Logs) -->
+        <aside class="sidebar">
+            <!-- Mode Selector -->
+            <div class="score-panel" style="padding: 10px;">
+                <h3 style="margin-bottom: 8px; font-size: 0.9rem;">Modo de Juego</h3>
+                <select id="game-mode-select" onchange="changeGameMode(this.value)" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-weight: 600;">
+                    <option value="pvc">Contra Ordenador (IA)</option>
+                    <option value="pvp">Dos Jugadores (Local)</option>
+                </select>
+            </div>
+
+            <!-- Scores -->
+            <div class="score-panel">
+                <h3>Marcador Global</h3>
+                <div class="score-row">
+                    <span class="score-label" id="lbl-p1-score">Jugador 1</span>
+                    <span class="score-val player" id="val-p1-score">0</span>
+                </div>
+                <div class="score-row">
+                    <span class="score-label" id="lbl-p2-score">Computadora</span>
+                    <span class="score-val cpu" id="val-p2-score">0</span>
+                </div>
+
+                <!-- China Progress Tracks -->
+                <div class="china-track">
+                    <div class="china-label">
+                        <span>MALAS (0-25)</span>
+                        <span id="txt-p1-malas">0</span>
+                    </div>
+                    <div class="china-dots" id="track-p1-malas"></div>
+                </div>
+                <div class="china-track">
+                    <div class="china-label">
+                        <span>BUENAS (25-50)</span>
+                        <span id="txt-p1-buenas">0</span>
+                    </div>
+                    <div class="china-dots" id="track-p1-buenas"></div>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 12px 0;">
+
+                <div class="china-track">
+                    <div class="china-label">
+                        <span id="lbl-p2-malas-title">MALAS CPU (0-25)</span>
+                        <span id="txt-p2-malas">0</span>
+                    </div>
+                    <div class="china-dots" id="track-p2-malas"></div>
+                </div>
+                <div class="china-track">
+                    <div class="china-label">
+                        <span id="lbl-p2-buenas-title">BUENAS CPU (25-50)</span>
+                        <span id="txt-p2-buenas">0</span>
+                    </div>
+                    <div class="china-dots" id="track-p2-buenas"></div>
+                </div>
+            </div>
+
+            <!-- Hand Score (For current round check) -->
+            <div class="score-panel" style="padding: 12px;">
+                <h3>Mano Actual</h3>
+                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>Envite Jugador 1: <strong id="val-p1-envite-pts">-</strong></div>
+                    <div>Envite P2/CPU: <strong id="val-p2-envite-pts">-</strong></div>
+                    <div style="grid-column: span 2; margin-top: 6px;">
+                        Bazas Ganadas: <br>
+                        - <span id="lbl-p1-name-bazas">Jugador 1</span>: <strong id="val-p1-bazas">0</strong> / 3 <br>
+                        - <span id="lbl-p2-name-bazas">P2/CPU</span>: <strong id="val-p2-bazas">0</strong> / 3
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Logs -->
+            <div class="log-panel">
+                <h4>Registro del Juego</h4>
+                <div class="log-messages" id="log-messages">
+                    <div class="log-msg system">Partida de Truque iniciada a 50 chinas.</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Board -->
+        <main class="board">
+            
+            <!-- CPU/P2 Hand Area -->
+            <section class="zone" id="zone-opponent">
+                <span class="zone-label" id="lbl-opponent-name">Computadora</span>
+                <div class="cards-hand" id="opponent-hand">
+                    <!-- Cards will be populated dynamically -->
+                </div>
+            </section>
+
+            <!-- Table Center (Baza / Played Card Area & Guía) -->
+            <section class="play-field">
+                
+                <!-- Guía Card Slot -->
+                <div class="guia-area">
+                    <div class="guia-title">Carta Guía</div>
+                    <div id="guia-card-container">
+                        <!-- Guía Card will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Played cards in the current trick -->
+                <div class="baza-area">
+                    <div class="played-cards-slots">
+                        <div class="played-slot">
+                            <span class="played-slot-label" id="lbl-played-p2">CPU</span>
+                            <div class="slot-card-container" id="played-card-p2"></div>
+                        </div>
+                        <div class="played-slot">
+                            <span class="played-slot-label">Jugador 1</span>
+                            <div class="slot-card-container" id="played-card-p1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Screen overlay (Pass and Play) -->
+                    <div class="privacy-screen" id="privacy-screen">
+                        <h2 id="privacy-title">Turno del Oponente</h2>
+                        <p id="privacy-text">Pasa el dispositivo y haz clic en revelar para ver tu mano.</p>
+                        <button class="btn-reveal" onclick="revealPrivacyScreen()">Revelar Cartas</button>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Controls overlay between center and P1 hand -->
+            <div class="controls-area">
+                <div class="status-bar" id="status-message">Repartiendo cartas...</div>
+                <div class="action-buttons">
+                    <button id="btn-envido" class="btn-action bid-envite" onclick="handleAction('envido')">Envido (2)</button>
+                    <button id="btn-quique" class="btn-action bid-envite" onclick="handleAction('quique')">Quique (5)</button>
+                    <button id="btn-falta" class="btn-action bid-envite" onclick="handleAction('falta')">La Falta</button>
+                    
+                    <button id="btn-truco" class="btn-action bid-truque" onclick="handleAction('truco')">Truco (3)</button>
+                    
+                    <button id="btn-quiero" class="btn-action bid-accept" onclick="handleAction('quiero')">Quiero</button>
+                    <button id="btn-no-quiero" class="btn-action bid-decline" onclick="handleAction('no-quiero')">No Quiero</button>
+                    
+                    <button id="btn-tapar" class="btn-action" onclick="toggleTapar()" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15)">Tapar Carta: OFF</button>
+                    <button id="btn-ir-al-mazo" class="btn-action bid-decline" onclick="handleAction('retirarse')">Ir al Mazo</button>
+                </div>
+            </div>
+
+            <!-- Player 1 Hand Area -->
+            <section class="zone" id="zone-player">
+                <span class="zone-label">Jugador 1</span>
+                <div class="cards-hand" id="player-hand">
+                    <!-- Cards will be populated dynamically -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal-overlay" id="modal-game-over">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="game-over-body">
+                <span class="game-over-icon" id="game-over-icon">🏆</span>
+                <h2 class="game-over-title" id="game-over-title">¡Victoria!</h2>
+                <p class="game-over-desc" id="game-over-desc">Has ganado la partida con 50 chinas.</p>
+                <button class="btn-reveal" onclick="resetGame(true)" style="width: 100%;">Jugar de Nuevo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div class="modal-overlay" id="modal-rules">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reglas del Truque</h2>
+                <button class="close-btn" onclick="closeRulesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>Objetivo y Puntos</h3>
+                <p>El juego se disputa a <strong>50 chinas (puntos)</strong>, divididas en <strong>25 Malas</strong> y <strong>25 Buenas</strong>. Se reparten 3 cartas a cada jugador. Al final se descubre una carta que actúa de <strong>Guía</strong>.</p>
+                
+                <h3>Fase 1: El Envite</h3>
+                <p>Se calcula sumando las 2 cartas más altas y agregando <strong>20 puntos</strong>. Las cartas del mismo palo que la <strong>Guía</strong> tienen valores especiales:</p>
+                <ul>
+                    <li>As de la Guía: 12 ptos</li>
+                    <li>5 de la Guía: 11 ptos</li>
+                    <li>Rey de la Guía: 10 ptos</li>
+                    <li>Caballo de la Guía: 9 ptos</li>
+                    <li>Sota de la Guía: 8 ptos</li>
+                    <li>Otras cartas guía: Valor nominal</li>
+                    <li>Cartas normales: Su número (As vale 1)</li>
+                </ul>
+                <p><em>Puntuación máxima: 43 puntos ("El Amo"). En caso de empate, gana el jugador que es "Mano".</em></p>
+
+                <h3>Fase 2: El Truque</h3>
+                <p>Se juegan las 3 cartas en 3 rondas (Primeras, Segundas, Terceras). El que gane 2 de 3 gana la mano.</p>
+                <ul>
+                    <li><strong>Primeras:</strong> Obligatorio jugar boca arriba.</li>
+                    <li><strong>Pardas:</strong> Empate en primera ronda. Se va directo a Terceras saltándose Segundas.</li>
+                    <li><strong>Tapar:</strong> En la 2ª y 3ª ronda puedes jugar boca abajo para despistar.</li>
+                </ul>
+
+                <h3>Jerarquía de cartas en el Truque</h3>
+                <p>De mayor a menor poder:</p>
+                <ol>
+                    <li>As de la Guía, 5 de la Guía, Rey de la Guía, Caballo de la Guía, Sota de la Guía</li>
+                    <li>As de Espadas, As de Bastos</li>
+                    <li>7 de Espadas, 7 de Oros</li>
+                    <li>Los 3, Los 2</li>
+                    <li>As de Oros y As de Copas (Botas)</li>
+                    <li>Resto de Reyes, Caballos, Sotas, Seis, Cincos, Cuatros</li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeRulesModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script loading -->
+    <script src="app.js?v=3"></script>
+</body>
+</html>

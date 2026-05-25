@@ -1,0 +1,1681 @@
+// ==========================================
+// TRUQUE - GAME ENGINE AND UI HANDLER
+// ==========================================
+
+// --- Game State Constants & Variables ---
+let deck = [];
+let p1Hand = [];
+let p2Hand = [];
+let guiaCard = null;
+let gameMode = 'pvc'; // 'pvc' (vs CPU) or 'pvp' (vs Player 2 Local)
+
+// Scores
+let p1Score = 0;
+let p2Score = 0;
+
+// Hand State
+let manoPlayer = 1; // 1 or 2 (alternates each hand)
+let activePlayer = 1; // whose turn it is to act/play
+let enviteState = 'none'; // 'none', 'envido', 'envido-yo-tambien', 'quique', 'falta', 'accepted', 'declined', 'passed'
+let enviteChinas = 0;
+let enviteProposer = 0;
+let enviteChinasPending = 0; // chinas in play during negotiation
+let envitePointsCalculated = false;
+
+// Truque State
+let truqueLevel = 0; // 0 (base=1), 1 (truco=3), 2 (retruco=6), 3 (renueve=9), 4 (redoce=12), 5 (requince=15), 6 (rejuego=falta)
+let truqueChinasPending = 1; // starts at 1 if no truco is called
+let truqueState = 'none'; // 'none', 'truco', 'retruco', 'renueve', 'redoce', 'requince', 'rejuego', 'accepted', 'declined'
+let truqueProposer = 0;
+
+// Trick (Baza) State
+let currentTrick = 0; // 0 (Primeras), 1 (Segundas), 2 (Terceras)
+let p1PlayedCard = null;
+let p2PlayedCard = null;
+let p1PlayedTaped = false;
+let p2PlayedTaped = false;
+let trickWinners = []; // 1, 2, or 'parda' (tie)
+let currentTrickStarter = 1;
+let selectTaped = false;
+
+// Local Multiplayer Privacy Screen State
+let pvpScreenActive = false;
+
+// --- Suit SVG Generator ---
+function getSuitSvg(suit) {
+    if (suit === 'oro') {
+        return `
+        <svg viewBox="0 0 100 100" class="suit-icon">
+            <circle cx="50" cy="50" r="42" fill="url(#oroGrad)" stroke="#c39b22" stroke-width="3"/>
+            <circle cx="50" cy="50" r="32" fill="none" stroke="#e5a90a" stroke-width="2" stroke-dasharray="4 2"/>
+            <circle cx="50" cy="50" r="12" fill="url(#oroCenterGrad)" stroke="#b78a07" stroke-width="1.5"/>
+            <path d="M50,15 L50,30 M50,70 L50,85 M15,50 L30,50 M70,50 L85,50 M25,25 L36,36 M64,64 L75,75 M75,25 L64,36 M36,62 L25,75" stroke="#b78a07" stroke-width="2.5" stroke-linecap="round"/>
+            <defs>
+                <linearGradient id="oroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ffe875" />
+                    <stop offset="50%" stop-color="#f1c40f" />
+                    <stop offset="100%" stop-color="#d4af37" />
+                </linearGradient>
+                <linearGradient id="oroCenterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f1c40f" />
+                    <stop offset="100%" stop-color="#b78a07" />
+                </linearGradient>
+            </defs>
+        </svg>`;
+    } else if (suit === 'copa') {
+        return `
+        <svg viewBox="0 0 100 100" class="suit-icon">
+            <path d="M25,20 C25,50 75,50 75,20 C75,17 25,17 25,20 Z" fill="url(#copaGrad)" stroke="#b33939" stroke-width="3"/>
+            <path d="M25,20 L75,20" stroke="#f1c40f" stroke-width="2" fill="none"/>
+            <path d="M44,45 L44,72 C44,72 50,75 56,72 L56,45 Z" fill="url(#copaStemGrad)" stroke="#b33939" stroke-width="2.5"/>
+            <ellipse cx="50" cy="52" rx="14" ry="5.5" fill="#f1c40f" stroke="#d4af37" stroke-width="1.5"/>
+            <path d="M28,75 C28,68 72,68 72,75 C72,83 28,83 28,75 Z" fill="url(#copaGrad)" stroke="#b33939" stroke-width="2.5"/>
+            <defs>
+                <linearGradient id="copaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#ffe082" />
+                    <stop offset="40%" stop-color="#ffb300" />
+                    <stop offset="100%" stop-color="#ff6f00" />
+                </linearGradient>
+                <linearGradient id="copaStemGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#ffd54f" />
+                    <stop offset="100%" stop-color="#ff8f00" />
+                </linearGradient>
+            </defs>
+        </svg>`;
+    } else if (suit === 'espada') {
+        return `
+        <svg viewBox="0 0 100 100" class="suit-icon">
+            <path d="M30,70 L87,13 C88.5,11.5 88.5,9.5 87,8 C85.5,6.5 83.5,6.5 82,8 L25,65 Z" fill="url(#steelGrad)" stroke="#2c3e50" stroke-width="2"/>
+            <line x1="28" y1="67" x2="85" y2="10" stroke="#7f8c8d" stroke-width="1.5"/>
+            <rect x="23" y="62" width="46" height="7" rx="3.5" fill="#f1c40f" stroke="#d4af37" stroke-width="1.5" transform="rotate(-45 46 65.5)"/>
+            <rect x="30" y="69" width="8" height="18" rx="2" fill="#c0392b" stroke="#7f1d1d" stroke-width="1.5" transform="rotate(-45 34 78)"/>
+            <circle cx="23" cy="89" r="6" fill="#f1c40f" stroke="#d4af37" stroke-width="1.5"/>
+            <path d="M23,94 C18,97 12,100 15,102 C18,104 22,99 23,94 Z" fill="#e74c3c"/>
+            <defs>
+                <linearGradient id="steelGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#ffffff" />
+                    <stop offset="50%" stop-color="#cbd5e1" />
+                    <stop offset="100%" stop-color="#64748b" />
+                </linearGradient>
+            </defs>
+        </svg>`;
+    } else if (suit === 'basto') {
+        return `
+        <svg viewBox="0 0 100 100" class="suit-icon">
+            <path d="M16,84 C21,88 27,85 30,81 L86,25 C89.5,21.5 88,14.5 81,16.5 L25,72 C21,75.5 12,79 16,84 Z" fill="url(#woodGrad)" stroke="#4e342e" stroke-width="2"/>
+            <circle cx="38" cy="62" r="5" fill="#4e342e"/>
+            <circle cx="56" cy="44" r="6" fill="#4e342e"/>
+            <circle cx="74" cy="26" r="5" fill="#4e342e"/>
+            <circle cx="32" cy="74" r="4" fill="#4e342e"/>
+            <path d="M56,38 C50,30 57,24 61,28 C63,30 60.5,36 56,38 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="1"/>
+            <path d="M38,56 C32,48 39,42 43,46 C45,48 42.5,54 38,56 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="1"/>
+            <path d="M70,30 C76,26 80,32 76,36 C74,38 72,32 70,30 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="1"/>
+            <defs>
+                <linearGradient id="woodGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#b5651d" />
+                    <stop offset="50%" stop-color="#cd853f" />
+                    <stop offset="100%" stop-color="#5c2e0b" />
+                </linearGradient>
+            </defs>
+        </svg>`;
+    }
+    return '';
+}
+
+// --- Initialize Deck ---
+function createDeck() {
+    const suits = ['oro', 'copa', 'espada', 'basto'];
+    const numbers = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]; // 10=Sota, 11=Caballo, 12=Rey
+    deck = [];
+    let idCounter = 0;
+    
+    for (const suit of suits) {
+        for (const number of numbers) {
+            deck.push({
+                suit: suit,
+                number: number,
+                id: `card-${idCounter++}`
+            });
+        }
+    }
+}
+
+// --- Shuffle Deck ---
+function shuffleDeck() {
+    for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+}
+
+// --- UI rendering helpers ---
+function getCardLabel(number) {
+    if (number === 10) return 'Sota';
+    if (number === 11) return 'Cab';
+    if (number === 12) return 'Rey';
+    return number.toString();
+}
+
+function getSuitSymbol(suit) {
+    if (suit === 'oro') return 'O';
+    if (suit === 'copa') return 'C';
+    if (suit === 'espada') return 'E';
+    if (suit === 'basto') return 'B';
+    return '';
+}
+
+function getSuitColorClass(suit) {
+    return `suit-${suit}`;
+}
+
+// --- Pinta Borders SVG Generator ---
+function getPintaBorderSvg(suit) {
+    if (suit === 'oro') {
+        return `<svg class="card-pinta-border" viewBox="0 0 90 135"><rect x="4" y="4" width="82" height="127" fill="none" stroke="#222" stroke-width="1.5"/></svg>`;
+    }
+    if (suit === 'copa') {
+        return `<svg class="card-pinta-border" viewBox="0 0 90 135"><path d="M41,4 L4,4 L4,131 L41,131 M49,4 L86,4 L86,131 L49,131" fill="none" stroke="#222" stroke-width="1.5"/></svg>`;
+    }
+    if (suit === 'espada') {
+        return `<svg class="card-pinta-border" viewBox="0 0 90 135"><path d="M4,131 L4,4 L28,4 M34,4 L56,4 M62,4 L86,4 L86,131 M62,131 L86,131 M34,131 L56,131 M4,131 L28,131" fill="none" stroke="#222" stroke-width="1.5"/></svg>`;
+    }
+    if (suit === 'basto') {
+        return `<svg class="card-pinta-border" viewBox="0 0 90 135"><path d="M4,131 L4,4 L21,4 M27,4 L42,4 M48,4 L63,4 M69,4 L86,4 L86,131 M86,131 L69,131 M63,131 L48,131 M42,131 L27,131 M21,131 L4,131" fill="none" stroke="#222" stroke-width="1.5"/></svg>`;
+    }
+    return '';
+}
+
+// --- Court Card Figures SVG Generator ---
+function getFigureSvg(number, suit) {
+    const suitSvg = getSuitSvg(suit);
+    
+    // Choose dynamic colors based on suit
+    let primaryColor = '#2980b9'; // Blue for Espada
+    let accentColor = '#e74c3c'; // Red
+    
+    if (suit === 'copa') {
+        primaryColor = '#c0392b'; // Dark Red
+        accentColor = '#f39c12'; // Orange/Gold
+    } else if (suit === 'oro') {
+        primaryColor = '#f1c40f'; // Yellow/Gold
+        accentColor = '#27ae60'; // Green
+    } else if (suit === 'basto') {
+        primaryColor = '#27ae60'; // Green
+        accentColor = '#8e44ad'; // Purple
+    }
+
+    if (number === 12) { // REY (King)
+        let heldItem = '';
+        if (suit === 'oro') {
+            heldItem = `
+            <circle cx="70" cy="70" r="10" fill="url(#oroGrad)" stroke="#c39b22" stroke-width="1.5"/>
+            <circle cx="70" cy="70" r="7" fill="none" stroke="#e5a90a" stroke-width="1" stroke-dasharray="2 1"/>
+            <circle cx="70" cy="70" r="3" fill="#f1c40f"/>
+            <circle cx="70" cy="70" r="4.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        } else if (suit === 'copa') {
+            heldItem = `
+            <path d="M62,54 C62,68 78,68 78,54 Z" fill="url(#copaGrad)" stroke="#b33939" stroke-width="1.5"/>
+            <line x1="70" y1="64" x2="70" y2="74" stroke="#ffb300" stroke-width="2.5"/>
+            <path d="M64,74 L76,74" stroke="#b33939" stroke-width="2"/>
+            <circle cx="70" cy="70" r="4.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        } else if (suit === 'espada') {
+            heldItem = `
+            <path d="M72,32 L76,82 L70,82 Z" fill="url(#steelGrad)" stroke="#2c3e50" stroke-width="1.5"/>
+            <line x1="64" y1="78" x2="82" y2="78" stroke="#f1c40f" stroke-width="2"/>
+            <circle cx="73" cy="84" r="2.5" fill="#f1c40f"/>
+            <circle cx="73" cy="78" r="4.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        } else if (suit === 'basto') {
+            heldItem = `
+            <path d="M63,46 L70,80 C70,80 67,82 64,80 L59,48 Z" fill="url(#woodGrad)" stroke="#4e342e" stroke-width="1.5"/>
+            <circle cx="61" cy="56" r="2.5" fill="#2ecc71"/>
+            <circle cx="65" cy="74" r="4.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        }
+
+        return `
+        <div class="figure-container rey-figure">
+            <svg viewBox="0 0 100 100" class="figure-svg">
+                <defs>
+                    <linearGradient id="oroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffe875" /><stop offset="100%" stop-color="#d4af37" />
+                    </linearGradient>
+                    <linearGradient id="copaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#ffe082" /><stop offset="100%" stop-color="#ff6f00" />
+                    </linearGradient>
+                    <linearGradient id="steelGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ffffff" /><stop offset="100%" stop-color="#64748b" />
+                    </linearGradient>
+                    <linearGradient id="woodGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#b5651d" /><stop offset="100%" stop-color="#5c2e0b" />
+                    </linearGradient>
+                </defs>
+                <!-- Royal Robes -->
+                <path d="M20,90 C20,55 35,40 50,40 C65,40 80,55 80,90 Z" fill="${primaryColor}" stroke="#1f3a60" stroke-width="2"/>
+                <path d="M50,40 L50,90" stroke="#f1c40f" stroke-width="3"/>
+                <!-- Royal Mantle collar -->
+                <path d="M35,45 C42,52 58,52 65,45 C65,45 50,55 35,45 Z" fill="${accentColor}"/>
+                <!-- King Face -->
+                <circle cx="50" cy="33" r="12" fill="#fed330" stroke="#2d3436" stroke-width="2"/>
+                <!-- Beard -->
+                <path d="M42,38 C42,48 58,48 58,38 Z" fill="#f5f6fa" stroke="#dcdde1" stroke-width="1.5"/>
+                <!-- Crown -->
+                <path d="M36,23 L40,13 L50,20 L60,13 L64,23 Z" fill="#f1c40f" stroke="#d4af37" stroke-width="2"/>
+                <circle cx="40" cy="12" r="1.5" fill="#e74c3c"/>
+                <circle cx="50" cy="19" r="1.5" fill="#2ecc71"/>
+                <circle cx="60" cy="12" r="1.5" fill="#e74c3c"/>
+                <!-- Held Item -->
+                ${heldItem}
+            </svg>
+            <div class="figure-suit-badge">${suitSvg}</div>
+        </div>`;
+    }
+    
+    if (number === 11) { // CABALLO (Knight)
+        let heldItem = '';
+        if (suit === 'oro') {
+            heldItem = `
+            <circle cx="56" cy="24" r="6" fill="url(#oroGrad)" stroke="#c39b22" stroke-width="1"/>
+            <circle cx="56" cy="24" r="4.5" fill="none" stroke="#e5a90a" stroke-width="0.5" stroke-dasharray="1 1"/>
+            <circle cx="50" cy="28" r="2" fill="#fed330" stroke="#2d3436" stroke-width="0.75"/>`;
+        } else if (suit === 'copa') {
+            heldItem = `
+            <path d="M52,18 C52,25 60,25 60,18 Z" fill="url(#copaGrad)" stroke="#b33939" stroke-width="1"/>
+            <line x1="56" y1="22" x2="56" y2="28" stroke="#ffb300" stroke-width="1.5"/>
+            <circle cx="54" cy="28" r="2" fill="#fed330" stroke="#2d3436" stroke-width="0.75"/>`;
+        } else if (suit === 'espada') {
+            heldItem = `
+            <path d="M54,12 L58,26 L55,26 Z" fill="url(#steelGrad)" stroke="#2c3e50" stroke-width="1"/>
+            <line x1="50" y1="24" x2="60" y2="24" stroke="#f1c40f" stroke-width="1"/>
+            <circle cx="55" cy="24" r="2" fill="#fed330" stroke="#2d3436" stroke-width="0.75"/>`;
+        } else if (suit === 'basto') {
+            heldItem = `
+            <path d="M53,14 L58,26 C58,26 56,27 54,26 L51,15 Z" fill="url(#woodGrad)" stroke="#4e342e" stroke-width="1"/>
+            <circle cx="52" cy="24" r="2" fill="#fed330" stroke="#2d3436" stroke-width="0.75"/>`;
+        }
+
+        return `
+        <div class="figure-container caballo-figure">
+            <svg viewBox="0 0 100 100" class="figure-svg">
+                <defs>
+                    <linearGradient id="oroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffe875" /><stop offset="100%" stop-color="#d4af37" />
+                    </linearGradient>
+                    <linearGradient id="copaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#ffe082" /><stop offset="100%" stop-color="#ff6f00" />
+                    </linearGradient>
+                    <linearGradient id="steelGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ffffff" /><stop offset="100%" stop-color="#64748b" />
+                    </linearGradient>
+                    <linearGradient id="woodGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#b5651d" /><stop offset="100%" stop-color="#5c2e0b" />
+                    </linearGradient>
+                </defs>
+                <!-- Horse body jumping -->
+                <path d="M20,60 C25,45 45,40 55,42 C65,43 75,35 80,45 C82,49 76,55 74,58 C70,62 55,65 45,75 C38,82 32,85 25,80 C18,75 16,68 20,60 Z" fill="#ecf0f1" stroke="#2d3436" stroke-width="2"/>
+                <!-- Horse head & Mane -->
+                <path d="M60,42 C65,30 72,15 82,22 C90,28 85,42 80,45 C75,35 70,35 60,42 Z" fill="#ecf0f1" stroke="#2d3436" stroke-width="2"/>
+                <!-- Saddle -->
+                <path d="M42,48 C46,45 54,45 58,48 L56,58 C52,60 46,60 44,58 Z" fill="${primaryColor}" stroke="#1f3a60" stroke-width="1.5"/>
+                <!-- Knight Rider sitting -->
+                <path d="M40,48 C40,35 48,35 48,48 L46,56 L42,56 Z" fill="${accentColor}" stroke="#2d3436" stroke-width="1.2"/>
+                <circle cx="44" cy="30" r="5" fill="#fed330" stroke="#2d3436" stroke-width="1.2"/>
+                <!-- Horse legs (front) -->
+                <path d="M72,55 L82,68" stroke="#2d3436" stroke-width="4" stroke-linecap="round"/>
+                <path d="M76,53 L88,62" stroke="#2d3436" stroke-width="4" stroke-linecap="round"/>
+                <!-- Horse legs (back) -->
+                <path d="M26,75 L15,88" stroke="#2d3436" stroke-width="4" stroke-linecap="round"/>
+                <!-- Eye -->
+                <circle cx="78" cy="28" r="1.5" fill="#000"/>
+                <!-- Held Item -->
+                ${heldItem}
+            </svg>
+            <div class="figure-suit-badge">${suitSvg}</div>
+        </div>`;
+    }
+
+    if (number === 10) { // SOTA (Jack)
+        let heldItem = '';
+        let shieldElement = `<circle cx="50" cy="50" r="8" fill="${accentColor}" stroke-width="1"/>`; // default shield
+        if (suit === 'oro') {
+            shieldElement = `
+            <!-- Shield is a Gold Coin -->
+            <circle cx="50" cy="50" r="11" fill="url(#oroGrad)" stroke="#c39b22" stroke-width="2"/>
+            <circle cx="50" cy="50" r="8" fill="none" stroke="#e5a90a" stroke-width="1" stroke-dasharray="2 1"/>
+            <circle cx="50" cy="50" r="3" fill="#f1c40f"/>`;
+            heldItem = `
+            <line x1="68" y1="20" x2="68" y2="95" stroke="#f1c40f" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="68" cy="18" r="3" fill="#f1c40f"/>
+            <circle cx="68" cy="78" r="3.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        } else if (suit === 'copa') {
+            heldItem = `
+            <path d="M62,35 C62,45 74,45 74,35 Z" fill="url(#copaGrad)" stroke="#b33939" stroke-width="1.2"/>
+            <line x1="68" y1="42" x2="68" y2="50" stroke="#ffb300" stroke-width="2"/>
+            <circle cx="68" cy="46" r="3.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        } else if (suit === 'espada') {
+            heldItem = `
+            <path d="M67,20 L70,80 L66,80 Z" fill="url(#steelGrad)" stroke="#2c3e50" stroke-width="1.5"/>
+            <line x1="61" y1="76" x2="75" y2="76" stroke="#f1c40f" stroke-width="2"/>
+            <circle cx="68" cy="80" r="3.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        } else if (suit === 'basto') {
+            heldItem = `
+            <path d="M64,25 L70,75 C70,75 67,77 64,75 L60,28 Z" fill="url(#woodGrad)" stroke="#4e342e" stroke-width="1.5"/>
+            <circle cx="62" cy="38" r="2" fill="#2ecc71"/>
+            <circle cx="65" cy="70" r="3.5" fill="#fed330" stroke="#2d3436" stroke-width="1"/>`;
+        }
+
+        return `
+        <div class="figure-container sota-figure">
+            <svg viewBox="0 0 100 100" class="figure-svg">
+                <defs>
+                    <linearGradient id="oroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffe875" /><stop offset="100%" stop-color="#d4af37" />
+                    </linearGradient>
+                    <linearGradient id="copaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#ffe082" /><stop offset="100%" stop-color="#ff6f00" />
+                    </linearGradient>
+                    <linearGradient id="steelGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ffffff" /><stop offset="100%" stop-color="#64748b" />
+                    </linearGradient>
+                    <linearGradient id="woodGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#b5651d" /><stop offset="100%" stop-color="#5c2e0b" />
+                    </linearGradient>
+                </defs>
+                <!-- Cape -->
+                <path d="M32,32 C20,40 18,80 25,90 L42,90 Z" fill="${primaryColor}" stroke="#2d3436" stroke-width="1.5"/>
+                <!-- Armor / Torso -->
+                <path d="M35,32 L65,32 L60,75 L40,75 Z" fill="#bdc3c7" stroke="#2d3436" stroke-width="2"/>
+                <!-- Legs -->
+                <rect x="42" y="75" width="6" height="20" fill="#7f8c8d" stroke="#2d3436" stroke-width="1.5"/>
+                <rect x="52" y="75" width="6" height="20" fill="#7f8c8d" stroke="#2d3436" stroke-width="1.5"/>
+                <!-- Shield / Guard symbol -->
+                ${shieldElement}
+                <!-- Head & Helmet -->
+                <circle cx="50" cy="22" r="10" fill="#fed330" stroke="#2d3436" stroke-width="2"/>
+                <path d="M40,18 L60,18 C60,18 55,8 50,8 C45,8 40,18 40,18 Z" fill="#7f8c8d" stroke="#2d3436" stroke-width="2"/>
+                <!-- Held Item -->
+                ${heldItem}
+            </svg>
+            <div class="figure-suit-badge">${suitSvg}</div>
+        </div>`;
+    }
+    return '';
+}
+
+// --- Card Center HTML Generator based on Pips/Figure ---
+function getCardCenterHtml(number, suit) {
+    const svg = getSuitSvg(suit);
+    if (number === 1) {
+        return `<div class="card-grid-container grid-1">${svg}</div>`;
+    }
+    if (number === 2) {
+        return `<div class="card-grid-container grid-2">${svg}${svg}</div>`;
+    }
+    if (number === 3) {
+        return `<div class="card-grid-container grid-3">${svg}${svg}${svg}</div>`;
+    }
+    if (number === 4) {
+        return `<div class="card-grid-container grid-4">${svg}${svg}${svg}${svg}</div>`;
+    }
+    if (number === 5) {
+        return `<div class="card-grid-container grid-5">
+            ${svg}${svg}${svg}${svg}
+            <div class="center-pip-wrapper">${svg}</div>
+        </div>`;
+    }
+    if (number === 6) {
+        return `<div class="card-grid-container grid-6">${svg}${svg}${svg}${svg}${svg}${svg}</div>`;
+    }
+    if (number === 7) {
+        return `<div class="card-grid-container grid-7">
+            ${svg}${svg}${svg}${svg}${svg}${svg}
+            <div class="center-pip-wrapper">${svg}</div>
+        </div>`;
+    }
+    if (number === 10 || number === 11 || number === 12) {
+        return getFigureSvg(number, suit);
+    }
+    return '';
+}
+
+// --- Render Card HTML Element ---
+function createCardElement(card, isOpponent = false, onClickHandler = null) {
+    const isGuia = guiaCard && card.suit === guiaCard.suit && [1, 5, 12, 11, 10].includes(card.number);
+    
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'card';
+    cardDiv.id = card.id;
+
+    if (isGuia) {
+        cardDiv.classList.add('guia-card');
+    }
+
+    if (isOpponent && gameMode === 'pvc') {
+        cardDiv.classList.add('back');
+        return cardDiv;
+    }
+
+    // Set the inner pinta border
+    cardDiv.innerHTML = getPintaBorderSvg(card.suit);
+
+    // Header corner
+    const topCorner = document.createElement('div');
+    topCorner.className = `card-corner top ${getSuitColorClass(card.suit)}`;
+    
+    const labelSpan = document.createElement('span');
+    labelSpan.innerText = getCardLabel(card.number);
+    topCorner.appendChild(labelSpan);
+    
+    cardDiv.appendChild(topCorner);
+
+    // Center Illustration (Grid of pips or Figure)
+    const centerDiv = document.createElement('div');
+    centerDiv.className = 'card-center';
+    centerDiv.innerHTML = getCardCenterHtml(card.number, card.suit);
+    cardDiv.appendChild(centerDiv);
+
+    // Bottom corner
+    const bottomCorner = document.createElement('div');
+    bottomCorner.className = `card-corner bottom ${getSuitColorClass(card.suit)}`;
+    
+    const labelSpan2 = document.createElement('span');
+    labelSpan2.innerText = getCardLabel(card.number);
+    bottomCorner.appendChild(labelSpan2);
+    
+    cardDiv.appendChild(bottomCorner);
+
+    if (onClickHandler) {
+        cardDiv.addEventListener('click', () => onClickHandler(card));
+    }
+
+    return cardDiv;
+}
+
+// --- Logger helper ---
+function addLog(message, type = 'system') {
+    const logBox = document.getElementById('log-messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `log-msg ${type}`;
+    msgDiv.innerText = message;
+    logBox.appendChild(msgDiv);
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+// --- Initialize / Reset Round ---
+function startNewHand() {
+    createDeck();
+    shuffleDeck();
+
+    p1Hand = [deck.pop(), deck.pop(), deck.pop()];
+    p2Hand = [deck.pop(), deck.pop(), deck.pop()];
+    guiaCard = deck.pop(); // The guide card
+
+    // Reset Hand variables
+    enviteState = 'none';
+    enviteChinas = 0;
+    enviteChinasPending = 0;
+    enviteProposer = 0;
+    envitePointsCalculated = false;
+
+    truqueLevel = 0;
+    truqueChinasPending = 1;
+    truqueState = 'none';
+    truqueProposer = 0;
+
+    currentTrick = 0;
+    p1PlayedCard = null;
+    p2PlayedCard = null;
+    p1PlayedTaped = false;
+    p2PlayedTaped = false;
+    trickWinners = [];
+    currentTrickStarter = manoPlayer;
+    activePlayer = currentTrickStarter;
+
+    selectTaped = false;
+    updateTaparButtonUI();
+
+    // Reset UI
+    document.getElementById('played-card-p1').innerHTML = '';
+    document.getElementById('played-card-p2').innerHTML = '';
+    
+    // Clear played cards styling
+    document.getElementById('played-card-p1').className = 'slot-card-container';
+    document.getElementById('played-card-p2').className = 'slot-card-container';
+
+    // Show Guia Card
+    const guiaContainer = document.getElementById('guia-card-container');
+    guiaContainer.innerHTML = '';
+    guiaContainer.appendChild(createCardElement(guiaCard, false));
+
+    // Log hand start
+    addLog(`--- Nueva mano. El jugador ${manoPlayer} es MANO. ---`, 'system');
+    addLog(`La carta Guía es el ${getCardLabel(guiaCard.number)} de ${guiaCard.suit.toUpperCase()}.`, 'system');
+
+    // Setup turns
+    if (gameMode === 'pvp') {
+        pvpScreenActive = true;
+        showPrivacyScreen(`Turno del Jugador ${activePlayer}`, `Pasa el dispositivo al Jugador ${activePlayer}. Pulsa revelar para ver tus cartas.`);
+    } else {
+        renderHands();
+        startEnvitePhase();
+    }
+}
+
+// --- Start Envite Phase ---
+function startEnvitePhase() {
+    enviteState = 'none';
+    updateStatusBar(`Fase de Envite. Turno de Jugador ${activePlayer}.`);
+    updateActionButtons();
+    
+    // Trigger CPU action if CPU goes first
+    if (gameMode === 'pvc' && activePlayer === 2) {
+        setTimeout(cpuEnviteTurn, 1500);
+    }
+}
+
+// --- Calculate Envite Points for a Card ---
+function getCardEnviteValue(card) {
+    const isGuiaSuit = card.suit === guiaCard.suit;
+    if (isGuiaSuit) {
+        if (card.number === 1) return 12;
+        if (card.number === 5) return 11;
+        if (card.number === 12) return 10;
+        if (card.number === 11) return 9;
+        if (card.number === 10) return 8;
+        // Remaining guia suit cards nominal
+        return card.number;
+    } else {
+        // Normal cards
+        if (card.number === 1) return 1;
+        if ([10, 11, 12].includes(card.number)) return 0; // standard face cards are 0
+        return card.number;
+    }
+}
+
+// --- Calculate Hand Envite Score ---
+function calculateEnviteScore(hand) {
+    const values = hand.map(getCardEnviteValue);
+    // Sort descending
+    values.sort((a, b) => b - a);
+    // Sum two highest values + 20
+    return values[0] + values[1] + 20;
+}
+
+// --- Render Hands in DOM ---
+function renderHands(hideAll = false) {
+    const p1Container = document.getElementById('player-hand');
+    const p2Container = document.getElementById('opponent-hand');
+
+    p1Container.innerHTML = '';
+    p2Container.innerHTML = '';
+
+    // Player 1 Hand
+    p1Hand.forEach(card => {
+        if (card) {
+            const cardEl = createCardElement(card, false, (gameMode === 'pvp' && activePlayer !== 1) ? null : playerPlayCard);
+            // Disable click if it's not their turn in PvP or we are in Envite phase
+            if (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') {
+                cardEl.classList.add('disabled');
+            }
+            if (activePlayer !== 1 && gameMode === 'pvp') {
+                cardEl.classList.add('disabled');
+            }
+            p1Container.appendChild(cardEl);
+        }
+    });
+
+    // Player 2 / CPU Hand
+    p2Hand.forEach(card => {
+        if (card) {
+            if (gameMode === 'pvc') {
+                p2Container.appendChild(createCardElement(card, true));
+            } else {
+                // PvP Local
+                const cardEl = createCardElement(card, false, (activePlayer !== 2) ? null : playerPlayCard);
+                if (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') {
+                    cardEl.classList.add('disabled');
+                }
+                if (activePlayer !== 2) {
+                    cardEl.classList.add('disabled');
+                }
+                p2Container.appendChild(cardEl);
+            }
+        }
+    });
+
+    // Hide cards for privacy screen transitions
+    if (hideAll) {
+        p1Container.innerHTML = '<div style="font-style:italic; color:#aaa;">Cartas ocultas</div>';
+        p2Container.innerHTML = '<div style="font-style:italic; color:#aaa;">Cartas ocultas</div>';
+    }
+
+    // Display envite values in helper panel (if calculated/visible)
+    if (envitePointsCalculated || enviteState === 'accepted' || enviteState === 'passed') {
+        document.getElementById('val-p1-envite-pts').innerText = calculateEnviteScore(p1Hand);
+        if (gameMode === 'pvp' || enviteState === 'accepted') {
+            document.getElementById('val-p2-envite-pts').innerText = calculateEnviteScore(p2Hand);
+        } else {
+            document.getElementById('val-p2-envite-pts').innerText = '?';
+        }
+    } else {
+        document.getElementById('val-p1-envite-pts').innerText = '-';
+        document.getElementById('val-p2-envite-pts').innerText = '-';
+    }
+}
+
+// --- Update Status Message ---
+function updateStatusBar(msg) {
+    document.getElementById('status-message').innerText = msg;
+}
+
+// --- Toggle Tapar State ---
+function toggleTapar() {
+    selectTaped = !selectTaped;
+    updateTaparButtonUI();
+}
+
+function updateTaparButtonUI() {
+    const btn = document.getElementById('btn-tapar');
+    if (selectTaped) {
+        btn.innerText = "Tapar Carta: ON";
+        btn.style.background = "linear-gradient(135deg, #7f8c8d 0%, #34495e 100%)";
+    } else {
+        btn.innerText = "Tapar Carta: OFF";
+        btn.style.background = "rgba(255,255,255,0.05)";
+    }
+}
+
+// --- Update Button Visibility based on Turn & State ---
+function updateActionButtons() {
+    const btnEnvido = document.getElementById('btn-envido');
+    const btnQuique = document.getElementById('btn-quique');
+    const btnFalta = document.getElementById('btn-falta');
+    const btnTruco = document.getElementById('btn-truco');
+    const btnQuiero = document.getElementById('btn-quiero');
+    const btnNoQuiero = document.getElementById('btn-no-quiero');
+    const btnTapar = document.getElementById('btn-tapar');
+    const btnMazo = document.getElementById('btn-ir-al-mazo');
+
+    // Disable all by default
+    btnEnvido.disabled = true;
+    btnQuique.disabled = true;
+    btnFalta.disabled = true;
+    btnTruco.disabled = true;
+    btnQuiero.disabled = true;
+    btnNoQuiero.disabled = true;
+    btnTapar.disabled = true;
+    btnMazo.disabled = true;
+
+    // Local PvP turn check: if activePlayer is not Player 1, P1 buttons are disabled.
+    // However, since it's local PvP, the controls panel is shared.
+    // So the active player (whether P1 or P2) uses these buttons.
+    // If it's PvP and the screen is active, wait until screen is dismissed.
+    if (pvpScreenActive) return;
+
+    // Envite Phase active
+    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    
+    if (inEnvite) {
+        btnMazo.disabled = false; // can fold anytime
+        
+        if (enviteState === 'none') {
+            // First speaker can bid or pass
+            btnEnvido.disabled = false;
+            btnEnvido.innerText = "Envido (2)";
+            btnQuique.disabled = false;
+            btnQuique.innerText = "Quique (5)";
+            btnFalta.disabled = false;
+            btnFalta.innerText = "La Falta";
+            
+            // "Pass" button replaces No Quiero when there is no bet
+            btnNoQuiero.disabled = false;
+            btnNoQuiero.innerText = "Paso";
+        } else {
+            // There is a pending bet
+            btnQuiero.disabled = false;
+            btnNoQuiero.disabled = false;
+            btnNoQuiero.innerText = "No Quiero";
+
+            // Only allow raising to a higher category
+            if (enviteState === 'envido') {
+                btnEnvido.disabled = false;
+                btnEnvido.innerText = "Envido También (4)";
+                btnQuique.disabled = false;
+                btnQuique.innerText = "Quique (5)";
+                btnFalta.disabled = false;
+                btnFalta.innerText = "La Falta";
+            } else if (enviteState === 'envido-yo-tambien') {
+                btnQuique.disabled = false;
+                btnQuique.innerText = "Quique (5)";
+                btnFalta.disabled = false;
+                btnFalta.innerText = "La Falta";
+            } else if (enviteState === 'quique') {
+                btnFalta.disabled = false;
+                btnFalta.innerText = "La Falta";
+            }
+        }
+    } else {
+        // Truque Phase active (Envite resolved)
+        // Enable Tapar card only in 2nd and 3rd round
+        if (currentTrick > 0) {
+            btnTapar.disabled = false;
+        }
+
+        btnMazo.disabled = false;
+
+        // Bidding Truque (Truco, Retruco, Renueve, Redoce, Requince, Rejuego)
+        if (truqueState !== 'declined') {
+            const hasOpponentPosedBet = (truqueProposer !== activePlayer && ['truco', 'retruco', 'renueve', 'redoce', 'requince', 'rejuego'].includes(truqueState));
+            
+            if (hasOpponentPosedBet) {
+                btnQuiero.disabled = false;
+                btnNoQuiero.disabled = false;
+                btnNoQuiero.innerText = "No Quiero";
+            }
+
+            // Can raise if no bet or if answering opponent's bet
+            const canRaise = (truqueState === 'none' || hasOpponentPosedBet);
+            if (canRaise) {
+                if (truqueLevel === 0) {
+                    btnTruco.disabled = false;
+                    btnTruco.innerText = "Truco (3)";
+                } else if (truqueLevel === 1) {
+                    btnTruco.disabled = false;
+                    btnTruco.innerText = "Retruco (6)";
+                } else if (truqueLevel === 2) {
+                    btnTruco.disabled = false;
+                    btnTruco.innerText = "Renueve (9)";
+                } else if (truqueLevel === 3) {
+                    btnTruco.disabled = false;
+                    btnTruco.innerText = "Redoce (12)";
+                } else if (truqueLevel === 4) {
+                    btnTruco.disabled = false;
+                    btnTruco.innerText = "Requince (15)";
+                } else if (truqueLevel === 5) {
+                    btnTruco.disabled = false;
+                    btnTruco.innerText = "Rejuego (Falta)";
+                }
+            }
+        }
+    }
+}
+
+// --- Privacy Screen Handling for Local Multiplayer ---
+function showPrivacyScreen(title, text) {
+    renderHands(true); // Hide hands
+    document.getElementById('privacy-title').innerText = title;
+    document.getElementById('privacy-text').innerText = text;
+    document.getElementById('privacy-screen').classList.add('active');
+    updateActionButtons();
+}
+
+function revealPrivacyScreen() {
+    document.getElementById('privacy-screen').classList.remove('active');
+    pvpScreenActive = false;
+    renderHands();
+    
+    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    if (inEnvite) {
+        updateStatusBar(`Fase de Envite. Turno de Jugador ${activePlayer}.`);
+        updateActionButtons();
+    } else {
+        updateStatusBar(`Fase de Truque. Juega una carta Jugador ${activePlayer}.`);
+        updateActionButtons();
+    }
+}
+
+function switchPvPTurn(nextPlayer, actionType = 'play') {
+    activePlayer = nextPlayer;
+    pvpScreenActive = true;
+    let message = "";
+    if (actionType === 'envite') {
+        message = `Responde a la apuesta o decide el Envite.`;
+    } else if (actionType === 'truque_bet') {
+        message = `Responde al cante de Truque.`;
+    } else {
+        message = `Juega una de tus cartas en la mesa.`;
+    }
+    showPrivacyScreen(`Turno de Jugador ${activePlayer}`, `Pasa el dispositivo al Jugador ${activePlayer}. ${message}`);
+}
+
+// --- Player Actions Handler ---
+function handleAction(action) {
+    if (pvpScreenActive) return;
+    
+    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    
+    if (inEnvite) {
+        executeEnviteAction(activePlayer, action);
+    } else {
+        executeTruqueAction(activePlayer, action);
+    }
+}
+
+// ==========================================
+// ENVITE PHASE LOGIC
+// ==========================================
+
+function executeEnviteAction(player, action) {
+    const opponent = player === 1 ? 2 : 1;
+    const opponentName = opponent === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
+    const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
+
+    if (action === 'envido') {
+        if (enviteState === 'none') {
+            enviteState = 'envido';
+            enviteChinasPending = 2;
+            enviteProposer = player;
+            addLog(`${playerName} canta ENVIDO (2 chinas).`, 'action');
+            changeTurnEnvite(opponent);
+        } else if (enviteState === 'envido') {
+            enviteState = 'envido-yo-tambien';
+            enviteChinasPending = 4;
+            enviteProposer = player;
+            addLog(`${playerName} dice ENVIDO YO TAMBIÉN (4 chinas).`, 'action');
+            changeTurnEnvite(opponent);
+        }
+    } else if (action === 'quique') {
+        enviteState = 'quique';
+        enviteChinasPending = 5;
+        enviteProposer = player;
+        addLog(`${playerName} canta QUIQUE (5 chinas).`, 'action');
+        changeTurnEnvite(opponent);
+    } else if (action === 'falta') {
+        enviteState = 'falta';
+        // Falta calculation: max points needed to win by the leader
+        const maxScore = Math.max(p1Score, p2Score);
+        enviteChinasPending = Math.max(2, 50 - maxScore);
+        enviteProposer = player;
+        addLog(`${playerName} envida LA FALTA (${enviteChinasPending} chinas).`, 'action');
+        changeTurnEnvite(opponent);
+    } else if (action === 'quiero') {
+        addLog(`${playerName} dice QUIERO.`, 'action');
+        enviteState = 'accepted';
+        enviteChinas = enviteChinasPending;
+        resolveEnvite();
+    } else if (action === 'no-quiero') {
+        if (enviteState === 'none') {
+            // First player passed
+            addLog(`${playerName} pasa.`, 'action');
+            if (player === manoPlayer) {
+                // Opponent gets a turn to bid
+                changeTurnEnvite(opponent);
+            } else {
+                // Both passed
+                addLog(`Fase de Envite desierta.`, 'system');
+                enviteState = 'passed';
+                enviteChinas = 0;
+                startTruquePhase();
+            }
+        } else {
+            // Folded to a bet
+            addLog(`${playerName} dice NO QUIERO.`, 'action');
+            enviteState = 'declined';
+            
+            // Winner gets previous bet (or 1 china if it was the initial bet)
+            let wonChinas = 1;
+            if (enviteState === 'envido-yo-tambien') wonChinas = 2; // declined a 4-china raise
+            if (enviteState === 'quique' && enviteChinasPending > 5) wonChinas = 2; // if raised to quique from envido
+            if (enviteState === 'falta') {
+                if (enviteChinasPending > 5) wonChinas = 2; // fallback
+            }
+
+            addLog(`El Envite se cierra. El proponente gana ${wonChinas} china(s).`, 'system');
+            awardChinas(opponent, wonChinas);
+            startTruquePhase();
+        }
+    } else if (action === 'retirarse') {
+        addLog(`${playerName} se va al mazo. Pierde el Envite y la mano.`, 'system');
+        // Fold whole hand. Opponent gets 1 china from Envite + 1 from Truque
+        awardChinas(opponent, 2);
+        endHand();
+    }
+}
+
+function changeTurnEnvite(nextPlayer) {
+    if (gameMode === 'pvp') {
+        switchPvPTurn(nextPlayer, 'envite');
+    } else {
+        activePlayer = nextPlayer;
+        updateStatusBar(`Fase de Envite. Turno de ${activePlayer === 1 ? 'Jugador 1' : 'Computadora'}.`);
+        updateActionButtons();
+        if (activePlayer === 2) {
+            setTimeout(cpuEnviteTurn, 1500);
+        }
+    }
+}
+
+// --- Envite Resolution ---
+function resolveEnvite() {
+    envitePointsCalculated = true;
+    renderHands();
+
+    const p1Pts = calculateEnviteScore(p1Hand);
+    const p2Pts = calculateEnviteScore(p2Hand);
+    
+    const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
+    addLog(`Jugador 1 tiene ${p1Pts} puntos de Envite.`, 'player');
+    addLog(`${p2Name} tiene ${p2Pts} puntos de Envite.`, 'cpu');
+
+    let winner = 0;
+    if (p1Pts > p2Pts) {
+        winner = 1;
+    } else if (p2Pts > p1Pts) {
+        winner = 2;
+    } else {
+        // Tie goes to Mano
+        winner = manoPlayer;
+        addLog(`¡Empate de puntos! Gana el jugador por ser MANO.`, 'system');
+    }
+
+    const winnerName = winner === 1 ? 'Jugador 1' : p2Name;
+    addLog(`¡${winnerName} gana el Envite con ${winner === 1 ? p1Pts : p2Pts} puntos y se lleva ${enviteChinas} chinas!`, 'system');
+    
+    awardChinas(winner, enviteChinas);
+    
+    // Proceed to Truque phase after a small delay
+    setTimeout(startTruquePhase, 3000);
+}
+
+// ==========================================
+// TRUQUE PHASE LOGIC
+// ==========================================
+
+function startTruquePhase() {
+    updateTaparButtonUI();
+    // Starter of the truque is the hand's Mano
+    currentTrickStarter = manoPlayer;
+    activePlayer = currentTrickStarter;
+
+    updateStatusBar(`Fase de Truque. Juega una carta Jugador ${activePlayer}.`);
+    renderHands();
+    updateActionButtons();
+
+    if (gameMode === 'pvp') {
+        pvpScreenActive = true;
+        showPrivacyScreen(`Turno de Jugador ${activePlayer}`, `Pasa el dispositivo. Juega tu primera carta.`);
+    } else {
+        if (activePlayer === 2) {
+            setTimeout(cpuTruqueTurn, 1500);
+        }
+    }
+}
+
+function executeTruqueAction(player, action) {
+    const opponent = player === 1 ? 2 : 1;
+    const opponentName = opponent === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
+    const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
+
+    if (action === 'truco') {
+        truqueLevel = 1;
+        truqueChinasPending = 3;
+        truqueState = 'truco';
+        truqueProposer = player;
+        addLog(`${playerName} canta TRUCO (3 chinas).`, 'action');
+        changeTurnTruqueBet(opponent);
+    } else if (action === 'retruco') {
+        truqueLevel = 2;
+        truqueChinasPending = 6;
+        truqueState = 'retruco';
+        truqueProposer = player;
+        addLog(`${playerName} canta RETRUCO (6 chinas).`, 'action');
+        changeTurnTruqueBet(opponent);
+    } else if (action === 'renueve') {
+        truqueLevel = 3;
+        truqueChinasPending = 9;
+        truqueState = 'renueve';
+        truqueProposer = player;
+        addLog(`${playerName} canta RENUEVE (9 chinas).`, 'action');
+        changeTurnTruqueBet(opponent);
+    } else if (action === 'redoce') {
+        truqueLevel = 4;
+        truqueChinasPending = 12;
+        truqueState = 'redoce';
+        truqueProposer = player;
+        addLog(`${playerName} canta REDOCE (12 chinas).`, 'action');
+        changeTurnTruqueBet(opponent);
+    } else if (action === 'requince') {
+        truqueLevel = 5;
+        truqueChinasPending = 15;
+        truqueState = 'requince';
+        truqueProposer = player;
+        addLog(`${playerName} canta REQUINCE (15 chinas).`, 'action');
+        changeTurnTruqueBet(opponent);
+    } else if (action === 'rejuego') {
+        truqueLevel = 6;
+        const maxScore = Math.max(p1Score, p2Score);
+        truqueChinasPending = Math.max(3, 50 - maxScore);
+        truqueState = 'rejuego';
+        truqueProposer = player;
+        addLog(`${playerName} canta REJUEGO (Todas las chinas).`, 'action');
+        changeTurnTruqueBet(opponent);
+    } else if (action === 'quiero') {
+        addLog(`${playerName} dice QUIERO al Truque. Se jugará por ${truqueChinasPending} chinas.`, 'action');
+        truqueState = 'accepted';
+        
+        // Return to normal playing turn
+        activePlayer = currentTrickStarter;
+        if (p1PlayedCard && activePlayer === 1) activePlayer = 2;
+        if (p2PlayedCard && activePlayer === 2) activePlayer = 1;
+        
+        if (gameMode === 'pvp') {
+            switchPvPTurn(activePlayer, 'play');
+        } else {
+            updateStatusBar(`Juego reanudado. Juega una carta ${activePlayer === 1 ? 'Jugador 1' : 'Computadora'}.`);
+            updateActionButtons();
+            if (activePlayer === 2) {
+                setTimeout(cpuTruqueTurn, 1500);
+            }
+        }
+    } else if (action === 'no-quiero') {
+        // Decline Truque fold
+        addLog(`${playerName} dice NO QUIERO. Se retira del Truque.`, 'action');
+        truqueState = 'declined';
+        
+        // Winner gets previous level's chinas
+        let wonChinas = 1; // base if Truco declined
+        if (truqueLevel === 2) wonChinas = 3; // declined Retruco
+        if (truqueLevel === 3) wonChinas = 6; // declined Renueve
+        if (truqueLevel === 4) wonChinas = 9; // declined Redoce
+        if (truqueLevel === 5) wonChinas = 12; // declined Requince
+        if (truqueLevel === 6) wonChinas = 15; // declined Rejuego
+        
+        addLog(`La mano finaliza. El proponente gana ${wonChinas} chinas.`, 'system');
+        awardChinas(opponent, wonChinas);
+        endHand();
+    } else if (action === 'retirarse') {
+        addLog(`${playerName} se retira al mazo. El rival gana la mano.`, 'system');
+        awardChinas(opponent, truqueLevel > 0 ? truqueChinasPending - 2 : 1);
+        endHand();
+    }
+}
+
+function changeTurnTruqueBet(nextPlayer) {
+    if (gameMode === 'pvp') {
+        switchPvPTurn(nextPlayer, 'truque_bet');
+    } else {
+        activePlayer = nextPlayer;
+        updateStatusBar(`Respuesta al Truque. Turno de ${activePlayer === 1 ? 'Jugador 1' : 'Computadora'}.`);
+        updateActionButtons();
+        if (activePlayer === 2) {
+            setTimeout(cpuTruqueTurn, 1500);
+        }
+    }
+}
+
+// --- Player Card Clicking ---
+function playerPlayCard(card) {
+    if (pvpScreenActive) return;
+    
+    // Ensure Envite is resolved
+    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    if (inEnvite) return;
+
+    // Check if it's their turn
+    if (activePlayer === 1) {
+        if (p1PlayedCard) return;
+        p1PlayedCard = card;
+        p1PlayedTaped = selectTaped;
+        p1Hand = p1Hand.filter(c => c.id !== card.id);
+        
+        // Show card in played slot
+        const slot = document.getElementById('played-card-p1');
+        slot.innerHTML = '';
+        const cardEl = createCardElement(card, false);
+        if (selectTaped) {
+            cardEl.classList.add('taped');
+        }
+        slot.appendChild(cardEl);
+        
+        addLog(`Jugador 1 juega ${selectTaped ? 'carta tapada' : getCardLabel(card.number) + ' de ' + card.suit.toUpperCase()}.`, 'player');
+        
+        // Reset Tapar state for next round
+        selectTaped = false;
+        updateTaparButtonUI();
+
+        // Check if both have played in the current trick
+        checkTrickFinished();
+    } else if (activePlayer === 2 && gameMode === 'pvp') {
+        // Player 2 in PvP
+        if (p2PlayedCard) return;
+        p2PlayedCard = card;
+        p2PlayedTaped = selectTaped;
+        p2Hand = p2Hand.filter(c => c.id !== card.id);
+        
+        const slot = document.getElementById('played-card-p2');
+        slot.innerHTML = '';
+        const cardEl = createCardElement(card, false);
+        if (selectTaped) {
+            cardEl.classList.add('taped');
+        }
+        slot.appendChild(cardEl);
+        
+        addLog(`Jugador 2 juega ${selectTaped ? 'carta tapada' : getCardLabel(card.number) + ' de ' + card.suit.toUpperCase()}.`, 'cpu');
+        
+        selectTaped = false;
+        updateTaparButtonUI();
+
+        checkTrickFinished();
+    }
+}
+
+// --- Get Card Power for Truque ---
+function getCardPower(card) {
+    if (!card) return -1;
+    
+    const isGuiaSuit = card.suit === guiaCard.suit;
+    if (isGuiaSuit) {
+        if (card.number === 1) return 40;  // As de guía
+        if (card.number === 5) return 39;  // 5 de guía
+        if (card.number === 12) return 38; // Rey de guía
+        if (card.number === 11) return 37; // Caballo de guía
+        if (card.number === 10) return 36; // Sota de guía
+    }
+    
+    // Special high cards
+    if (card.number === 1 && card.suit === 'espada') return 35; // As de espadas
+    if (card.number === 1 && card.suit === 'basto') return 34;  // As de bastos
+    if (card.number === 7 && card.suit === 'espada') return 33; // 7 de espadas
+    if (card.number === 7 && card.suit === 'oro') return 32;    // 7 de oros
+    
+    // Normals
+    if (card.number === 3) return 31;
+    if (card.number === 2) return 30;
+    if (card.number === 1) return 29; // As of Copas/Oros
+    if (card.number === 12) return 28; // Other kings
+    if (card.number === 11) return 27; // Other horses
+    if (card.number === 10) return 26; // Other jacks
+    if (card.number === 7) return 25;  // Other sevens
+    if (card.number === 6) return 24;
+    if (card.number === 5) return 23;
+    if (card.number === 4) return 22;
+
+    return 0;
+}
+
+// --- Check Trick Conclusion ---
+function checkTrickFinished() {
+    if (p1PlayedCard && p2PlayedCard) {
+        // Both played, evaluate trick winner
+        setTimeout(resolveTrick, 1500);
+    } else {
+        // Move to the next player
+        const next = activePlayer === 1 ? 2 : 1;
+        if (gameMode === 'pvp') {
+            switchPvPTurn(next, 'play');
+        } else {
+            activePlayer = next;
+            updateStatusBar(`Fase de Truque. Juega una carta ${activePlayer === 1 ? 'Jugador 1' : 'Computadora'}.`);
+            renderHands();
+            updateActionButtons();
+            if (activePlayer === 2) {
+                setTimeout(cpuTruqueTurn, 1500);
+            }
+        }
+    }
+}
+
+function resolveTrick() {
+    const pow1 = p1PlayedTaped ? -1 : getCardPower(p1PlayedCard);
+    const pow2 = p2PlayedTaped ? -1 : getCardPower(p2PlayedCard);
+
+    let winner = 'parda';
+    if (pow1 > pow2) {
+        winner = 1;
+    } else if (pow2 > pow1) {
+        winner = 2;
+    }
+
+    trickWinners.push(winner);
+    
+    // Log winner
+    const trickNames = ["PRIMERAS", "SEGUNDAS", "TERCERAS"];
+    const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
+    
+    if (winner === 'parda') {
+        addLog(`La ronda de ${trickNames[currentTrick]} queda PARDA (empate).`, 'system');
+    } else {
+        const winName = winner === 1 ? 'Jugador 1' : p2Name;
+        addLog(`¡${winName} gana la ronda de ${trickNames[currentTrick]}!`, 'system');
+    }
+
+    // Update sub scoreboard
+    document.getElementById('val-p1-bazas').innerText = trickWinners.filter(w => w === 1).length;
+    document.getElementById('val-p2-bazas').innerText = trickWinners.filter(w => w === 2).length;
+
+    // Reset played cards for UI
+    p1PlayedCard = null;
+    p2PlayedCard = null;
+    p1PlayedTaped = false;
+    p2PlayedTaped = false;
+
+    document.getElementById('played-card-p1').innerHTML = '';
+    document.getElementById('played-card-p2').innerHTML = '';
+
+    // Check hand winner
+    checkHandWinner(winner);
+}
+
+function checkHandWinner(trickWinner) {
+    const w1 = trickWinners.filter(w => w === 1).length;
+    const w2 = trickWinners.filter(w => w === 2).length;
+    const pardas = trickWinners.filter(w => w === 'parda').length;
+
+    const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
+
+    // 1. If someone wins 2 tricks, they win the Truque
+    if (w1 === 2) {
+        addLog(`¡Jugador 1 gana el Truque de la mano por bazas (${w1} de 3)!`, 'system');
+        awardChinas(1, truqueChinasPending);
+        endHand();
+        return;
+    }
+    if (w2 === 2) {
+        addLog(`¡${p2Name} gana el Truque de la mano por bazas (${w2} de 3)!`, 'system');
+        awardChinas(2, truqueChinasPending);
+        endHand();
+        return;
+    }
+
+    // 2. Tie in "Primeras" (pardas) -> skip "Segundas", go straight to "Terceras"
+    if (currentTrick === 0 && trickWinner === 'parda') {
+        addLog(`Al quedar pardas en PRIMERAS, se pasa directamente a TERCERAS para resolver la mano.`, 'system');
+        currentTrick = 2; // Jump to trick 3
+        currentTrickStarter = manoPlayer; // Mano starts
+        activePlayer = currentTrickStarter;
+    } else {
+        // Normal progression
+        currentTrick++;
+        // Winner of trick starts the next trick. If it was parda, starter of previous trick starts again.
+        if (trickWinner !== 'parda') {
+            currentTrickStarter = trickWinner;
+        }
+        activePlayer = currentTrickStarter;
+    }
+
+    // Check if we reached the end of 3 tricks
+    if (currentTrick >= 3) {
+        // Decide winner based on overall state
+        // This only executes if we played 3 tricks or had pardas at some point and finished
+        let finalWinner = 0;
+        
+        if (w1 > w2) {
+            finalWinner = 1;
+        } else if (w2 > w1) {
+            finalWinner = 2;
+        } else {
+            // Equal tricks (e.g. 1 win each and a parda, or all pardas)
+            // Rules:
+            // - If first was won by A, second by B, and third is parda -> A wins (winner of first wins)
+            // - If first was parda, second won by A, third won by B -> winner of second wins
+            // - If all pardas -> Mano wins
+            const firstTrick = trickWinners[0];
+            const secondTrick = trickWinners[1];
+            const thirdTrick = trickWinners[2];
+
+            if (firstTrick !== 'parda') {
+                finalWinner = firstTrick; // Winner of first wins
+            } else if (secondTrick && secondTrick !== 'parda') {
+                finalWinner = secondTrick;
+            } else if (thirdTrick && thirdTrick !== 'parda') {
+                finalWinner = thirdTrick;
+            } else {
+                finalWinner = manoPlayer; // all pardas -> Mano wins
+                addLog(`Todas las rondas quedaron pardas. Gana el jugador por ser MANO.`, 'system');
+            }
+        }
+
+        const winName = finalWinner === 1 ? 'Jugador 1' : p2Name;
+        addLog(`¡${winName} gana el Truque de la mano con ${truqueChinasPending} chinas!`, 'system');
+        awardChinas(finalWinner, truqueChinasPending);
+        endHand();
+    } else {
+        // Next Trick Turn Setup
+        updateStatusBar(`Ronda de ${currentTrick === 1 ? 'Segundas' : 'Terceras'}. Turno de Jugador ${activePlayer}.`);
+        if (gameMode === 'pvp') {
+            switchPvPTurn(activePlayer, 'play');
+        } else {
+            renderHands();
+            updateActionButtons();
+            if (activePlayer === 2) {
+                setTimeout(cpuTruqueTurn, 1500);
+            }
+        }
+    }
+}
+
+// ==========================================
+// POINT AWARDING & END OF HAND LOGIC
+// ==========================================
+
+function awardChinas(player, amount) {
+    if (player === 1) {
+        p1Score += amount;
+        if (p1Score > 50) p1Score = 50;
+    } else {
+        p2Score += amount;
+        if (p2Score > 50) p2Score = 50;
+    }
+
+    updateScoreboardUI();
+
+    // Check Win Condition
+    if (p1Score >= 50) {
+        showGameOverModal('¡Victoria de Jugador 1!', '🏆', 'Has logrado vencer alcanzando las 50 chinas.');
+    } else if (p2Score >= 50) {
+        const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
+        showGameOverModal(`¡Victoria de ${p2Name}!`, '💀', `El oponente ha ganado la partida con 50 chinas.`);
+    }
+}
+
+function updateScoreboardUI() {
+    document.getElementById('val-p1-score').innerText = p1Score;
+    document.getElementById('val-p2-score').innerText = p2Score;
+
+    // Split scores into Malas (0-25) and Buenas (25-50)
+    const p1Malas = Math.min(25, p1Score);
+    const p1Buenas = Math.max(0, p1Score - 25);
+    const p2Malas = Math.min(25, p2Score);
+    const p2Buenas = Math.max(0, p2Score - 25);
+
+    document.getElementById('txt-p1-malas').innerText = p1Malas;
+    document.getElementById('txt-p1-buenas').innerText = p1Buenas;
+    document.getElementById('txt-p2-malas').innerText = p2Malas;
+    document.getElementById('txt-p2-buenas').innerText = p2Buenas;
+
+    // Fill Dots UI
+    fillDotTrack('track-p1-malas', p1Malas, 'active-p1');
+    fillDotTrack('track-p1-buenas', p1Buenas, 'active-p1');
+    fillDotTrack('track-p2-malas', p2Malas, 'active-p2');
+    fillDotTrack('track-p2-buenas', p2Buenas, 'active-p2');
+}
+
+function fillDotTrack(trackId, activeCount, activeClass) {
+    const track = document.getElementById(trackId);
+    track.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'china-dot';
+        if (i < activeCount) {
+            dot.classList.add(activeClass);
+        }
+        track.appendChild(dot);
+    }
+}
+
+function endHand() {
+    // Check if game is over
+    if (p1Score >= 50 || p2Score >= 50) return;
+
+    // Alternate Mano for next hand
+    manoPlayer = manoPlayer === 1 ? 2 : 1;
+    
+    // Clear bazas indicators
+    document.getElementById('val-p1-bazas').innerText = '0';
+    document.getElementById('val-p2-bazas').innerText = '0';
+
+    updateStatusBar(`Fin de la mano. Repartiendo siguiente mano...`);
+    setTimeout(startNewHand, 3000);
+}
+
+// ==========================================
+// COMPUTER AI DECISION ENGINE
+// ==========================================
+
+function cpuEnviteTurn() {
+    if (enviteState === 'accepted' || enviteState === 'declined' || enviteState === 'passed') return;
+
+    const cpuPts = calculateEnviteScore(p2Hand);
+    
+    // AI Strategy parameters
+    const random = Math.random();
+    
+    if (enviteState === 'none') {
+        if (cpuPts >= 38) {
+            // Excellent score, bid Envite or Falta
+            if (cpuPts >= 41 && random > 0.4) {
+                executeEnviteAction(2, 'falta');
+            } else {
+                executeEnviteAction(2, 'envido');
+            }
+        } else if (cpuPts >= 33 && random > 0.6) {
+            // Good score, bid Envido
+            executeEnviteAction(2, 'envido');
+        } else if (random > 0.92) {
+            // Bluff Envido (8% chance)
+            addLog("La Computadora decide meter un embuste...", 'system');
+            executeEnviteAction(2, 'envido');
+        } else {
+            // Pass
+            executeEnviteAction(2, 'no-quiero');
+        }
+    } else {
+        // Player has made a bet. CPU must accept, fold, or raise.
+        const pending = enviteChinasPending;
+
+        if (cpuPts >= 38) {
+            // Accept always, raise sometimes
+            if (cpuPts >= 41 && enviteState === 'envido' && random > 0.4) {
+                executeEnviteAction(2, 'envido'); // raises to Envido Yo También
+            } else {
+                executeEnviteAction(2, 'quiero');
+            }
+        } else if (cpuPts >= 33) {
+            // Medium-high, accept small bets, fold to Falta
+            if (enviteState === 'falta') {
+                if (random > 0.8) executeEnviteAction(2, 'quiero');
+                else executeEnviteAction(2, 'no-quiero');
+            } else {
+                executeEnviteAction(2, 'quiero');
+            }
+        } else {
+            // Low score. Mostly fold, very rare bluff raise
+            if (random > 0.95 && enviteState === 'envido') {
+                executeEnviteAction(2, 'envido'); // Bluff raise
+            } else {
+                executeEnviteAction(2, 'no-quiero');
+            }
+        }
+    }
+}
+
+function cpuTruqueTurn() {
+    // Ensure Envite is resolved
+    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    if (inEnvite) return;
+
+    if (truqueState === 'declined') return;
+
+    // AI is asked to make a Truque bet response
+    const hasOpponentPosedBet = (truqueProposer === 1 && ['truco', 'retruco', 'renueve', 'redoce', 'requince', 'rejuego'].includes(truqueState));
+    
+    // Evaluate Hand Strength for Truque
+    const cpuCardPowers = p2Hand.map(getCardPower);
+    cpuCardPowers.sort((a,b) => b - a);
+    const bestCpuPower = cpuCardPowers[0] || -1;
+    const avgCpuPower = cpuCardPowers.reduce((a,b) => a+b, 0) / (p2Hand.length || 1);
+
+    const random = Math.random();
+
+    if (hasOpponentPosedBet) {
+        // Opponent (Player 1) has bid Truco or similar. CPU must Quiero, No Quiero, or Raise.
+        // Power reference: Max power is 40 (As Guía), high standard is 35 (As Espadas), average is around 26-28.
+        if (bestCpuPower >= 35 || (avgCpuPower >= 29 && p2Hand.length >= 2)) {
+            // Strong hand
+            if (bestCpuPower >= 38 && random > 0.5) {
+                // Raise to next level!
+                raiseTruqueLevelCpu();
+            } else {
+                executeTruqueAction(2, 'quiero');
+            }
+        } else if (avgCpuPower >= 26) {
+            // Medium hand. Accept Truco, fold to high levels.
+            if (truqueLevel === 1) {
+                executeTruqueAction(2, 'quiero');
+            } else {
+                if (random > 0.7) executeTruqueAction(2, 'quiero');
+                else executeTruqueAction(2, 'no-quiero');
+            }
+        } else {
+            // Weak hand. Fold, or very rare bluff
+            if (random > 0.94) {
+                executeTruqueAction(2, 'quiero');
+            } else {
+                executeTruqueAction(2, 'no-quiero');
+            }
+        }
+        return;
+    }
+
+    // CPU is playing a card or singing Truco
+    // If CPU has extremely good cards and hasn't called Truco yet, it might call it!
+    if (truqueState === 'none' && truqueLevel === 0 && bestCpuPower >= 35 && random > 0.4) {
+        executeTruqueAction(2, 'truco');
+        return;
+    }
+    // High level raises
+    if (truqueState === 'accepted' && truqueProposer === 1 && bestCpuPower >= 37 && random > 0.6) {
+        raiseTruqueLevelCpu();
+        return;
+    }
+
+    // Actually play a card
+    let cardToPlay = null;
+    let tapeIt = false;
+
+    // CPU plays card based on whether player has already played in this trick
+    if (p1PlayedCard) {
+        // Player has played. CPU knows what card to beat.
+        const targetPower = p1PlayedTaped ? -1 : getCardPower(p1PlayedCard);
+        
+        // Find if we have cards that can beat targetPower
+        const winningCards = p2Hand.filter(c => getCardPower(c) > targetPower);
+        const losingCards = p2Hand.filter(c => getCardPower(c) <= targetPower);
+
+        if (winningCards.length > 0) {
+            // We can win. Strategy: play the smallest winning card to conserve high cards
+            winningCards.sort((a,b) => getCardPower(a) - getCardPower(b));
+            cardToPlay = winningCards[0];
+        } else {
+            // We cannot win. Strategy: discard our lowest card (throw it away)
+            p2Hand.sort((a,b) => getCardPower(a) - getCardPower(b));
+            cardToPlay = p2Hand[0];
+            
+            // In 2nd or 3rd round, CPU might "tapar" (play face down) a losing card to hide information
+            if (currentTrick > 0 && random > 0.4) {
+                tapeIt = true;
+            }
+        }
+    } else {
+        // CPU plays first. Strategy:
+        if (currentTrick === 0) {
+            // First round (Primeras) - play medium strength card or highest card to grab control
+            p2Hand.sort((a,b) => getCardPower(b) - getCardPower(a));
+            cardToPlay = p2Hand[0]; // Play highest to win first round
+        } else {
+            // Play lowest card or tap it
+            p2Hand.sort((a,b) => getCardPower(a) - getCardPower(b));
+            cardToPlay = p2Hand[0];
+            if (random > 0.5) tapeIt = true;
+        }
+    }
+
+    // Play the card in DOM and state
+    if (cardToPlay) {
+        p2PlayedCard = cardToPlay;
+        p2PlayedTaped = tapeIt;
+        p2Hand = p2Hand.filter(c => c.id !== cardToPlay.id);
+        
+        const slot = document.getElementById('played-card-p2');
+        slot.innerHTML = '';
+        const cardEl = createCardElement(cardToPlay, false); // CPU card is revealed when played
+        if (tapeIt) {
+            cardEl.classList.add('taped');
+        }
+        slot.appendChild(cardEl);
+        
+        addLog(`La Computadora juega ${tapeIt ? 'carta tapada' : getCardLabel(cardToPlay.id ? cardToPlay.number : '') + ' de ' + cardToPlay.suit.toUpperCase()}.`, 'cpu');
+
+        checkTrickFinished();
+    }
+}
+
+function raiseTruqueLevelCpu() {
+    if (truqueLevel === 0) executeTruqueAction(2, 'truco');
+    else if (truqueLevel === 1) executeTruqueAction(2, 'retruco');
+    else if (truqueLevel === 2) executeTruqueAction(2, 'renueve');
+    else if (truqueLevel === 3) executeTruqueAction(2, 'redoce');
+    else if (truqueLevel === 4) executeTruqueAction(2, 'requince');
+    else if (truqueLevel === 5) executeTruqueAction(2, 'rejuego');
+}
+
+// ==========================================
+// GAME STATE MANAGEMENT (MODALS & SETUP)
+// ==========================================
+
+function changeGameMode(mode) {
+    gameMode = mode;
+    
+    // Update labels in HTML
+    const nameOpponent = document.getElementById('lbl-opponent-name');
+    const labelPlayedP2 = document.getElementById('lbl-played-p2');
+    const lblP2Score = document.getElementById('lbl-p2-score');
+    
+    const lblP2MalasTitle = document.getElementById('lbl-p2-malas-title');
+    const lblP2BuenasTitle = document.getElementById('lbl-p2-buenas-title');
+    const lblP2NameBazas = document.getElementById('lbl-p2-name-bazas');
+
+    if (mode === 'pvp') {
+        nameOpponent.innerText = "Jugador 2";
+        labelPlayedP2.innerText = "Jugador 2";
+        lblP2Score.innerText = "Jugador 2";
+        lblP2MalasTitle.innerText = "MALAS J2 (0-25)";
+        lblP2BuenasTitle.innerText = "BUENAS J2 (25-50)";
+        lblP2NameBazas.innerText = "Jugador 2";
+    } else {
+        nameOpponent.innerText = "Computadora";
+        labelPlayedP2.innerText = "CPU";
+        lblP2Score.innerText = "Computadora";
+        lblP2MalasTitle.innerText = "MALAS CPU (0-25)";
+        lblP2BuenasTitle.innerText = "BUENAS CPU (25-50)";
+        lblP2NameBazas.innerText = "P2/CPU";
+    }
+
+    addLog(`Modo de juego cambiado a: ${mode === 'pvp' ? 'Jugador contra Jugador' : 'Jugador contra Computadora'}.`, 'system');
+    resetGame(true);
+}
+
+function resetGame(fullReset = false) {
+    if (fullReset) {
+        p1Score = 0;
+        p2Score = 0;
+        manoPlayer = 1;
+        
+        // Reset logs
+        document.getElementById('log-messages').innerHTML = '<div class="log-msg system">Nueva partida de Truque iniciada.</div>';
+    }
+
+    document.getElementById('modal-game-over').classList.remove('active');
+    
+    updateScoreboardUI();
+    startNewHand();
+}
+
+// --- Modals Controls ---
+function openRulesModal() {
+    document.getElementById('modal-rules').classList.add('active');
+}
+
+function closeRulesModal() {
+    document.getElementById('modal-rules').classList.remove('active');
+}
+
+function showGameOverModal(title, icon, desc) {
+    document.getElementById('game-over-icon').innerText = icon;
+    document.getElementById('game-over-title').innerText = title;
+    document.getElementById('game-over-desc').innerText = desc;
+    document.getElementById('modal-game-over').classList.add('active');
+}
+
+// --- Bootstrap ---
+window.onload = () => {
+    resetGame(true);
+};
