@@ -24,6 +24,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y sshpass
           sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r ./* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}
+          sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r ./truque/* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../truque
 
       - name: 🐬 Migraciones
         run: |
