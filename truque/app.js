@@ -8,6 +8,8 @@ let p1Hand = [];
 let p2Hand = [];
 let guiaCard = null;
 let gameMode = 'pvc'; // 'pvc' (vs CPU) or 'pvp' (vs Player 2 Local)
+let gameHistory = [];
+let handCount = 0;
 
 // Scores
 let p1Score = 0;
@@ -499,6 +501,14 @@ function addLog(message, type = 'system') {
     msgDiv.innerText = message;
     logBox.appendChild(msgDiv);
     logBox.scrollTop = logBox.scrollHeight;
+
+    // Save to active hand history logs
+    if (typeof gameHistory !== 'undefined' && gameHistory.length > 0) {
+        gameHistory[gameHistory.length - 1].logs.push({
+            timestamp: new Date().toLocaleTimeString(),
+            message: message
+        });
+    }
 }
 
 // --- Initialize / Reset Round ---
@@ -509,6 +519,18 @@ function startNewHand() {
     p1Hand = [deck.pop(), deck.pop(), deck.pop()];
     p2Hand = [deck.pop(), deck.pop(), deck.pop()];
     guiaCard = deck.pop(); // The guide card
+
+    handCount++;
+    const handInfo = {
+        handNumber: handCount,
+        manoPlayer: manoPlayer,
+        guiaCard: { number: guiaCard.number, suit: guiaCard.suit },
+        p1InitialHand: p1Hand.map(c => ({ number: c.number, suit: c.suit })),
+        p2InitialHand: p2Hand.map(c => ({ number: c.number, suit: c.suit })),
+        logs: [],
+        finalScores: null
+    };
+    gameHistory.push(handInfo);
 
     // Reset Hand variables
     enviteState = 'none';
@@ -651,16 +673,16 @@ function renderHands(hideAll = false) {
     }
 
     // Display envite values in helper panel (if calculated/visible)
-    if (envitePointsCalculated || enviteState === 'accepted' || enviteState === 'passed') {
+    if (envitePointsCalculated) {
         document.getElementById('val-p1-envite-pts').innerText = calculateEnviteScore(p1Hand);
-        if (gameMode === 'pvp' || enviteState === 'accepted') {
-            document.getElementById('val-p2-envite-pts').innerText = calculateEnviteScore(p2Hand);
-        } else {
-            document.getElementById('val-p2-envite-pts').innerText = '?';
-        }
+        document.getElementById('val-p2-envite-pts').innerText = calculateEnviteScore(p2Hand);
     } else {
-        document.getElementById('val-p1-envite-pts').innerText = '-';
-        document.getElementById('val-p2-envite-pts').innerText = '-';
+        if (gameMode === 'pvc') {
+            document.getElementById('val-p1-envite-pts').innerText = calculateEnviteScore(p1Hand);
+        } else {
+            document.getElementById('val-p1-envite-pts').innerText = '?';
+        }
+        document.getElementById('val-p2-envite-pts').innerText = '?';
     }
 }
 
@@ -968,34 +990,8 @@ function changeTurnEnvite(nextPlayer) {
 
 // --- Envite Resolution ---
 function resolveEnvite() {
-    envitePointsCalculated = true;
-    renderHands();
-
-    const p1Pts = calculateEnviteScore(p1Hand);
-    const p2Pts = calculateEnviteScore(p2Hand);
-    
-    const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
-    addLog(`Jugador 1 tiene ${p1Pts} puntos de Envite.`, 'player');
-    addLog(`${p2Name} tiene ${p2Pts} puntos de Envite.`, 'cpu');
-
-    let winner = 0;
-    if (p1Pts > p2Pts) {
-        winner = 1;
-    } else if (p2Pts > p1Pts) {
-        winner = 2;
-    } else {
-        // Tie goes to Mano
-        winner = manoPlayer;
-        addLog(`¡Empate de puntos! Gana el jugador por ser MANO.`, 'system');
-    }
-
-    const winnerName = winner === 1 ? 'Jugador 1' : p2Name;
-    addLog(`¡${winnerName} gana el Envite con ${winner === 1 ? p1Pts : p2Pts} puntos y se lleva ${enviteChinas} chinas!`, 'system');
-    
-    awardChinas(winner, enviteChinas);
-    
-    // Proceed to Truque phase after a small delay
-    setTimeout(startTruquePhase, 3000);
+    addLog(`El Envite ha sido aceptado por ${enviteChinas} chinas. Se resolverá al finalizar la mano.`, 'system');
+    startTruquePhase();
 }
 
 // ==========================================
@@ -1425,6 +1421,47 @@ function fillDotTrack(trackId, activeCount, activeClass) {
 }
 
 function endHand() {
+    // Record final scores of the hand for history
+    if (typeof gameHistory !== 'undefined' && gameHistory.length > 0) {
+        gameHistory[gameHistory.length - 1].finalScores = {
+            p1Score: p1Score,
+            p2Score: p2Score
+        };
+    }
+
+    // If the Envite was accepted, resolve it now!
+    if (enviteState === 'accepted') {
+        envitePointsCalculated = true;
+        renderHands();
+
+        const p1Pts = calculateEnviteScore(p1Hand);
+        const p2Pts = calculateEnviteScore(p2Hand);
+        const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
+        
+        addLog(`--- Resolución del Envite ---`, 'system');
+        addLog(`Jugador 1 tiene ${p1Pts} puntos de Envite.`, 'player');
+        addLog(`${p2Name} tiene ${p2Pts} puntos de Envite.`, 'cpu');
+
+        let winner = 0;
+        if (p1Pts > p2Pts) {
+            winner = 1;
+        } else if (p2Pts > p1Pts) {
+            winner = 2;
+        } else {
+            // Tie goes to Mano
+            winner = manoPlayer;
+            addLog(`¡Empate de puntos! Gana el jugador por ser MANO.`, 'system');
+        }
+
+        const winnerName = winner === 1 ? 'Jugador 1' : p2Name;
+        addLog(`¡${winnerName} gana el Envite con ${winner === 1 ? p1Pts : p2Pts} puntos y se lleva ${enviteChinas} chinas!`, 'system');
+        
+        awardChinas(winner, enviteChinas);
+        
+        // We set enviteState to resolved so we don't resolve it again
+        enviteState = 'resolved';
+    }
+
     // Check if game is over
     if (p1Score >= 50 || p2Score >= 50) return;
 
@@ -1684,6 +1721,8 @@ function resetGame(fullReset = false) {
         p1Score = 0;
         p2Score = 0;
         manoPlayer = 1;
+        gameHistory = [];
+        handCount = 0;
         
         // Reset logs
         document.getElementById('log-messages').innerHTML = '<div class="log-msg system">Nueva partida de Truque iniciada.</div>';
@@ -1783,6 +1822,56 @@ function cancelCustomEnvido() {
     // Hide custom selector, show action buttons
     document.getElementById('envido-selector').style.display = 'none';
     document.querySelector('.action-buttons').style.display = 'flex';
+}
+
+// --- Download Game History Report ---
+function downloadGameHistory() {
+    if (gameHistory.length === 0) {
+        alert('No hay historial de partida registrado aún.');
+        return;
+    }
+
+    let text = `==================================================\n`;
+    text += `HISTORIAL DE LA PARTIDA DE TRUQUE\n`;
+    text += `Fecha: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    text += `Modo de juego: ${gameMode === 'pvc' ? 'Jugador vs Computadora' : 'Jugador vs Jugador'}\n`;
+    text += `Puntuación Final: Jugador 1: ${p1Score} | ${gameMode === 'pvc' ? 'Computadora' : 'Jugador 2'}: ${p2Score}\n`;
+    text += `==================================================\n\n`;
+
+    gameHistory.forEach(hand => {
+        text += `--------------------------------------------------\n`;
+        text += `MANO Nº ${hand.handNumber}\n`;
+        text += `--------------------------------------------------\n`;
+        text += `• Dador/Mano: El Jugador ${hand.manoPlayer} es MANO.\n`;
+        text += `• Carta Guía: ${getCardLabel(hand.guiaCard.number)} de ${hand.guiaCard.suit.toUpperCase()}\n`;
+        
+        const p1Cards = hand.p1InitialHand.map(c => `${getCardLabel(c.number)} de ${c.suit.toUpperCase()}`).join(', ');
+        text += `• Cartas Jugador 1: ${p1Cards}\n`;
+        
+        const p2Label = gameMode === 'pvc' ? 'Computadora' : 'Jugador 2';
+        const p2Cards = hand.p2InitialHand.map(c => `${getCardLabel(c.number)} de ${c.suit.toUpperCase()}`).join(', ');
+        text += `• Cartas ${p2Label}: ${p2Cards}\n\n`;
+        
+        text += `Desarrollo de la mano:\n`;
+        hand.logs.forEach(log => {
+            text += `  [${log.timestamp}] ${log.message}\n`;
+        });
+        
+        if (hand.finalScores) {
+            text += `\n• Puntuación al finalizar la mano: Jugador 1: ${hand.finalScores.p1Score} | ${p2Label}: ${hand.finalScores.p2Score}\n`;
+        }
+        text += `\n`;
+    });
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `historial_truque_${new Date().toISOString().slice(0,10)}_${new Date().toTimeString().slice(0,8).replace(/:/g,'-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 // --- Bootstrap ---
