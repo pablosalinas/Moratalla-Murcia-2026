@@ -1,5 +1,5 @@
 <?php
-// index.php - v1.2.0 (Finalizing deployment)
+// index.php - v1.3.0 (Curiosidades / Accesos externos)
 require_once 'inc/header.php';
 ?>
 
@@ -69,5 +69,168 @@ require_once 'inc/header.php';
         </div>
     </div>
 </div>
+
+<?php
+// ─── Sección Curiosidades (accesos externos visibles) ───────────────────────
+$stmtEL = $pdo->query("SELECT * FROM external_links WHERE is_visible = 1 ORDER BY sort_order ASC, id ASC");
+$externalLinks = $stmtEL ? $stmtEL->fetchAll() : [];
+
+if (count($externalLinks) > 0):
+?>
+<section class="curiosidades-section">
+    <div class="container">
+        <div class="curiosidades-header">
+            <span class="curiosidades-badge"><i class="fas fa-compass"></i> Descubre más</span>
+            <h2 class="curiosidades-title">Curiosidades y Recursos</h2>
+            <p class="curiosidades-subtitle">Explora enlaces de interés sobre Moratalla y su entorno</p>
+        </div>
+        <div class="curiosidades-grid">
+            <?php
+            $palettes = [
+                ['bg' => '#e8f5e9', 'color' => '#2e7d32', 'icon' => 'fa-globe'],
+                ['bg' => '#e3f2fd', 'color' => '#1565c0', 'icon' => 'fa-link'],
+                ['bg' => '#fff8e1', 'color' => '#e65100', 'icon' => 'fa-map-marker-alt'],
+                ['bg' => '#fce4ec', 'color' => '#880e4f', 'icon' => 'fa-landmark'],
+                ['bg' => '#f3e5f5', 'color' => '#6a1b9a', 'icon' => 'fa-star'],
+                ['bg' => '#e0f7fa', 'color' => '#006064', 'icon' => 'fa-book-open'],
+            ];
+            foreach ($externalLinks as $idx => $el):
+                $p = $palettes[$idx % count($palettes)];
+            ?>
+            <a href="<?php echo htmlspecialchars($el['url']); ?>" target="_blank" rel="noopener noreferrer" class="curiosidad-card">
+                <div class="curiosidad-icon" style="background:<?php echo $p['bg']; ?>; color:<?php echo $p['color']; ?>;">
+                    <i class="fas <?php echo $p['icon']; ?>"></i>
+                </div>
+                <div class="curiosidad-body">
+                    <h3 class="curiosidad-title"><?php echo htmlspecialchars($el['title']); ?></h3>
+                    <?php if (!empty($el['description'])): ?>
+                        <p class="curiosidad-desc"><?php echo htmlspecialchars($el['description']); ?></p>
+                    <?php endif; ?>
+                    <span class="curiosidad-link-label">
+                        Visitar enlace <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<style>
+    .curiosidades-section {
+        background: linear-gradient(135deg, #f0faf4 0%, #e8f5e9 100%);
+        padding: 5rem 0 4rem;
+        margin-top: 3rem;
+        border-top: 3px solid var(--accent, #c8a85a);
+    }
+    .curiosidades-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    .curiosidades-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--primary, #1b4332);
+        color: white;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+    .curiosidades-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--primary, #1b4332);
+        margin: 0.5rem 0;
+        letter-spacing: -0.5px;
+    }
+    .curiosidades-subtitle {
+        color: #555;
+        font-size: 1rem;
+        margin: 0;
+    }
+    .curiosidades-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    .curiosidad-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.8rem;
+        display: flex;
+        gap: 1.2rem;
+        align-items: flex-start;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .curiosidad-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(27,67,50,0.04) 0%, transparent 60%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .curiosidad-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.13);
+    }
+    .curiosidad-card:hover::after { opacity: 1; }
+    .curiosidad-icon {
+        flex-shrink: 0;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+    }
+    .curiosidad-body { flex: 1; min-width: 0; }
+    .curiosidad-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 0.5rem;
+        line-height: 1.3;
+    }
+    .curiosidad-desc {
+        font-size: 0.88rem;
+        color: #666;
+        line-height: 1.5;
+        margin: 0 0 0.8rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .curiosidad-link-label {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--primary, #1b4332);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+    .curiosidad-card:hover .curiosidad-link-label { opacity: 1; }
+    @media (max-width: 600px) {
+        .curiosidades-grid { grid-template-columns: 1fr; }
+        .curiosidades-title { font-size: 1.5rem; }
+    }
+</style>
+<?php endif; ?>
 
 <?php require_once 'inc/footer.php'; ?>
