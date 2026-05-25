@@ -280,7 +280,7 @@
     </div>
 
     <!-- Replay Modal -->
-    <div id="modal-replay" class="modal">
+    <div id="modal-replay" class="modal-overlay">
         <div class="modal-content replay-modal-content">
             <div class="replay-modal-header">
                 <h2><i class="fas fa-play-circle"></i> Reproductor de Partidas</h2>
@@ -288,7 +288,7 @@
                     <label for="replay-hand-select">Mano:</label>
                     <select id="replay-hand-select" onchange="loadReplayHand(this.value)"></select>
                 </div>
-                <button class="modal-close" onclick="closeReplayModal()">&times;</button>
+                <button class="close-btn" onclick="closeReplayModal()">&times;</button>
             </div>
             
             <div class="replay-modal-body">

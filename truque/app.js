@@ -2093,4 +2093,18 @@ function adjustReplaySpeed(val) {
 // --- Bootstrap ---
 window.onload = () => {
     resetGame(true);
+
+    // Add backdrop click listeners to modals for premium UX close on blur click
+    const modals = ['modal-rules', 'modal-replay'];
+    modals.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    if (id === 'modal-rules') closeRulesModal();
+                    if (id === 'modal-replay') closeReplayModal();
+                }
+            });
+        }
+    });
 };
