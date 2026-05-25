@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juego del Truque - Baraja Española</title>
     <meta name="description" content="Juega al juego tradicional del Truque contra la computadora o contra un amigo localmente.">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 
@@ -13,8 +14,9 @@
     <header>
         <h1><svg viewBox="0 0 100 100" style="width: 28px; height: 28px; display: inline-block; vertical-align: middle; margin-right: 8px;"><circle cx="50" cy="50" r="42" fill="#ffe875" stroke="#d4af37" stroke-width="6"/><circle cx="50" cy="50" r="28" fill="none" stroke="#d4af37" stroke-width="4" stroke-dasharray="8 4"/><circle cx="50" cy="50" r="10" fill="#f1c40f"/></svg>EL TRUQUE</h1>
         <div class="header-buttons">
+            <a href="https://www.moratalla-murcia.com" class="btn-secondary btn-home-link" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><i class="fas fa-home"></i> moratalla-murcia.com</a>
             <button id="btn-rules" class="btn-secondary" onclick="openRulesModal()">Reglas del Juego</button>
-            <a href="reglas_truque.pdf" download class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Descargar PDF</a>
+            <a href="reglas_truque.pdf" download class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-file-pdf" style="margin-right: 6px;"></i>Descargar PDF</a>
             <button id="btn-new-game" class="btn-secondary" onclick="resetGame(true)">Nueva Partida</button>
         </div>
     </header>
@@ -238,6 +240,6 @@
     </div>
 
     <!-- Script loading -->
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>

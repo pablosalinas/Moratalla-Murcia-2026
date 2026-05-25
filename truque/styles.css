@@ -86,6 +86,38 @@ button.btn-secondary:hover {
     transform: translateY(-2px);
 }
 
+/* Standout styles for the tutorial/rules button */
+button#btn-rules {
+    background: linear-gradient(135deg, var(--gold) 0%, #b78a07 100%);
+    color: #0b150c;
+    border: 1px solid #ffe875;
+    text-shadow: none;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+    font-weight: 700;
+}
+
+button#btn-rules:hover {
+    background: linear-gradient(135deg, #ffd343 0%, var(--gold) 100%);
+    box-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Beautiful blue highlight style for the Home link */
+.header-buttons a.btn-home-link {
+    background: rgba(41, 128, 185, 0.25);
+    border-color: rgba(52, 152, 219, 0.5);
+    color: #5dade2;
+    transition: all 0.2s ease;
+}
+
+.header-buttons a.btn-home-link:hover {
+    background: rgba(41, 128, 185, 0.4);
+    border-color: #5dade2;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+
 /* Main Game Layout */
 .game-container {
     flex: 1;
