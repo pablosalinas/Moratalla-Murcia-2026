@@ -166,6 +166,23 @@ function getCardLabel(number) {
     return number.toString();
 }
 
+function getSuitNameSpanish(suit) {
+    if (suit === 'oro') return 'OROS';
+    if (suit === 'copa') return 'COPAS';
+    if (suit === 'espada') return 'ESPADAS';
+    if (suit === 'basto') return 'BASTOS';
+    return suit.toUpperCase();
+}
+
+function getCardNameSpanish(number, suit) {
+    let name = number.toString();
+    if (number === 1) name = 'As';
+    else if (number === 10) name = 'Sota';
+    else if (number === 11) name = 'Caballo';
+    else if (number === 12) name = 'Rey';
+    return `${name} de ${getSuitNameSpanish(suit)}`;
+}
+
 function getSuitSymbol(suit) {
     if (suit === 'oro') return 'O';
     if (suit === 'copa') return 'C';
@@ -592,7 +609,7 @@ function startNewHand() {
 
     // Log hand start
     addLog(`--- Nueva mano. El jugador ${manoPlayer} es MANO. ---`, 'system');
-    addLog(`La carta Guía es el ${getCardLabel(guiaCard.number)} de ${guiaCard.suit.toUpperCase()}.`, 'system');
+    addLog(`La carta Guía es el ${getCardNameSpanish(guiaCard.number, guiaCard.suit)}.`, 'system');
 
     // Setup turns
     if (gameMode === 'pvp') {
@@ -722,10 +739,10 @@ function toggleTapar() {
 function updateTaparButtonUI() {
     const btn = document.getElementById('btn-tapar');
     if (selectTaped) {
-        btn.innerText = "Tapar Carta: ON";
+        btn.innerText = "Tapar Carta: SÍ";
         btn.style.background = "linear-gradient(135deg, #7f8c8d 0%, #34495e 100%)";
     } else {
-        btn.innerText = "Tapar Carta: OFF";
+        btn.innerText = "Tapar Carta: NO";
         btn.style.background = "rgba(255,255,255,0.05)";
     }
 }
@@ -1166,7 +1183,7 @@ function playerPlayCard(card) {
         }
         slot.appendChild(cardEl);
         
-        addLog(`Jugador 1 juega ${selectTaped ? 'carta tapada' : getCardLabel(card.number) + ' de ' + card.suit.toUpperCase()}.`, 'player');
+        addLog(`Jugador 1 juega ${selectTaped ? 'carta tapada' : getCardNameSpanish(card.number, card.suit)}.`, 'player');
         
         // Reset Tapar state for next round
         selectTaped = false;
@@ -1189,7 +1206,7 @@ function playerPlayCard(card) {
         }
         slot.appendChild(cardEl);
         
-        addLog(`Jugador 2 juega ${selectTaped ? 'carta tapada' : getCardLabel(card.number) + ' de ' + card.suit.toUpperCase()}.`, 'cpu');
+        addLog(`Jugador 2 juega ${selectTaped ? 'carta tapada' : getCardNameSpanish(card.number, card.suit)}.`, 'cpu');
         
         selectTaped = false;
         updateTaparButtonUI();
@@ -1687,7 +1704,7 @@ function cpuTruqueTurn() {
         }
         slot.appendChild(cardEl);
         
-        addLog(`La Computadora juega ${tapeIt ? 'carta tapada' : getCardLabel(cardToPlay.id ? cardToPlay.number : '') + ' de ' + cardToPlay.suit.toUpperCase()}.`, 'cpu');
+        addLog(`La Computadora juega ${tapeIt ? 'carta tapada' : getCardNameSpanish(cardToPlay.number, cardToPlay.suit)}.`, 'cpu');
 
         checkTrickFinished();
     }
@@ -1865,13 +1882,13 @@ function downloadGameHistory() {
         text += `MANO Nº ${hand.handNumber}\n`;
         text += `--------------------------------------------------\n`;
         text += `• Dador/Mano: El Jugador ${hand.manoPlayer} es MANO.\n`;
-        text += `• Carta Guía: ${getCardLabel(hand.guiaCard.number)} de ${hand.guiaCard.suit.toUpperCase()}\n`;
+        text += `• Carta Guía: ${getCardNameSpanish(hand.guiaCard.number, hand.guiaCard.suit)}\n`;
         
-        const p1Cards = hand.p1InitialHand.map(c => `${getCardLabel(c.number)} de ${c.suit.toUpperCase()}`).join(', ');
+        const p1Cards = hand.p1InitialHand.map(c => `${getCardNameSpanish(c.number, c.suit)}`).join(', ');
         text += `• Cartas Jugador 1: ${p1Cards}\n`;
         
         const p2Label = gameMode === 'pvc' ? 'Computadora' : 'Jugador 2';
-        const p2Cards = hand.p2InitialHand.map(c => `${getCardLabel(c.number)} de ${c.suit.toUpperCase()}`).join(', ');
+        const p2Cards = hand.p2InitialHand.map(c => `${getCardNameSpanish(c.number, c.suit)}`).join(', ');
         text += `• Cartas ${p2Label}: ${p2Cards}\n\n`;
         
         text += `Desarrollo de la mano:\n`;

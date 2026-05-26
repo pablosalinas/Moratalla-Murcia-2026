@@ -744,6 +744,10 @@ button.btn-action.bid-decline:hover:not(:disabled) {
     border: 3px solid #ffffff;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     cursor: default;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
 .card.back::before {
@@ -759,8 +763,25 @@ button.btn-action.bid-decline:hover:not(:disabled) {
         radial-gradient(var(--gold) 15%, transparent 16%);
     background-size: 12px 12px;
     background-position: 0 0, 6px 6px;
-    opacity: 0.35;
+    opacity: 0.25;
     border-radius: 6px;
+    z-index: 1;
+}
+
+.card.back::after {
+    content: '';
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    background-image: url('https://www.moratalla-murcia.com/moratalla/uploads/theme/logo2.jpg');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), var(--gold-glow);
+    background-color: #ffffff;
+    z-index: 2;
 }
 
 .card.back:hover {
