@@ -1122,12 +1122,8 @@ button.btn-reveal:hover {
     }
     
     .sidebar .score-panel {
-        flex: 1 1 45%;
-        font-size: 0.8rem;
-    }
-    
-    .sidebar .score-panel:first-child {
-        display: none; /* Hide mode select on very small screens to fit score */
+        flex: 1 1 100%;
+        font-size: 0.85rem;
     }
     
     .play-field {

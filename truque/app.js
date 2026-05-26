@@ -1277,6 +1277,7 @@ function executeEnviteAction(player, action, customChinas = null) {
         changeTurnEnvite(opponent);
     } else if (action === 'quiero') {
         addLog(`${playerName} dice QUIERO.`, 'action');
+        speakAction('quiero');
         enviteState = 'accepted';
         enviteChinas = enviteChinasPending;
         resolveEnvite();
@@ -1284,6 +1285,7 @@ function executeEnviteAction(player, action, customChinas = null) {
         if (enviteState === 'none') {
             // First player passed
             addLog(`${playerName} pasa.`, 'action');
+            speakAction('no-quiero');
             if (player === manoPlayer) {
                 // Opponent gets a turn to bid
                 changeTurnEnvite(opponent);
@@ -1297,6 +1299,7 @@ function executeEnviteAction(player, action, customChinas = null) {
         } else {
             // Folded to a bet
             addLog(`${playerName} dice NO QUIERO.`, 'action');
+            speakAction('no-quiero');
             enviteState = 'declined';
             
             // Winner gets previous bet (or 1 china if it was the initial bet)
@@ -1440,6 +1443,7 @@ function executeTruqueAction(player, action) {
         changeTurnTruqueBet(opponent);
     } else if (action === 'quiero') {
         addLog(`${playerName} dice QUIERO al Truque. Se jugará por ${truqueChinasPending} chinas.`, 'action');
+        speakAction('quiero');
         truqueState = 'accepted';
         
         // Return to normal playing turn
@@ -1459,6 +1463,7 @@ function executeTruqueAction(player, action) {
     } else if (action === 'no-quiero') {
         // Decline Truque fold
         addLog(`${playerName} dice NO QUIERO. Se retira del Truque.`, 'action');
+        speakAction('no-quiero');
         truqueState = 'declined';
         
         // Winner gets previous level's chinas
