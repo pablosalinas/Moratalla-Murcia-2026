@@ -1,9 +1,10 @@
 name: Deploy to Ionos (SFTP)
 
-# Se activa automáticamente con cada push a main
+# Se activa automáticamente con cada push a main, y también manualmente
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
