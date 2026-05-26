@@ -514,6 +514,13 @@ button.btn-action.bid-decline:hover:not(:disabled) {
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
 }
 
+.card:focus {
+    outline: none;
+    transform: translateY(-12px) rotate(1deg);
+    border-color: var(--gold);
+    box-shadow: var(--gold-glow);
+}
+
 .card.selected {
     transform: translateY(-20px);
     border-color: var(--gold);
@@ -1538,3 +1545,239 @@ button.btn-reveal:hover {
     }
 }
 
+/* =============================================
+   ENVIDAR SELECTOR – Premium redesign
+   ============================================= */
+
+.envido-selector-container {
+    background: linear-gradient(145deg, rgba(10, 40, 20, 0.97), rgba(5, 25, 12, 0.99));
+    border: 1px solid #2da15a;
+    border-radius: 18px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 0 30px rgba(45, 161, 90, 0.35), 0 8px 32px rgba(0,0,0,0.6);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: envido-appear 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes envido-appear {
+    from { opacity: 0; transform: scale(0.92) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.envido-selector-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.envido-icon {
+    font-size: 1.2rem;
+    color: #ffe875;
+    animation: spin-coin 2s linear infinite;
+}
+
+@keyframes spin-coin {
+    0%   { transform: rotateY(0deg); }
+    50%  { transform: rotateY(180deg); }
+    100% { transform: rotateY(360deg); }
+}
+
+.envido-selector-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #ffe875;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex: 1;
+}
+
+.envido-max-badge {
+    background: rgba(255,232,117,0.15);
+    border: 1px solid rgba(255,232,117,0.35);
+    color: #ffe875;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+/* Quick-pick chips */
+.envido-chip-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.envido-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, #1d6e3c, #0f3d20);
+    border: 1px solid #2da15a;
+    color: #fff;
+    border-radius: 12px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.18s;
+    min-width: 52px;
+    line-height: 1.1;
+}
+
+.envido-chip span {
+    font-size: 0.55rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.65);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 2px;
+}
+
+.envido-chip:hover,
+.envido-chip.active {
+    background: linear-gradient(145deg, #29a356, #17542f);
+    border-color: #5fdc93;
+    transform: translateY(-2px);
+    box-shadow: 0 0 14px rgba(95, 220, 147, 0.5);
+}
+
+/* Custom stepper */
+.envido-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+}
+
+.envido-stepper {
+    background: rgba(45,161,90,0.2);
+    border: 1px solid #2da15a;
+    color: #5fdc93;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.envido-stepper:hover {
+    background: rgba(45,161,90,0.4);
+    box-shadow: 0 0 10px rgba(45,161,90,0.5);
+    transform: scale(1.1);
+}
+
+.envido-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 70px;
+}
+
+.envido-big-num {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #ffe875;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(255,232,117,0.6);
+}
+
+.envido-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Confirm / Cancel */
+.envido-confirm-row {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-envidar {
+    flex: 1;
+    background: linear-gradient(135deg, #29a356, #17542f);
+    border: 1px solid #5fdc93;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 16px rgba(41,163,86,0.35);
+}
+
+.btn-envidar:hover {
+    background: linear-gradient(135deg, #34c96a, #1d6e3c);
+    box-shadow: 0 6px 24px rgba(41,163,86,0.6);
+    transform: translateY(-2px);
+}
+
+.btn-envidar:active {
+    transform: translateY(0);
+}
+
+.btn-envido-cancel {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.6);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-envido-cancel:hover {
+    background: rgba(255,100,100,0.15);
+    border-color: rgba(255,100,100,0.35);
+    color: #ff7675;
+}
+
+/* Cantar button */
+button.btn-cantar {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.5), rgba(72, 52, 212, 0.4)) !important;
+    border: 1px solid rgba(162, 155, 254, 0.5) !important;
+    color: #a29bfe !important;
+}
+
+button.btn-cantar:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.7), rgba(72, 52, 212, 0.6)) !important;
+    border-color: #a29bfe !important;
+    color: #fff !important;
+}
+
+/* Responsive tweaks for the envido selector */
+@media (max-width: 480px) {
+    .envido-chip {
+        min-width: 44px;
+        font-size: 0.9rem;
+        padding: 5px 7px;
+    }
+    .envido-big-num {
+        font-size: 1.8rem;
+    }
+    .envido-confirm-row {
+        flex-direction: column;
+    }
+}

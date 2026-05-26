@@ -31,6 +31,8 @@ let enviteChinasPending = 0; // chinas in play during negotiation
 let enviteChinasPrevious = 1;
 let customEnvidoValue = 2;
 let envitePointsCalculated = false;
+let p1EnviteScore = 0;
+let p2EnviteScore = 0;
 
 // Truque State
 let truqueLevel = 0; // 0 (base=1), 1 (truco=3), 2 (retruco=6), 3 (renueve=9), 4 (redoce=12), 5 (requince=15), 6 (rejuego=falta)
@@ -50,6 +52,13 @@ let selectTaped = false;
 
 // Local Multiplayer Privacy Screen State
 let pvpScreenActive = false;
+
+// --- Envite Helper ---
+function isEnviteActive() {
+    return (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') &&
+           (currentTrick === 0) &&
+           !(p1PlayedCard && p2PlayedCard);
+}
 
 // --- Suit SVG Generator ---
 function getSuitSvg(suit) {
@@ -509,7 +518,14 @@ function createCardElement(card, isOpponent = false, onClickHandler = null) {
     cardDiv.appendChild(bottomCorner);
 
     if (onClickHandler) {
+        cardDiv.setAttribute('tabindex', '0');
         cardDiv.addEventListener('click', () => onClickHandler(card));
+        cardDiv.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                cardDiv.click();
+            }
+        });
     }
 
     return cardDiv;
@@ -556,6 +572,9 @@ function startNewHand() {
     p1Hand = [deck.pop(), deck.pop(), deck.pop()];
     p2Hand = [deck.pop(), deck.pop(), deck.pop()];
     guiaCard = deck.pop(); // The guide card
+    
+    p1EnviteScore = calculateEnviteScore(p1Hand);
+    p2EnviteScore = calculateEnviteScore(p2Hand);
 
     handCount++;
     const handInfo = {
@@ -708,11 +727,11 @@ function renderHands(hideAll = false) {
 
     // Display envite values in helper panel (if calculated/visible)
     if (envitePointsCalculated) {
-        document.getElementById('val-p1-envite-pts').innerText = calculateEnviteScore(p1Hand);
-        document.getElementById('val-p2-envite-pts').innerText = calculateEnviteScore(p2Hand);
+        document.getElementById('val-p1-envite-pts').innerText = p1EnviteScore;
+        document.getElementById('val-p2-envite-pts').innerText = p2EnviteScore;
     } else {
         if (gameMode === 'pvc') {
-            document.getElementById('val-p1-envite-pts').innerText = calculateEnviteScore(p1Hand);
+            document.getElementById('val-p1-envite-pts').innerText = p1EnviteScore;
         } else {
             document.getElementById('val-p1-envite-pts').innerText = '?';
         }
@@ -770,7 +789,7 @@ function updateActionButtons() {
     if (pvpScreenActive) return;
 
     // Envite Phase active
-    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    const inEnvite = isEnviteActive();
     
     if (inEnvite) {
         btnMazo.disabled = false; // can fold anytime
@@ -874,7 +893,7 @@ function revealPrivacyScreen() {
     pvpScreenActive = false;
     renderHands();
     
-    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    const inEnvite = isEnviteActive();
     if (inEnvite) {
         updateStatusBar(`Fase de Envite. Turno de Jugador ${activePlayer}.`);
         updateActionButtons();
@@ -902,7 +921,7 @@ function switchPvPTurn(nextPlayer, actionType = 'play') {
 function handleAction(action) {
     if (pvpScreenActive) return;
     
-    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    const inEnvite = isEnviteActive();
     
     if (inEnvite) {
         executeEnviteAction(activePlayer, action);
@@ -926,6 +945,8 @@ function getParText(chinas) {
 }
 
 function executeEnviteAction(player, action, customChinas = null) {
+    if (!isEnviteActive() && action !== 'retirarse') return;
+
     const opponent = player === 1 ? 2 : 1;
     const opponentName = opponent === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
     const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
@@ -944,6 +965,7 @@ function executeEnviteAction(player, action, customChinas = null) {
             enviteChinasPending = bidVal;
             enviteProposer = player;
             addLog(`${playerName} canta ENVIDO (${enviteChinasPending} china${enviteChinasPending === 1 ? '' : 's'}${getParText(enviteChinasPending)}).`, 'action');
+            speakAnnouncement(`¡Envido! ${enviteChinasPending} china${enviteChinasPending === 1 ? '' : 's'}`);
             changeTurnEnvite(opponent);
         } else {
             enviteState = 'envido-yo-tambien';
@@ -951,6 +973,7 @@ function executeEnviteAction(player, action, customChinas = null) {
             enviteChinasPending = bidVal;
             enviteProposer = player;
             addLog(`${playerName} dice ENVIDO MÁS (${enviteChinasPending} china${enviteChinasPending === 1 ? '' : 's'}${getParText(enviteChinasPending)}).`, 'action');
+            speakAnnouncement(`¡Envido más! ${enviteChinasPending} chinas`);
             changeTurnEnvite(opponent);
         }
     } else if (action === 'quique') {
@@ -960,6 +983,7 @@ function executeEnviteAction(player, action, customChinas = null) {
         enviteChinasPending = bidVal;
         enviteProposer = player;
         addLog(`${playerName} canta QUINQUÉ (5 chinas).`, 'action');
+        speakAnnouncement('¡Quinqué!');
         changeTurnEnvite(opponent);
     } else if (action === 'falta') {
         enviteState = 'falta';
@@ -969,6 +993,7 @@ function executeEnviteAction(player, action, customChinas = null) {
         enviteChinasPending = faltaChinas;
         enviteProposer = player;
         addLog(`${playerName} envida LA FALTA (${enviteChinasPending} chinas).`, 'action');
+        speakAnnouncement('¡La falta!');
         changeTurnEnvite(opponent);
     } else if (action === 'quiero') {
         addLog(`${playerName} dice QUIERO.`, 'action');
@@ -1036,18 +1061,36 @@ function startTruquePhase() {
     updateTaparButtonUI();
     // Starter of the truque is the hand's Mano
     currentTrickStarter = manoPlayer;
-    activePlayer = currentTrickStarter;
 
-    updateStatusBar(`Fase de Truque. Juega una carta Jugador ${activePlayer}.`);
-    renderHands();
-    updateActionButtons();
-
-    if (gameMode === 'pvp') {
-        pvpScreenActive = true;
-        showPrivacyScreen(`Turno de Jugador ${activePlayer}`, `Pasa el dispositivo. Juega tu primera carta.`);
+    // Check if someone has already played a card to pass or fold Envite
+    if (p1PlayedCard || p2PlayedCard) {
+        activePlayer = p1PlayedCard ? 2 : 1;
+        const activeName = activePlayer === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'la Computadora' : 'Jugador 2');
+        updateStatusBar(`Fase de Truque. Juega una carta ${activeName}.`);
+        renderHands();
+        updateActionButtons();
+        
+        if (gameMode === 'pvp') {
+            switchPvPTurn(activePlayer, 'play');
+        } else {
+            if (activePlayer === 2) {
+                setTimeout(cpuTruqueTurn, 1500);
+            }
+        }
     } else {
-        if (activePlayer === 2) {
-            setTimeout(cpuTruqueTurn, 1500);
+        activePlayer = currentTrickStarter;
+
+        updateStatusBar(`Fase de Truque. Juega una carta Jugador ${activePlayer}.`);
+        renderHands();
+        updateActionButtons();
+
+        if (gameMode === 'pvp') {
+            pvpScreenActive = true;
+            showPrivacyScreen(`Turno de Jugador ${activePlayer}`, `Pasa el dispositivo. Juega tu primera carta.`);
+        } else {
+            if (activePlayer === 2) {
+                setTimeout(cpuTruqueTurn, 1500);
+            }
         }
     }
 }
@@ -1063,6 +1106,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'truco';
         truqueProposer = player;
         addLog(`${playerName} canta TRUCO (3 chinas).`, 'action');
+        speakAnnouncement('¡Truco!');
         changeTurnTruqueBet(opponent);
     } else if (action === 'retruco') {
         truqueLevel = 2;
@@ -1070,6 +1114,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'retruco';
         truqueProposer = player;
         addLog(`${playerName} canta RETRUCO (6 chinas).`, 'action');
+        speakAnnouncement('¡Retruco!');
         changeTurnTruqueBet(opponent);
     } else if (action === 'renueve') {
         truqueLevel = 3;
@@ -1077,6 +1122,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'renueve';
         truqueProposer = player;
         addLog(`${playerName} canta RENUEVE (9 chinas).`, 'action');
+        speakAnnouncement('¡Renueve!');
         changeTurnTruqueBet(opponent);
     } else if (action === 'redoce') {
         truqueLevel = 4;
@@ -1084,6 +1130,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'redoce';
         truqueProposer = player;
         addLog(`${playerName} canta REDOCE (12 chinas).`, 'action');
+        speakAnnouncement('¡Redoce!');
         changeTurnTruqueBet(opponent);
     } else if (action === 'requince') {
         truqueLevel = 5;
@@ -1091,6 +1138,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'requince';
         truqueProposer = player;
         addLog(`${playerName} canta REQUINCE (15 chinas).`, 'action');
+        speakAnnouncement('¡Requince!');
         changeTurnTruqueBet(opponent);
     } else if (action === 'rejuego') {
         truqueLevel = 6;
@@ -1099,6 +1147,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'rejuego';
         truqueProposer = player;
         addLog(`${playerName} canta REJUEGO (Todas las chinas).`, 'action');
+        speakAnnouncement('¡Rejuego!');
         changeTurnTruqueBet(opponent);
     } else if (action === 'quiero') {
         addLog(`${playerName} dice QUIERO al Truque. Se jugará por ${truqueChinasPending} chinas.`, 'action');
@@ -1205,7 +1254,7 @@ function executeCardPlay(player, card) {
 function playerPlayCard(card) {
     if (pvpScreenActive) return;
     
-    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    const inEnvite = isEnviteActive();
     const player = activePlayer;
     const opponent = player === 1 ? 2 : 1;
     const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvp' ? 'Jugador 2' : 'Computadora');
@@ -1512,8 +1561,8 @@ function endHand() {
         envitePointsCalculated = true;
         renderHands();
 
-        const p1Pts = calculateEnviteScore(p1Hand);
-        const p2Pts = calculateEnviteScore(p2Hand);
+        const p1Pts = p1EnviteScore;
+        const p2Pts = p2EnviteScore;
         const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
         
         addLog(`--- Resolución del Envite ---`, 'system');
@@ -1561,7 +1610,7 @@ function endHand() {
 function cpuEnviteTurn() {
     if (enviteState === 'accepted' || enviteState === 'declined' || enviteState === 'passed') return;
 
-    const cpuPts = calculateEnviteScore(p2Hand);
+    const cpuPts = p2EnviteScore;
     const maxScore = Math.max(p1Score, p2Score);
     const faltaChinas = Math.max(2, 50 - maxScore);
     
@@ -1588,8 +1637,10 @@ function cpuEnviteTurn() {
             addLog("La Computadora decide meter un embuste...", 'system');
             executeEnviteAction(2, 'envido', 2);
         } else {
-            // Pass
-            executeEnviteAction(2, 'no-quiero');
+            // Pass Envite by playing a card
+            p2Hand.sort((a,b) => getCardPower(b) - getCardPower(a));
+            const cardToPlay = p2Hand[0];
+            playerPlayCard(cardToPlay);
         }
     } else {
         // Player has made a bet. CPU must accept, fold, or raise.
@@ -1630,7 +1681,7 @@ function cpuEnviteTurn() {
 
 function cpuTruqueTurn() {
     // Ensure Envite is resolved
-    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    const inEnvite = isEnviteActive();
     if (inEnvite) return;
 
     if (truqueState === 'declined') return;
@@ -1847,10 +1898,25 @@ function openEnvidoSelector() {
 
     document.getElementById('envido-max-val').innerText = faltaChinas;
     
+    // Disable chips that are below the minimum allowed
+    const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
+    document.querySelectorAll('.envido-chip').forEach(chip => {
+        const v = parseInt(chip.dataset.val);
+        chip.disabled = (v < minVal || v > faltaChinas);
+    });
+    
     // Hide action buttons, show custom selector
     document.querySelector('.action-buttons').style.display = 'none';
     document.getElementById('envido-selector').style.display = 'flex';
     
+    updateCustomEnvidoUI();
+}
+
+function setEnvidoChinas(val) {
+    const maxScore = Math.max(p1Score, p2Score);
+    const faltaChinas = Math.max(2, 50 - maxScore);
+    const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
+    customEnvidoValue = Math.min(Math.max(val, minVal), faltaChinas);
     updateCustomEnvidoUI();
 }
 
@@ -1869,22 +1935,24 @@ function adjustEnvidoChinas(diff) {
 }
 
 function updateCustomEnvidoUI() {
-    const display = document.getElementById('envido-selected-chinas');
-    let text = `${customEnvidoValue} china${customEnvidoValue === 1 ? '' : 's'}`;
+    // Update number display
+    const numEl = document.getElementById('envido-chinas-num');
+    const labelEl = document.getElementById('envido-selected-chinas');
+    if (numEl) numEl.innerText = customEnvidoValue;
     
-    // Add slang for specific numbers of chinas
-    if (customEnvidoValue === 2) {
-        text += ' (Envido)';
-    } else if (customEnvidoValue === 5) {
-        text += ' (Quinqué)';
-    } else {
-        // Show pares if even
-        if (customEnvidoValue % 2 === 0) {
-            const pares = customEnvidoValue / 2;
-            text += ` (${pares} ${pares === 1 ? 'par' : 'pares'})`;
-        }
+    let label = `china${customEnvidoValue === 1 ? '' : 's'}`;
+    if (customEnvidoValue === 2) label = 'chinas (Envido)';
+    else if (customEnvidoValue === 5) label = 'chinas (Quinqué)';
+    else if (customEnvidoValue % 2 === 0) {
+        const pares = customEnvidoValue / 2;
+        label = `chinas (${pares} ${pares === 1 ? 'par' : 'pares'})`;
     }
-    display.innerText = text;
+    if (labelEl) labelEl.innerText = label;
+    
+    // Highlight active chip
+    document.querySelectorAll('.envido-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.val) === customEnvidoValue);
+    });
 }
 
 function confirmCustomEnvido() {
@@ -1900,6 +1968,40 @@ function cancelCustomEnvido() {
     // Hide custom selector, show action buttons
     document.getElementById('envido-selector').style.display = 'none';
     document.querySelector('.action-buttons').style.display = 'flex';
+}
+
+// --- Speech Synthesis Utilities ---
+function speakAnnouncement(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'es-ES';
+    utter.rate = 0.95;
+    utter.pitch = 1.1;
+    utter.volume = 1.0;
+    window.speechSynthesis.speak(utter);
+}
+
+function cantarMarcador() {
+    const p2Name = gameMode === 'pvc' ? 'la Computadora' : 'el Jugador Dos';
+    const p1Malas = Math.min(p1Score, 25);
+    const p1Buenas = Math.max(0, p1Score - 25);
+    const p2Malas = Math.min(p2Score, 25);
+    const p2Buenas = Math.max(0, p2Score - 25);
+    
+    let texto = '';
+    if (p1Score === 0 && p2Score === 0) {
+        texto = 'Partida sin puntos. Todo por ganar.';
+    } else {
+        texto = `Marcador actual. Jugador Uno: ${p1Malas} malas`;
+        if (p1Buenas > 0) texto += ` y ${p1Buenas} buenas`;
+        texto += `. ${p2Name}: ${p2Malas} malas`;
+        if (p2Buenas > 0) texto += ` y ${p2Buenas} buenas`;
+        texto += '.';
+    }
+    
+    addLog(`[Cantar] ${texto}`, 'system');
+    speakAnnouncement(texto);
 }
 
 // --- Download Game History Report ---

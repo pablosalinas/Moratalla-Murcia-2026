@@ -6,7 +6,7 @@
     <title>Juego del Truque - Baraja Española</title>
     <meta name="description" content="Juega al juego tradicional del Truque contra la computadora o contra un amigo localmente.">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
     <link rel="icon" href="https://www.moratalla-murcia.com/moratalla/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="https://www.moratalla-murcia.com/moratalla/favicon.ico" type="image/x-icon">
 </head>
@@ -172,15 +172,28 @@
                 
                 <!-- Custom Envido Selector (hidden by default) -->
                 <div id="envido-selector" class="envido-selector-container" style="display: none;">
-                    <div class="selector-title">Envidar Chinas (Máx: <span id="envido-max-val">50</span>)</div>
-                    <div class="selector-controls">
-                        <button class="selector-btn" onclick="adjustEnvidoChinas(-1)">-</button>
-                        <span id="envido-selected-chinas" class="selected-chinas-val">2 chinas (Envido)</span>
-                        <button class="selector-btn" onclick="adjustEnvidoChinas(1)">+</button>
+                    <div class="envido-selector-header">
+                        <i class="fas fa-coins envido-icon"></i>
+                        <span class="envido-selector-title">Envidar</span>
+                        <span class="envido-max-badge">Máx: <strong id="envido-max-val">50</strong></span>
                     </div>
-                    <div class="selector-actions">
-                        <button class="btn-confirm" onclick="confirmCustomEnvido()">Cantar</button>
-                        <button class="btn-cancel" onclick="cancelCustomEnvido()">Cancelar</button>
+                    <div class="envido-chip-row">
+                        <button class="envido-chip" onclick="setEnvidoChinas(2)" data-val="2">2<span>Sencillo</span></button>
+                        <button class="envido-chip" onclick="setEnvidoChinas(4)" data-val="4">4<span>2 pares</span></button>
+                        <button class="envido-chip" onclick="setEnvidoChinas(5)" data-val="5">5<span>Quinqué</span></button>
+                        <button class="envido-chip" onclick="setEnvidoChinas(6)" data-val="6">6<span>3 pares</span></button>
+                    </div>
+                    <div class="envido-custom-row">
+                        <button class="envido-stepper" onclick="adjustEnvidoChinas(-1)"><i class="fas fa-minus"></i></button>
+                        <div class="envido-display">
+                            <span id="envido-chinas-num" class="envido-big-num">2</span>
+                            <span id="envido-selected-chinas" class="envido-label">chinas</span>
+                        </div>
+                        <button class="envido-stepper" onclick="adjustEnvidoChinas(1)"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="envido-confirm-row">
+                        <button class="btn-envidar" onclick="confirmCustomEnvido()"><i class="fas fa-bullhorn"></i> ¡Envidar!</button>
+                        <button class="btn-envido-cancel" onclick="cancelCustomEnvido()"><i class="fas fa-times"></i> Cancelar</button>
                     </div>
                 </div>
 
@@ -196,6 +209,7 @@
                     
                     <button id="btn-tapar" class="btn-action" onclick="toggleTapar()" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15)">Tapar Carta: OFF</button>
                     <button id="btn-ir-al-mazo" class="btn-action bid-decline" onclick="handleAction('retirarse')">Ir al Mazo</button>
+                    <button id="btn-cantar" class="btn-action btn-cantar" onclick="cantarMarcador()" title="Anunciar marcador en voz alta"><i class="fas fa-volume-up"></i> Cantar</button>
                 </div>
             </div>
 
@@ -353,6 +367,6 @@
     </div>
 
     <!-- Script loading -->
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>
