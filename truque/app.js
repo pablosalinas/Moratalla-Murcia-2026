@@ -1077,7 +1077,7 @@ function updateActionButtons() {
             btnNoQuiero.innerText = "No Quiero";
 
             const maxScore = Math.max(p1Score, p2Score);
-            const faltaChinas = Math.max(2, metaChinas - maxScore);
+            const faltaChinas = (metaChinas - maxScore);
 
             // Allow custom raise if we haven't reached Falta yet
             if (enviteChinasPending < faltaChinas) {
@@ -1109,6 +1109,7 @@ function updateActionButtons() {
         // Bidding Truque (Truco, Retruco, Renueve, Redoce, Requince, Rejuego)
         if (truqueState !== 'declined') {
             const hasOpponentPosedBet = (truqueProposer !== activePlayer && ['truco', 'retruco', 'renueve', 'redoce', 'requince', 'rejuego'].includes(truqueState));
+            const isAcceptedAndNotProposer = (truqueState === 'accepted' && truqueProposer !== activePlayer);
             
             if (hasOpponentPosedBet) {
                 btnQuiero.disabled = false;
@@ -1116,8 +1117,8 @@ function updateActionButtons() {
                 btnNoQuiero.innerText = "No Quiero";
             }
 
-            // Can raise if no bet or if answering opponent's bet
-            const canRaise = (truqueState === 'none' || hasOpponentPosedBet);
+            // Can raise if no bet, answering opponent's bet, OR continuing the escalation after an accepted bet
+            const canRaise = (truqueState === 'none' || hasOpponentPosedBet || isAcceptedAndNotProposer);
             if (canRaise) {
                 if (truqueLevel === 0) {
                     btnTruco.disabled = false;
@@ -1252,7 +1253,7 @@ function executeEnviteAction(player, action, customChinas = null) {
     } else if (action === 'falta') {
         enviteState = 'falta';
         const maxScore = Math.max(p1Score, p2Score);
-        const faltaChinas = Math.max(2, metaChinas - maxScore);
+        const faltaChinas = (metaChinas - maxScore);
         enviteChinasPrevious = enviteState === 'none' ? 1 : enviteChinasPending;
         enviteChinasPending = faltaChinas;
         enviteProposer = player;
@@ -1407,7 +1408,7 @@ function executeTruqueAction(player, action) {
     } else if (action === 'rejuego') {
         truqueLevel = 6;
         const maxScore = Math.max(p1Score, p2Score);
-        truqueChinasPending = Math.max(3, metaChinas - maxScore);
+        truqueChinasPending = metaChinas - maxScore;
         truqueState = 'rejuego';
         truqueProposer = player;
         addLog(`${playerName} canta REJUEGO (Todas las chinas).`, 'action');
@@ -1769,7 +1770,7 @@ function awardChinas(player, amount) {
 
     // Check Win Condition
     if (p1Score >= metaChinas) {
-        showGameOverModal('¡Victoria de Jugador 1!', '🏆', 'Has logrado vencer alcanzando las ${metaChinas} chinas.');
+        showGameOverModal('¡Victoria de Jugador 1!', '🏆', `Has logrado vencer alcanzando las ${metaChinas} chinas.`);
     } else if (p2Score >= metaChinas) {
         const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
         showGameOverModal(`¡Victoria de ${p2Name}!`, '💀', `El oponente ha ganado la partida con ${metaChinas} chinas.`);
@@ -1876,7 +1877,7 @@ function cpuEnviteTurn() {
 
     const cpuPts = p2EnviteScore;
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, metaChinas - maxScore);
+    const faltaChinas = (metaChinas - maxScore);
     
     // AI Strategy parameters
     const random = Math.random();
@@ -2141,12 +2142,21 @@ function showGameOverModal(title, icon, desc) {
     document.getElementById('game-over-title').innerText = title;
     document.getElementById('game-over-desc').innerText = desc;
     document.getElementById('modal-game-over').classList.add('active');
+    
+    // Reproducir himno de Freddie Mercury si está disponible
+    try {
+        const anthem = new Audio('champions.mp3');
+        if (typeof voiceVolume !== 'undefined') anthem.volume = voiceVolume;
+        anthem.play().catch(e => console.log('Himno no reproducido:', e));
+    } catch (e) {
+        console.log('Error al intentar reproducir el himno:', e);
+    }
 }
 
 // --- Custom Envido Selector Handlers ---
 function openEnvidoSelector() {
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, metaChinas - maxScore);
+    const faltaChinas = (metaChinas - maxScore);
 
     // Initial value:
     // If no bet: start at 2
@@ -2178,7 +2188,7 @@ function openEnvidoSelector() {
 
 function setEnvidoChinas(val) {
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, metaChinas - maxScore);
+    const faltaChinas = (metaChinas - maxScore);
     const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
     customEnvidoValue = Math.min(Math.max(val, minVal), faltaChinas);
     updateCustomEnvidoUI();
@@ -2186,7 +2196,7 @@ function setEnvidoChinas(val) {
 
 function adjustEnvidoChinas(diff) {
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, metaChinas - maxScore);
+    const faltaChinas = (metaChinas - maxScore);
     
     const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
     
