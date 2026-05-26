@@ -54,40 +54,20 @@
 
             <!-- Voice Control Panel -->
             <div class="score-panel voice-panel" id="voice-panel" style="padding: 12px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
                     <h3 style="margin: 0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
                         <i class="fas fa-microphone" style="color: var(--gold);"></i> Voz del Cante
                     </h3>
-                    <button id="btn-voice-toggle" class="voice-toggle-btn" onclick="toggleVoice()" title="Voz activada (clic para desactivar)">
-                        <i id="voice-toggle-icon" class="fas fa-volume-up"></i>
-                    </button>
-                </div>
-
-                <!-- Selector de voz -->
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Voz del sistema</div>
-                    <select id="voice-select" onchange="selectSpecificVoice(this.value)"
-                        style="width: 100%; padding: 5px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-size: 0.78rem;">
-                    </select>
-                </div>
-
-                <!-- Volumen -->
-                <div style="margin-bottom: 10px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        <span>Volumen</span>
-                        <span id="voice-volume-label">100%</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="voice-test-btn" onclick="speakAnnouncement('¡TRUCO! ¡Te lo CANTO con fuerza!')" style="padding: 5px 10px; font-size: 0.75rem;">
+                            <i class="fas fa-play-circle"></i> Probar
+                        </button>
+                        <button id="btn-voice-toggle" class="voice-toggle-btn" onclick="toggleVoice()" title="Voz activada (clic para desactivar)">
+                            <i id="voice-toggle-icon" class="fas fa-volume-up"></i>
+                        </button>
                     </div>
-                    <input type="range" id="voice-volume-slider" min="0" max="1" step="0.05" value="1"
-                        oninput="setVoiceVolume(this.value)" class="voice-volume-slider">
                 </div>
-
-                <!-- Botón de prueba -->
-                <button class="voice-test-btn" onclick="speakAnnouncement('¡Truco! ¡Te lo canto con fuerza!')">
-                    <i class="fas fa-play-circle"></i> Probar voz
-                </button>
             </div>
-
-
 
             <div class="score-panel">
                 <h3>Marcador Global</h3>

@@ -6,60 +6,34 @@
 // VOICE ANNOUNCEMENT ENGINE
 // ==========================================
 
-// Voice settings
-let voiceVolume = 1.0;
+// Voice settings — voz fija: Microsoft Pablo
 let voiceEnabled = true;
-let availableVoices = [];
-let speechQueue = [];
-
-// Keys localStorage
-const LS_VOICE_NAME    = 'truque_voice_name';
-const LS_VOICE_VOLUME  = 'truque_voice_volume';
 const LS_VOICE_ENABLED = 'truque_voice_enabled';
 
-// Announcement text map for game actions
+// Frases del juego
 const VOICE_LINES = {
-    // Envite
-    'envido':      ['¡Envido!', '¡Tiro el envido!', '¡Envido, compañero!'],
-    'envido-mas':  ['¡Envido más!', '¡Y yo más!', '¡Envido, subo!'],
-    'quique':      ['¡Quinqué!', '¡Cinco chinas, quinqué!', '¡Al quinqué!'],
-    'falta':       ['¡La falta!', '¡La falta entera, a por todo!', '¡La falta, no me tiembla el pulso!'],
-    'quiero':      ['¡Quiero!', '¡Quiero, venga!', '¡Acepto, vamos allá!'],
-    'no-quiero':   ['¡No quiero!', '¡Paso, no quiero!', '¡No quiero, siguiente!'],
-    // Truque
-    'truco':       ['¡Truco!', '¡Truco, compañero!', '¡Truco, te lo canto!'],
-    'retruco':     ['¡Retruco!', '¡Retruco, y van tres!', '¡Retruco, aprieta!'],
-    'renueve':     ['¡Renueve!', '¡Renueve, subo la apuesta!', '¡Renueve, nueve chinas!'],
-    'redoce':      ['¡Redoce!', '¡Redoce, doce chinas!', '¡Redoce, a lo grande!'],
-    'requince':    ['¡Requince!', '¡Requince, quince chinas!', '¡Requince, esto se pone serio!'],
-    'rejuego':     ['¡Rejuego!', '¡Al rejuego, todo o nada!', '¡Rejuego, a falta entera!'],
-    // Game events
-    'gana-mano':   ['¡La mano es mía!', '¡Baza ganada!', '¡Para mí!'],
-    'pierde-mano': ['¡Baza perdida!', '¡Te la llevas!'],
-    'victoria':    ['¡Victoria! ¡Soy el amo!', '¡He ganado la partida!', '¡Cincuenta chinas, soy el rey del truque!'],
-    'derrota':     ['¡Maldita sea, has ganado!', '¡Enhorabuena, bien jugado!'],
+    'envido':      ['¡ENVIDO!', '¡Tiro el ENVIDO!', '¡ENVIDO, compañero!'],
+    'envido-mas':  ['¡ENVIDO más!', '¡Y yo MÁS!', '¡ENVIDO, subo!'],
+    'quique':      ['¡QUINQUÉ!', '¡Cinco chinas, QUINQUÉ!', '¡Al QUINQUÉ!'],
+    'falta':       ['¡La FALTA!', '¡La FALTA entera, a por TODO!', '¡La FALTA, no me tiembla el PULSO!'],
+    'quiero':      ['¡QUIERO!', '¡QUIERO, venga!', '¡ACEPTO, vamos ALLÁ!'],
+    'no-quiero':   ['¡NO quiero!', '¡PASO, no quiero!', '¡NO quiero, siguiente!'],
+    'truco':       ['¡TRUCO!', '¡TRUCO, compañero!', '¡TRUCO, te lo CANTO!'],
+    'retruco':     ['¡RETRUCO!', '¡RETRUCO, y van TRES!', '¡RETRUCO, APRIETA!'],
+    'renueve':     ['¡RENUEVE!', '¡RENUEVE, subo la APUESTA!', '¡RENUEVE, nueve CHINAS!'],
+    'redoce':      ['¡REDOCE!', '¡REDOCE, doce CHINAS!', '¡REDOCE, a lo GRANDE!'],
+    'requince':    ['¡REQUINCE!', '¡REQUINCE, quince CHINAS!', '¡REQUINCE, esto se pone SERIO!'],
+    'rejuego':     ['¡REJUEGO!', '¡Al REJUEGO, todo o NADA!', '¡REJUEGO, a FALTA entera!'],
+    'gana-mano':   ['¡La mano es MÍA!', '¡BAZA ganada!', '¡Para MÍ!'],
+    'pierde-mano': ['¡BAZA perdida!', '¡Te la LLEVAS!'],
+    'victoria':    ['¡VICTORIA! ¡Soy el AMO!', '¡He GANADO la partida!', '¡CINCUENTA chinas, soy el REY del truque!'],
+    'derrota':     ['¡MALDITA sea, has GANADO!', '¡ENHORABUENA, bien JUGADO!'],
 };
 
 function getRandomLine(key) {
     const lines = VOICE_LINES[key];
     if (!lines) return null;
     return lines[Math.floor(Math.random() * lines.length)];
-}
-
-// Devuelve lista de voces en español (o todas si no hay)
-function getVoiceList() {
-    const spanish = availableVoices.filter(v => v.lang.startsWith('es'));
-    return spanish.length ? spanish : availableVoices;
-}
-
-// Devuelve la voz guardada en localStorage (o la primera disponible)
-function getSelectedVoice() {
-    const savedName = localStorage.getItem(LS_VOICE_NAME);
-    if (savedName) {
-        const found = availableVoices.find(v => v.name === savedName);
-        if (found) return found;
-    }
-    return getVoiceList()[0] || null;
 }
 
 // Actualiza el icono y clase del botón toggle
@@ -73,48 +47,20 @@ function updateToggleUI() {
     if (icon) icon.className = voiceEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
 }
 
-// Restaura volumen y estado desde localStorage
-function restoreVoicePreferences() {
-    const savedVolume  = localStorage.getItem(LS_VOICE_VOLUME);
-    const savedEnabled = localStorage.getItem(LS_VOICE_ENABLED);
-    if (savedVolume !== null) {
-        voiceVolume = parseFloat(savedVolume);
-        const slider = document.getElementById('voice-volume-slider');
-        if (slider) slider.value = voiceVolume;
-        const label = document.getElementById('voice-volume-label');
-        if (label) label.textContent = Math.round(voiceVolume * 100) + '%';
-    }
-    if (savedEnabled !== null) {
-        voiceEnabled = savedEnabled === 'true';
-        updateToggleUI();
-    }
+// Obtiene la voz de Pablo (o la mejor española disponible como fallback)
+function getPabloVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    // Buscar Pablo por nombre exacto primero
+    return voices.find(v => v.name === 'Microsoft Pablo - Spanish (Spain)')
+        || voices.find(v => v.name.toLowerCase().includes('pablo'))
+        || voices.find(v => v.lang === 'es-ES')
+        || voices.find(v => v.lang.startsWith('es'))
+        || voices[0]
+        || null;
 }
 
-// Carga voces y restaura preferencias
-function loadVoices() {
-    availableVoices = window.speechSynthesis.getVoices();
-    populateVoiceSelector();
-    restoreVoicePreferences();
-}
-
-// Rellena el desplegable marcando la voz guardada
-function populateVoiceSelector() {
-    const sel = document.getElementById('voice-select');
-    if (!sel) return;
-    sel.innerHTML = '';
-    const list = getVoiceList();
-    const savedName = localStorage.getItem(LS_VOICE_NAME);
-    list.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.name;          // nombre como clave, no índice
-        opt.textContent = `${v.name} (${v.lang})`;
-        if (v.name === savedName) opt.selected = true;
-        sel.appendChild(opt);
-    });
-}
-
-// Core speak function
-// NOTA: Chrome requiere delay tras cancel() para respetar voz y volumen elegidos
+// Core speak — voz Pablo fija, pitch y rate altos para sonar enérgico
+// Chrome requiere 50ms de delay tras cancel() para respetar la voz
 function speakAnnouncement(text, options = {}) {
     if (!voiceEnabled) return;
     if (!window.speechSynthesis) return;
@@ -122,73 +68,45 @@ function speakAnnouncement(text, options = {}) {
     window.speechSynthesis.cancel();
 
     setTimeout(() => {
-        // Re-obtener voces frescas en el momento de hablar (Chrome invalida refs cacheadas)
-        const voices    = window.speechSynthesis.getVoices();
-        const savedName = localStorage.getItem(LS_VOICE_NAME);
-        const voice     = savedName
-            ? voices.find(v => v.name === savedName)
-                || voices.find(v => v.lang.startsWith('es'))
-                || voices[0]
-            : voices.find(v => v.lang.startsWith('es')) || voices[0];
+        const voice     = getPabloVoice();
+        const utterance = new SpeechSynthesisUtterance(text);
 
-        const utterance  = new SpeechSynthesisUtterance(text);
-        utterance.volume = voiceVolume;
-        utterance.rate   = options.rate  ?? 1.15;
-        utterance.pitch  = options.pitch ?? 1.0;
+        utterance.volume = 1.0;
+        utterance.rate   = options.rate  ?? 1.05;  // ligeramente más lento para que se entienda
+        utterance.pitch  = options.pitch ?? 1.9;   // pitch máximo = voz enérgica y aguda
 
         if (voice) {
             utterance.voice = voice;
-            utterance.lang  = voice.lang; // debe coincidir con el idioma de la voz
+            utterance.lang  = voice.lang;
         } else {
             utterance.lang  = 'es-ES';
         }
 
         flashVoiceIndicator();
         window.speechSynthesis.speak(utterance);
-    }, 50); // 50 ms es suficiente para que Chrome procese el cancel()
+    }, 50);
 }
 
-
-// Speak a game action key (picks random phrase from VOICE_LINES)
 function speakAction(key) {
     const line = getRandomLine(key);
     if (line) speakAnnouncement(line);
 }
 
-// Cantar el marcador actual en voz alta
 function cantarMarcador() {
     const p2Name = gameMode === 'pvc' ? 'la computadora' : 'el jugador dos';
-    const text   = `Marcador: jugador uno, ${p1Score} chinas. ${p2Name}, ${p2Score} chinas.`;
-    speakAnnouncement(text, { rate: 1.0 });
+    const text   = `Marcador. Jugador uno: ${p1Score} chinas. ${p2Name}: ${p2Score} chinas.`;
+    speakAnnouncement(text, { rate: 0.95, pitch: 1.6 });
 }
 
-// Toggle voz on/off — persiste en localStorage
+// Toggle on/off — persiste en localStorage
 function toggleVoice() {
     voiceEnabled = !voiceEnabled;
     localStorage.setItem(LS_VOICE_ENABLED, voiceEnabled);
     updateToggleUI();
-    if (voiceEnabled) speakAnnouncement('¡Voz activada!');
+    if (voiceEnabled) speakAnnouncement('¡VOZ activada!');
 }
 
-// Seleccionar voz por nombre — persiste en localStorage y prueba la voz
-function selectSpecificVoice(voiceName) {
-    localStorage.setItem(LS_VOICE_NAME, voiceName);
-    speakAnnouncement('¡Truco!');
-}
-
-// Cambiar volumen — persiste en localStorage y reproduce sonido de prueba
-let _volTestTimer = null;
-function setVoiceVolume(val) {
-    voiceVolume = parseFloat(val);
-    localStorage.setItem(LS_VOICE_VOLUME, voiceVolume);
-    const label = document.getElementById('voice-volume-label');
-    if (label) label.textContent = Math.round(voiceVolume * 100) + '%';
-    // Prueba de sonido con debounce (300 ms) para escuchar el cambio
-    clearTimeout(_volTestTimer);
-    _volTestTimer = setTimeout(() => speakAnnouncement('¡Truco!'), 300);
-}
-
-// Flash the cantar/voice button briefly as visual feedback
+// Flash visual en el botón Cantar
 function flashVoiceIndicator() {
     const btn = document.getElementById('btn-cantar');
     if (!btn) return;
@@ -196,20 +114,28 @@ function flashVoiceIndicator() {
     setTimeout(() => btn.classList.remove('voice-flash'), 600);
 }
 
-// Inicialización del motor de voz
+// Inicialización
 function initVoiceEngine() {
     if (!window.speechSynthesis) {
-        console.warn('Speech Synthesis no disponible en este navegador.');
         const panel = document.getElementById('voice-panel');
         if (panel) panel.style.display = 'none';
         return;
     }
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-    loadVoices();
 
-    // Warmup silencioso para Chrome
+    // Restaurar estado on/off desde localStorage
+    const savedEnabled = localStorage.getItem(LS_VOICE_ENABLED);
+    if (savedEnabled !== null) {
+        voiceEnabled = savedEnabled === 'true';
+        updateToggleUI();
+    }
+
+    // Chrome carga las voces de forma asíncrona
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = () => {}; // solo necesitamos que carguen
+    }
+    window.speechSynthesis.getVoices(); // trigger inicial
+
+    // Warmup silencioso para desbloquear el contexto de audio en Chrome
     const warmup = new SpeechSynthesisUtterance(' ');
     warmup.volume = 0;
     window.speechSynthesis.speak(warmup);
@@ -218,6 +144,25 @@ function initVoiceEngine() {
 // ==========================================
 // END VOICE ENGINE
 // ==========================================
+
+// ==========================================
+// PROTECCIÓN ANTI-COPIA
+// ==========================================
+(function () {
+    // Bloquear copy, cut, paste y menú contextual
+    ['copy', 'cut', 'paste', 'contextmenu'].forEach(evt => {
+        document.addEventListener(evt, e => e.preventDefault(), true);
+    });
+    // Bloquear selección de texto por teclado (Ctrl+A, etc.)
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && ['a','c','x','v','u','s'].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+        }
+    }, true);
+    // Desactivar selección de texto via CSS
+    document.documentElement.style.userSelect = 'none';
+    document.documentElement.style.webkitUserSelect = 'none';
+})();
 
 // --- Game State Constants & Variables ---
 let deck = [];
