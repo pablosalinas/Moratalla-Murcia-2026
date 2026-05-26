@@ -7,12 +7,15 @@
 // ==========================================
 
 // Voice settings
-let voiceGender = 'male'; // 'male' or 'female'
 let voiceVolume = 1.0;
 let voiceEnabled = true;
 let availableVoices = [];
 let speechQueue = [];
-let isSpeaking = false;
+
+// Keys localStorage
+const LS_VOICE_NAME    = 'truque_voice_name';
+const LS_VOICE_VOLUME  = 'truque_voice_volume';
+const LS_VOICE_ENABLED = 'truque_voice_enabled';
 
 // Announcement text map for game actions
 const VOICE_LINES = {
@@ -43,61 +46,69 @@ function getRandomLine(key) {
     return lines[Math.floor(Math.random() * lines.length)];
 }
 
-// Load available voices from browser
+// Devuelve lista de voces en español (o todas si no hay)
+function getVoiceList() {
+    const spanish = availableVoices.filter(v => v.lang.startsWith('es'));
+    return spanish.length ? spanish : availableVoices;
+}
+
+// Devuelve la voz guardada en localStorage (o la primera disponible)
+function getSelectedVoice() {
+    const savedName = localStorage.getItem(LS_VOICE_NAME);
+    if (savedName) {
+        const found = availableVoices.find(v => v.name === savedName);
+        if (found) return found;
+    }
+    return getVoiceList()[0] || null;
+}
+
+// Actualiza el icono y clase del botón toggle
+function updateToggleUI() {
+    const btn  = document.getElementById('btn-voice-toggle');
+    const icon = document.getElementById('voice-toggle-icon');
+    if (btn) {
+        btn.classList.toggle('voice-off', !voiceEnabled);
+        btn.title = voiceEnabled ? 'Voz activada (clic para desactivar)' : 'Voz desactivada (clic para activar)';
+    }
+    if (icon) icon.className = voiceEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+}
+
+// Restaura volumen y estado desde localStorage
+function restoreVoicePreferences() {
+    const savedVolume  = localStorage.getItem(LS_VOICE_VOLUME);
+    const savedEnabled = localStorage.getItem(LS_VOICE_ENABLED);
+    if (savedVolume !== null) {
+        voiceVolume = parseFloat(savedVolume);
+        const slider = document.getElementById('voice-volume-slider');
+        if (slider) slider.value = voiceVolume;
+        const label = document.getElementById('voice-volume-label');
+        if (label) label.textContent = Math.round(voiceVolume * 100) + '%';
+    }
+    if (savedEnabled !== null) {
+        voiceEnabled = savedEnabled === 'true';
+        updateToggleUI();
+    }
+}
+
+// Carga voces y restaura preferencias
 function loadVoices() {
     availableVoices = window.speechSynthesis.getVoices();
     populateVoiceSelector();
+    restoreVoicePreferences();
 }
 
-// Find best Spanish voice matching gender preference
-function getBestVoice() {
-    // Respect manual selection if set
-    if (window._selectedVoice) return window._selectedVoice;
-
-    if (!availableVoices.length) {
-        availableVoices = window.speechSynthesis.getVoices();
-    }
-
-    // Priority: es-ES voices, then es-*, then any Spanish
-    const spanishVoices = availableVoices.filter(v =>
-        v.lang.startsWith('es')
-    );
-
-    const candidates = spanishVoices.length ? spanishVoices : availableVoices;
-
-    // Try to match gender by voice name heuristics
-    const maleKeywords   = ['male', 'hombre', 'jorge', 'carlos', 'pablo', 'miguel', 'diego', 'juan', 'antonio', 'alvaro', 'enrique', 'raul'];
-    const femaleKeywords = ['female', 'mujer', 'monica', 'maria', 'laura', 'lucia', 'elena', 'carmen', 'rosa', 'sara', 'patricia', 'pilar'];
-
-    const keywords = voiceGender === 'male' ? maleKeywords : femaleKeywords;
-
-    let matched = candidates.find(v =>
-        keywords.some(kw => v.name.toLowerCase().includes(kw))
-    );
-
-    if (!matched) {
-        // Fallback: take alternate voices (even index = tend to be male, odd = female in most browsers)
-        if (voiceGender === 'male') {
-            matched = candidates.find((_, i) => i % 2 === 0) || candidates[0];
-        } else {
-            matched = candidates.find((_, i) => i % 2 === 1) || candidates[candidates.length - 1] || candidates[0];
-        }
-    }
-
-    return matched || null;
-}
-
-// Populate the voice selector dropdown in the UI
+// Rellena el desplegable marcando la voz guardada
 function populateVoiceSelector() {
     const sel = document.getElementById('voice-select');
     if (!sel) return;
     sel.innerHTML = '';
-    const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
-    const list = spanishVoices.length ? spanishVoices : availableVoices;
-    list.forEach((v, i) => {
+    const list = getVoiceList();
+    const savedName = localStorage.getItem(LS_VOICE_NAME);
+    list.forEach(v => {
         const opt = document.createElement('option');
-        opt.value = i;
+        opt.value = v.name;          // nombre como clave, no índice
         opt.textContent = `${v.name} (${v.lang})`;
+        if (v.name === savedName) opt.selected = true;
         sel.appendChild(opt);
     });
 }
@@ -111,18 +122,16 @@ function speakAnnouncement(text, options = {}) {
     window.speechSynthesis.cancel();
     speechQueue = [];
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang    = 'es-ES';
-    utterance.volume  = voiceVolume;
-    utterance.rate    = options.rate    ?? 1.15;   // Slightly faster = more energetic
-    utterance.pitch   = options.pitch   ?? (voiceGender === 'male' ? 0.85 : 1.2);
+    const utterance     = new SpeechSynthesisUtterance(text);
+    utterance.lang       = 'es-ES';
+    utterance.volume     = voiceVolume;
+    utterance.rate       = options.rate  ?? 1.15;
+    utterance.pitch      = options.pitch ?? 1.0;
 
-    const voice = getBestVoice();
+    const voice = getSelectedVoice();
     if (voice) utterance.voice = voice;
 
-    // Visual feedback: flash the voice button
     flashVoiceIndicator();
-
     window.speechSynthesis.speak(utterance);
 }
 
@@ -134,55 +143,31 @@ function speakAction(key) {
 
 // Cantar el marcador actual en voz alta
 function cantarMarcador() {
-    const p1 = p1Score;
-    const p2 = p2Score;
     const p2Name = gameMode === 'pvc' ? 'la computadora' : 'el jugador dos';
-    const text = `Marcador: jugador uno, ${p1} chinas. ${p2Name}, ${p2} chinas.`;
-    speakAnnouncement(text, { rate: 1.0, pitch: voiceGender === 'male' ? 0.9 : 1.15 });
+    const text   = `Marcador: jugador uno, ${p1Score} chinas. ${p2Name}, ${p2Score} chinas.`;
+    speakAnnouncement(text, { rate: 1.0 });
 }
 
-// Toggle voice on/off
+// Toggle voz on/off — persiste en localStorage
 function toggleVoice() {
     voiceEnabled = !voiceEnabled;
-    const btn = document.getElementById('btn-voice-toggle');
-    const icon = document.getElementById('voice-toggle-icon');
-    if (btn) {
-        btn.classList.toggle('voice-off', !voiceEnabled);
-        btn.title = voiceEnabled ? 'Voz activada (clic para desactivar)' : 'Voz desactivada (clic para activar)';
-    }
-    if (icon) {
-        icon.className = voiceEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-    }
-    if (voiceEnabled) speakAnnouncement('Voz activada');
+    localStorage.setItem(LS_VOICE_ENABLED, voiceEnabled);
+    updateToggleUI();
+    if (voiceEnabled) speakAnnouncement('¡Voz activada!');
 }
 
-// Change gender preference (or mute with 'none')
-function setVoiceGender(gender) {
-    voiceGender = gender;
-    document.querySelectorAll('.voice-gender-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.gender === gender);
-    });
-
-    const btn = document.getElementById('btn-voice-toggle');
-    const icon = document.getElementById('voice-toggle-icon');
-
-    if (gender === 'none') {
-        voiceEnabled = false;
-        if (btn)  btn.classList.add('voice-off');
-        if (icon) icon.className = 'fas fa-volume-mute';
-    } else {
-        voiceEnabled = true;
-        if (btn)  btn.classList.remove('voice-off');
-        if (icon) icon.className = 'fas fa-volume-up';
-        const sample = gender === 'male' ? '¡Truco, compañero!' : '¡Quinqué, a por todas!';
-        speakAnnouncement(sample);
-    }
+// Seleccionar voz por nombre — persiste en localStorage y prueba la voz
+function selectSpecificVoice(voiceName) {
+    localStorage.setItem(LS_VOICE_NAME, voiceName);
+    speakAnnouncement('¡Truco!');
 }
 
-// Change volume
+// Cambiar volumen — persiste en localStorage
 function setVoiceVolume(val) {
     voiceVolume = parseFloat(val);
-    document.getElementById('voice-volume-label').textContent = Math.round(voiceVolume * 100) + '%';
+    localStorage.setItem(LS_VOICE_VOLUME, voiceVolume);
+    const label = document.getElementById('voice-volume-label');
+    if (label) label.textContent = Math.round(voiceVolume * 100) + '%';
 }
 
 // Flash the cantar/voice button briefly as visual feedback
@@ -193,38 +178,24 @@ function flashVoiceIndicator() {
     setTimeout(() => btn.classList.remove('voice-flash'), 600);
 }
 
-// Init speech synthesis
+// Inicialización del motor de voz
 function initVoiceEngine() {
     if (!window.speechSynthesis) {
-        console.warn('Speech Synthesis not supported in this browser.');
+        console.warn('Speech Synthesis no disponible en este navegador.');
         const panel = document.getElementById('voice-panel');
         if (panel) panel.style.display = 'none';
         return;
     }
-    // Voices load asynchronously in most browsers
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
     loadVoices();
 
-    // Workaround: Chrome needs a user gesture before first speak, so we warm it up silently
+    // Warmup silencioso para Chrome
     const warmup = new SpeechSynthesisUtterance(' ');
     warmup.volume = 0;
     window.speechSynthesis.speak(warmup);
 }
-
-// Select a specific voice by its index in the list
-function selectSpecificVoice(index) {
-    const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
-    const list = spanishVoices.length ? spanishVoices : availableVoices;
-    const chosen = list[parseInt(index)];
-    if (!chosen) return;
-    // Override getBestVoice for this session
-    window._selectedVoice = chosen;
-}
-
-// Override getBestVoice to respect manual selection
-const _getBestVoiceOriginal = getBestVoice;
 
 // ==========================================
 // END VOICE ENGINE
