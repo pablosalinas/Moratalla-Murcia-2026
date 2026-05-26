@@ -2572,7 +2572,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(tooltip);
 
     document.addEventListener('mouseover', (e) => {
-        const card = e.target.closest('.card:not(.back)');
+        const card = e.target.closest('.card:not(.back):not(.taped)');
         if (card && card.hasAttribute('data-tooltip')) {
             const title = card.getAttribute('data-tooltip');
             tooltip.innerText = title;
@@ -2588,7 +2588,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('mouseout', (e) => {
-        const card = e.target.closest('.card:not(.back)');
+        const card = e.target.closest('.card:not(.back):not(.taped)');
         if (card) {
             tooltip.classList.remove('active');
         }
