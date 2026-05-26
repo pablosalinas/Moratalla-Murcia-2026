@@ -1781,3 +1781,164 @@ button.btn-cantar:hover:not(:disabled) {
         flex-direction: column;
     }
 }
+
+/* ==========================================
+   VOICE PANEL STYLES
+   ========================================== */
+
+/* Toggle button (on/off) */
+.voice-toggle-btn {
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    color: var(--gold);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.voice-toggle-btn:hover {
+    background: rgba(212, 175, 55, 0.3);
+    transform: scale(1.1);
+}
+
+.voice-toggle-btn.voice-off {
+    background: rgba(255, 59, 48, 0.15);
+    border-color: rgba(255, 59, 48, 0.4);
+    color: #ff3b30;
+}
+
+/* Gender selector pill buttons */
+.voice-gender-btn {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.voice-gender-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.voice-gender-btn.active {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.15));
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+/* Special style when "Ninguna" (none/mute) is active */
+.voice-gender-btn[data-gender="none"].active {
+    background: linear-gradient(135deg, rgba(255, 59, 48, 0.2), rgba(255, 59, 48, 0.08));
+    border-color: rgba(255, 59, 48, 0.5);
+    color: #ff6b6b;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.15);
+}
+
+/* Volume range slider */
+.voice-volume-slider {
+    width: 100%;
+    height: 5px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.voice-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.5);
+    transition: transform 0.15s;
+}
+
+.voice-volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.voice-volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.5);
+}
+
+/* Test/Probar voice button */
+.voice-test-btn {
+    width: 100%;
+    padding: 8px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08));
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--gold);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.voice-test-btn:hover {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0.18));
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+    transform: translateY(-1px);
+}
+
+.voice-test-btn:active {
+    transform: translateY(0);
+}
+
+/* Cantar button with flash animation */
+button.btn-cantar {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08));
+    border-color: rgba(212, 175, 55, 0.4);
+    color: var(--gold);
+    transition: all 0.2s ease;
+}
+
+button.btn-cantar:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0.18));
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+    color: #ffe875;
+}
+
+@keyframes voice-flash-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.8); background: rgba(212,175,55,0.5); }
+    50%  { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08)); }
+}
+
+button.btn-cantar.voice-flash {
+    animation: voice-flash-pulse 0.6s ease-out forwards;
+}

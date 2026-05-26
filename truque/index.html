@@ -52,7 +52,58 @@
                 </select>
             </div>
 
-            <!-- Scores -->
+            <!-- Voice Control Panel -->
+            <div class="score-panel voice-panel" id="voice-panel" style="padding: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <h3 style="margin: 0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-microphone" style="color: var(--gold);"></i> Voz del Cante
+                    </h3>
+                    <button id="btn-voice-toggle" class="voice-toggle-btn" onclick="toggleVoice()" title="Voz activada (clic para desactivar)">
+                        <i id="voice-toggle-icon" class="fas fa-volume-up"></i>
+                    </button>
+                </div>
+
+                <!-- Gender selector -->
+                <div style="margin-bottom: 10px;">
+                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Voz</div>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="voice-gender-btn active" data-gender="male" onclick="setVoiceGender('male')">
+                            <i class="fas fa-mars"></i> Masculina
+                        </button>
+                        <button class="voice-gender-btn" data-gender="female" onclick="setVoiceGender('female')">
+                            <i class="fas fa-venus"></i> Femenina
+                        </button>
+                        <button class="voice-gender-btn" data-gender="none" onclick="setVoiceGender('none')">
+                            <i class="fas fa-volume-mute"></i> Ninguna
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Volume -->
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <span>Volumen</span>
+                        <span id="voice-volume-label">100%</span>
+                    </div>
+                    <input type="range" id="voice-volume-slider" min="0" max="1" step="0.05" value="1"
+                        oninput="setVoiceVolume(this.value)" class="voice-volume-slider">
+                </div>
+
+                <!-- Voice selector -->
+                <div style="margin-bottom: 10px;">
+                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Motor de voz del sistema</div>
+                    <select id="voice-select" onchange="selectSpecificVoice(this.value)"
+                        style="width: 100%; padding: 5px 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-size: 0.78rem;">
+                    </select>
+                </div>
+
+                <!-- Test button -->
+                <button class="voice-test-btn" onclick="speakAnnouncement('¡Truco! ¡Te lo canto con fuerza!')">
+                    <i class="fas fa-play-circle"></i> Probar voz
+                </button>
+            </div>
+
+
             <div class="score-panel">
                 <h3>Marcador Global</h3>
                 <div class="score-row">

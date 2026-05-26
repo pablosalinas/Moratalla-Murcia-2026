@@ -2,6 +2,234 @@
 // TRUQUE - GAME ENGINE AND UI HANDLER
 // ==========================================
 
+// ==========================================
+// VOICE ANNOUNCEMENT ENGINE
+// ==========================================
+
+// Voice settings
+let voiceGender = 'male'; // 'male' or 'female'
+let voiceVolume = 1.0;
+let voiceEnabled = true;
+let availableVoices = [];
+let speechQueue = [];
+let isSpeaking = false;
+
+// Announcement text map for game actions
+const VOICE_LINES = {
+    // Envite
+    'envido':      ['¡Envido!', '¡Tiro el envido!', '¡Envido, compañero!'],
+    'envido-mas':  ['¡Envido más!', '¡Y yo más!', '¡Envido, subo!'],
+    'quique':      ['¡Quinqué!', '¡Cinco chinas, quinqué!', '¡Al quinqué!'],
+    'falta':       ['¡La falta!', '¡La falta entera, a por todo!', '¡La falta, no me tiembla el pulso!'],
+    'quiero':      ['¡Quiero!', '¡Quiero, venga!', '¡Acepto, vamos allá!'],
+    'no-quiero':   ['¡No quiero!', '¡Paso, no quiero!', '¡No quiero, siguiente!'],
+    // Truque
+    'truco':       ['¡Truco!', '¡Truco, compañero!', '¡Truco, te lo canto!'],
+    'retruco':     ['¡Retruco!', '¡Retruco, y van tres!', '¡Retruco, aprieta!'],
+    'renueve':     ['¡Renueve!', '¡Renueve, subo la apuesta!', '¡Renueve, nueve chinas!'],
+    'redoce':      ['¡Redoce!', '¡Redoce, doce chinas!', '¡Redoce, a lo grande!'],
+    'requince':    ['¡Requince!', '¡Requince, quince chinas!', '¡Requince, esto se pone serio!'],
+    'rejuego':     ['¡Rejuego!', '¡Al rejuego, todo o nada!', '¡Rejuego, a falta entera!'],
+    // Game events
+    'gana-mano':   ['¡La mano es mía!', '¡Baza ganada!', '¡Para mí!'],
+    'pierde-mano': ['¡Baza perdida!', '¡Te la llevas!'],
+    'victoria':    ['¡Victoria! ¡Soy el amo!', '¡He ganado la partida!', '¡Cincuenta chinas, soy el rey del truque!'],
+    'derrota':     ['¡Maldita sea, has ganado!', '¡Enhorabuena, bien jugado!'],
+};
+
+function getRandomLine(key) {
+    const lines = VOICE_LINES[key];
+    if (!lines) return null;
+    return lines[Math.floor(Math.random() * lines.length)];
+}
+
+// Load available voices from browser
+function loadVoices() {
+    availableVoices = window.speechSynthesis.getVoices();
+    populateVoiceSelector();
+}
+
+// Find best Spanish voice matching gender preference
+function getBestVoice() {
+    // Respect manual selection if set
+    if (window._selectedVoice) return window._selectedVoice;
+
+    if (!availableVoices.length) {
+        availableVoices = window.speechSynthesis.getVoices();
+    }
+
+    // Priority: es-ES voices, then es-*, then any Spanish
+    const spanishVoices = availableVoices.filter(v =>
+        v.lang.startsWith('es')
+    );
+
+    const candidates = spanishVoices.length ? spanishVoices : availableVoices;
+
+    // Try to match gender by voice name heuristics
+    const maleKeywords   = ['male', 'hombre', 'jorge', 'carlos', 'pablo', 'miguel', 'diego', 'juan', 'antonio', 'alvaro', 'enrique', 'raul'];
+    const femaleKeywords = ['female', 'mujer', 'monica', 'maria', 'laura', 'lucia', 'elena', 'carmen', 'rosa', 'sara', 'patricia', 'pilar'];
+
+    const keywords = voiceGender === 'male' ? maleKeywords : femaleKeywords;
+
+    let matched = candidates.find(v =>
+        keywords.some(kw => v.name.toLowerCase().includes(kw))
+    );
+
+    if (!matched) {
+        // Fallback: take alternate voices (even index = tend to be male, odd = female in most browsers)
+        if (voiceGender === 'male') {
+            matched = candidates.find((_, i) => i % 2 === 0) || candidates[0];
+        } else {
+            matched = candidates.find((_, i) => i % 2 === 1) || candidates[candidates.length - 1] || candidates[0];
+        }
+    }
+
+    return matched || null;
+}
+
+// Populate the voice selector dropdown in the UI
+function populateVoiceSelector() {
+    const sel = document.getElementById('voice-select');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
+    const list = spanishVoices.length ? spanishVoices : availableVoices;
+    list.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${v.name} (${v.lang})`;
+        sel.appendChild(opt);
+    });
+}
+
+// Core speak function — queues utterances and fires them sequentially
+function speakAnnouncement(text, options = {}) {
+    if (!voiceEnabled) return;
+    if (!window.speechSynthesis) return;
+
+    // Cancel any current speech and clear queue for immediacy
+    window.speechSynthesis.cancel();
+    speechQueue = [];
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang    = 'es-ES';
+    utterance.volume  = voiceVolume;
+    utterance.rate    = options.rate    ?? 1.15;   // Slightly faster = more energetic
+    utterance.pitch   = options.pitch   ?? (voiceGender === 'male' ? 0.85 : 1.2);
+
+    const voice = getBestVoice();
+    if (voice) utterance.voice = voice;
+
+    // Visual feedback: flash the voice button
+    flashVoiceIndicator();
+
+    window.speechSynthesis.speak(utterance);
+}
+
+// Speak a game action key (picks random phrase from VOICE_LINES)
+function speakAction(key) {
+    const line = getRandomLine(key);
+    if (line) speakAnnouncement(line);
+}
+
+// Cantar el marcador actual en voz alta
+function cantarMarcador() {
+    const p1 = p1Score;
+    const p2 = p2Score;
+    const p2Name = gameMode === 'pvc' ? 'la computadora' : 'el jugador dos';
+    const text = `Marcador: jugador uno, ${p1} chinas. ${p2Name}, ${p2} chinas.`;
+    speakAnnouncement(text, { rate: 1.0, pitch: voiceGender === 'male' ? 0.9 : 1.15 });
+}
+
+// Toggle voice on/off
+function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    const btn = document.getElementById('btn-voice-toggle');
+    const icon = document.getElementById('voice-toggle-icon');
+    if (btn) {
+        btn.classList.toggle('voice-off', !voiceEnabled);
+        btn.title = voiceEnabled ? 'Voz activada (clic para desactivar)' : 'Voz desactivada (clic para activar)';
+    }
+    if (icon) {
+        icon.className = voiceEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+    }
+    if (voiceEnabled) speakAnnouncement('Voz activada');
+}
+
+// Change gender preference (or mute with 'none')
+function setVoiceGender(gender) {
+    voiceGender = gender;
+    document.querySelectorAll('.voice-gender-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.gender === gender);
+    });
+
+    const btn = document.getElementById('btn-voice-toggle');
+    const icon = document.getElementById('voice-toggle-icon');
+
+    if (gender === 'none') {
+        voiceEnabled = false;
+        if (btn)  btn.classList.add('voice-off');
+        if (icon) icon.className = 'fas fa-volume-mute';
+    } else {
+        voiceEnabled = true;
+        if (btn)  btn.classList.remove('voice-off');
+        if (icon) icon.className = 'fas fa-volume-up';
+        const sample = gender === 'male' ? '¡Truco, compañero!' : '¡Quinqué, a por todas!';
+        speakAnnouncement(sample);
+    }
+}
+
+// Change volume
+function setVoiceVolume(val) {
+    voiceVolume = parseFloat(val);
+    document.getElementById('voice-volume-label').textContent = Math.round(voiceVolume * 100) + '%';
+}
+
+// Flash the cantar/voice button briefly as visual feedback
+function flashVoiceIndicator() {
+    const btn = document.getElementById('btn-cantar');
+    if (!btn) return;
+    btn.classList.add('voice-flash');
+    setTimeout(() => btn.classList.remove('voice-flash'), 600);
+}
+
+// Init speech synthesis
+function initVoiceEngine() {
+    if (!window.speechSynthesis) {
+        console.warn('Speech Synthesis not supported in this browser.');
+        const panel = document.getElementById('voice-panel');
+        if (panel) panel.style.display = 'none';
+        return;
+    }
+    // Voices load asynchronously in most browsers
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    loadVoices();
+
+    // Workaround: Chrome needs a user gesture before first speak, so we warm it up silently
+    const warmup = new SpeechSynthesisUtterance(' ');
+    warmup.volume = 0;
+    window.speechSynthesis.speak(warmup);
+}
+
+// Select a specific voice by its index in the list
+function selectSpecificVoice(index) {
+    const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
+    const list = spanishVoices.length ? spanishVoices : availableVoices;
+    const chosen = list[parseInt(index)];
+    if (!chosen) return;
+    // Override getBestVoice for this session
+    window._selectedVoice = chosen;
+}
+
+// Override getBestVoice to respect manual selection
+const _getBestVoiceOriginal = getBestVoice;
+
+// ==========================================
+// END VOICE ENGINE
+// ==========================================
+
 // --- Game State Constants & Variables ---
 let deck = [];
 let p1Hand = [];
@@ -2252,6 +2480,7 @@ function adjustReplaySpeed(val) {
 // --- Bootstrap ---
 window.onload = () => {
     resetGame(true);
+    initVoiceEngine();
 
     // Add backdrop click listeners to modals for premium UX close on blur click
     const modals = ['modal-rules', 'modal-replay'];
