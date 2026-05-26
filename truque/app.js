@@ -42,10 +42,27 @@ function getRandomLine(key) {
     return lines[Math.floor(Math.random() * lines.length)];
 }
 
-// Devuelve solo las voces en español (incluyendo las de Microsoft)
-// Devuelve todas las voces disponibles (se pueden añadir filtros si se desea)
+// Filtra priorizando voces de Microsoft y evitando las de Google por ser muy agudas
 function getVoiceList() {
-    return availableVoices.sort((a, b) => a.name.localeCompare(b.name));
+    let list = availableVoices.filter(v => 
+        v.lang.toLowerCase().startsWith('es') || 
+        v.name.toLowerCase().includes('spanish') || 
+        v.name.toLowerCase().includes('español')
+    );
+    
+    // Intentar dejar solo las voces de Microsoft según petición
+    const microsoftVoices = list.filter(v => v.name.toLowerCase().includes('microsoft'));
+    if (microsoftVoices.length > 0) {
+        list = microsoftVoices;
+    } else {
+        // Si no hay Microsoft (ej. Android/Mac), intentar quitar las de Google si hay alternativas
+        const nonGoogle = list.filter(v => !v.name.toLowerCase().includes('google'));
+        if (nonGoogle.length > 0) {
+            list = nonGoogle;
+        }
+    }
+    
+    return list.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Obtiene la voz activa: primero la guardada en LS, luego Pablo, luego primera española
