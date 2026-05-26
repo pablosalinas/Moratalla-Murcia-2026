@@ -46,9 +46,16 @@
             <!-- Mode Selector -->
             <div class="score-panel" style="padding: 10px;">
                 <h3 style="margin-bottom: 8px; font-size: 0.9rem;">Modo de Juego</h3>
-                <select id="game-mode-select" onchange="changeGameMode(this.value)" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-weight: 600;">
+                <select id="game-mode-select" onchange="changeGameMode(this.value)" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-weight: 600; margin-bottom: 10px;">
                     <option value="pvc">Contra Ordenador (IA)</option>
                     <option value="pvp">Dos Jugadores (Local)</option>
+                </select>
+                <h3 style="margin-bottom: 8px; font-size: 0.9rem;">Meta de Chinas</h3>
+                <select id="meta-chinas-select" onchange="changeMetaChinas(this.value)" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); color: #fff; border-radius: 6px; font-weight: 600;">
+                    <option value="20">20 Chinas</option>
+                    <option value="30">30 Chinas</option>
+                    <option value="40">40 Chinas</option>
+                    <option value="50" selected>50 Chinas</option>
                 </select>
             </div>
 
@@ -142,6 +149,9 @@
                         Bazas Ganadas: <br>
                         - <span id="lbl-p1-name-bazas">Jugador 1</span>: <strong id="val-p1-bazas">0</strong> / 3 <br>
                         - <span id="lbl-p2-name-bazas">P2/CPU</span>: <strong id="val-p2-bazas">0</strong> / 3
+                    </div>
+                    <div style="grid-column: span 2; margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.3); border-left: 3px solid var(--accent); border-radius: 4px;">
+                        <strong>Última Acción:</strong> <span id="val-ultima-accion" style="color: var(--gold);">-</span>
                     </div>
                 </div>
             </div>

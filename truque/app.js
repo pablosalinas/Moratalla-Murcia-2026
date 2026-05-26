@@ -42,10 +42,13 @@ function getRandomLine(key) {
     return lines[Math.floor(Math.random() * lines.length)];
 }
 
-// Devuelve voces en español (o todas si no hay)
+// Devuelve solo las voces en español (incluyendo las de Microsoft)
 function getVoiceList() {
-    const spanish = availableVoices.filter(v => v.lang.startsWith('es'));
-    return spanish.length ? spanish : availableVoices;
+    return availableVoices.filter(v => 
+        v.lang.toLowerCase().startsWith('es') || 
+        v.name.toLowerCase().includes('spanish') || 
+        v.name.toLowerCase().includes('español')
+    ).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Obtiene la voz activa: primero la guardada en LS, luego Pablo, luego primera española
@@ -162,7 +165,15 @@ function speakAction(key) {
 
 function cantarMarcador() {
     const p2Name = gameMode === 'pvc' ? 'la computadora' : 'el jugador dos';
-    const text   = `Marcador. Jugador uno: ${p1Score} chinas. ${p2Name}: ${p2Score} chinas.`;
+    const mitad = Math.floor(metaChinas / 2);
+    
+    const getScoreText = (score) => {
+        if (score === 0) return "cero chinas";
+        if (score <= mitad) return `${score} malas`;
+        return `${score - mitad} buenas`;
+    };
+
+    const text = `Marcador. Jugador uno: ${getScoreText(p1Score)}. ${p2Name}: ${getScoreText(p2Score)}.`;
     speakAnnouncement(text, { rate: 0.95, pitch: 1.6 });
 }
 
@@ -244,6 +255,7 @@ function initVoiceEngine() {
 })();
 
 // --- Game State Constants & Variables ---
+let metaChinas = 50; // Meta de chinas para ganar
 let deck = [];
 let p1Hand = [];
 let p2Hand = [];
@@ -251,6 +263,11 @@ let guiaCard = null;
 let gameMode = 'pvc'; // 'pvc' (vs CPU) or 'pvp' (vs Player 2 Local)
 let gameHistory = [];
 let handCount = 0;
+
+function changeMetaChinas(value) {
+    metaChinas = parseInt(value);
+    resetGame();
+}
 
 // Replay State
 let replayHandIndex = 0;
@@ -781,6 +798,12 @@ function addLog(message, type = 'system') {
     logBox.appendChild(msgDiv);
     logBox.scrollTop = logBox.scrollHeight;
 
+    // Update Última Acción in the UI
+    const ultimaAccionSpan = document.getElementById('val-ultima-accion');
+    if (ultimaAccionSpan && (type === 'p1' || type === 'p2' || type === 'pvc')) {
+        ultimaAccionSpan.innerText = message;
+    }
+
     // Save to active hand history logs with state snapshot
     if (typeof gameHistory !== 'undefined' && gameHistory.length > 0) {
         const activeHand = gameHistory[gameHistory.length - 1];
@@ -1054,7 +1077,7 @@ function updateActionButtons() {
             btnNoQuiero.innerText = "No Quiero";
 
             const maxScore = Math.max(p1Score, p2Score);
-            const faltaChinas = Math.max(2, 50 - maxScore);
+            const faltaChinas = Math.max(2, metaChinas - maxScore);
 
             // Allow custom raise if we haven't reached Falta yet
             if (enviteChinasPending < faltaChinas) {
@@ -1229,7 +1252,7 @@ function executeEnviteAction(player, action, customChinas = null) {
     } else if (action === 'falta') {
         enviteState = 'falta';
         const maxScore = Math.max(p1Score, p2Score);
-        const faltaChinas = Math.max(2, 50 - maxScore);
+        const faltaChinas = Math.max(2, metaChinas - maxScore);
         enviteChinasPrevious = enviteState === 'none' ? 1 : enviteChinasPending;
         enviteChinasPending = faltaChinas;
         enviteProposer = player;
@@ -1384,7 +1407,7 @@ function executeTruqueAction(player, action) {
     } else if (action === 'rejuego') {
         truqueLevel = 6;
         const maxScore = Math.max(p1Score, p2Score);
-        truqueChinasPending = Math.max(3, 50 - maxScore);
+        truqueChinasPending = Math.max(3, metaChinas - maxScore);
         truqueState = 'rejuego';
         truqueProposer = player;
         addLog(`${playerName} canta REJUEGO (Todas las chinas).`, 'action');
@@ -1532,7 +1555,7 @@ function playerPlayCard(card) {
             awardChinas(opponent, wonChinas);
             
             // If the game didn't end (which checkTrickFinished might be needed if it continues)
-            if (p1Score < 50 && p2Score < 50) {
+            if (p1Score < metaChinas && p2Score < metaChinas) {
                 checkTrickFinished();
             }
             return;
@@ -1570,7 +1593,7 @@ function getCardPower(card) {
     if (card.number === 12) return 28; // Other kings
     if (card.number === 11) return 27; // Other horses
     if (card.number === 10) return 26; // Other jacks
-    if (card.number === 7) return 25;  // Other sevens
+    if (card.number === 7) return Math.floor(metaChinas / 2);  // Other sevens
     if (card.number === 6) return 24;
     if (card.number === 5) return 23;
     if (card.number === 4) return 22;
@@ -1736,20 +1759,20 @@ function checkHandWinner(trickWinner) {
 function awardChinas(player, amount) {
     if (player === 1) {
         p1Score += amount;
-        if (p1Score > 50) p1Score = 50;
+        if (p1Score > metaChinas) p1Score = metaChinas;
     } else {
         p2Score += amount;
-        if (p2Score > 50) p2Score = 50;
+        if (p2Score > metaChinas) p2Score = metaChinas;
     }
 
     updateScoreboardUI();
 
     // Check Win Condition
-    if (p1Score >= 50) {
-        showGameOverModal('¡Victoria de Jugador 1!', '🏆', 'Has logrado vencer alcanzando las 50 chinas.');
-    } else if (p2Score >= 50) {
+    if (p1Score >= metaChinas) {
+        showGameOverModal('¡Victoria de Jugador 1!', '🏆', 'Has logrado vencer alcanzando las ${metaChinas} chinas.');
+    } else if (p2Score >= metaChinas) {
         const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
-        showGameOverModal(`¡Victoria de ${p2Name}!`, '💀', `El oponente ha ganado la partida con 50 chinas.`);
+        showGameOverModal(`¡Victoria de ${p2Name}!`, '💀', `El oponente ha ganado la partida con ${metaChinas} chinas.`);
     }
 }
 
@@ -1758,10 +1781,10 @@ function updateScoreboardUI() {
     document.getElementById('val-p2-score').innerText = p2Score;
 
     // Split scores into Malas (0-25) and Buenas (25-50)
-    const p1Malas = Math.min(25, p1Score);
-    const p1Buenas = Math.max(0, p1Score - 25);
-    const p2Malas = Math.min(25, p2Score);
-    const p2Buenas = Math.max(0, p2Score - 25);
+    const p1Malas = Math.min(Math.floor(metaChinas / 2), p1Score);
+    const p1Buenas = Math.max(0, p1Score - Math.floor(metaChinas / 2));
+    const p2Malas = Math.min(Math.floor(metaChinas / 2), p2Score);
+    const p2Buenas = Math.max(0, p2Score - Math.floor(metaChinas / 2));
 
     document.getElementById('txt-p1-malas').innerText = p1Malas;
     document.getElementById('txt-p1-buenas').innerText = p1Buenas;
@@ -1778,7 +1801,7 @@ function updateScoreboardUI() {
 function fillDotTrack(trackId, activeCount, activeClass) {
     const track = document.getElementById(trackId);
     track.innerHTML = '';
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < Math.floor(metaChinas / 2); i++) {
         const dot = document.createElement('div');
         dot.className = 'china-dot';
         if (i < activeCount) {
@@ -1831,7 +1854,7 @@ function endHand() {
     }
 
     // Check if game is over
-    if (p1Score >= 50 || p2Score >= 50) return;
+    if (p1Score >= metaChinas || p2Score >= metaChinas) return;
 
     // Alternate Mano for next hand
     manoPlayer = manoPlayer === 1 ? 2 : 1;
@@ -1853,7 +1876,7 @@ function cpuEnviteTurn() {
 
     const cpuPts = p2EnviteScore;
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, 50 - maxScore);
+    const faltaChinas = Math.max(2, metaChinas - maxScore);
     
     // AI Strategy parameters
     const random = Math.random();
@@ -2070,15 +2093,15 @@ function changeGameMode(mode) {
         nameOpponent.innerText = "Jugador 2";
         labelPlayedP2.innerText = "Jugador 2";
         lblP2Score.innerText = "Jugador 2";
-        lblP2MalasTitle.innerText = "MALAS J2 (0-25)";
-        lblP2BuenasTitle.innerText = "BUENAS J2 (25-50)";
+        lblP2MalasTitle.innerText = "MALAS J2 (0-${Math.floor(metaChinas/2)})";
+        lblP2BuenasTitle.innerText = "BUENAS J2 (${Math.floor(metaChinas/2)}-${metaChinas})";
         lblP2NameBazas.innerText = "Jugador 2";
     } else {
         nameOpponent.innerText = "Computadora";
         labelPlayedP2.innerText = "CPU";
         lblP2Score.innerText = "Computadora";
-        lblP2MalasTitle.innerText = "MALAS CPU (0-25)";
-        lblP2BuenasTitle.innerText = "BUENAS CPU (25-50)";
+        lblP2MalasTitle.innerText = "MALAS CPU (0-${Math.floor(metaChinas/2)})";
+        lblP2BuenasTitle.innerText = "BUENAS CPU (${Math.floor(metaChinas/2)}-${metaChinas})";
         lblP2NameBazas.innerText = "P2/CPU";
     }
 
@@ -2123,7 +2146,7 @@ function showGameOverModal(title, icon, desc) {
 // --- Custom Envido Selector Handlers ---
 function openEnvidoSelector() {
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, 50 - maxScore);
+    const faltaChinas = Math.max(2, metaChinas - maxScore);
 
     // Initial value:
     // If no bet: start at 2
@@ -2155,7 +2178,7 @@ function openEnvidoSelector() {
 
 function setEnvidoChinas(val) {
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, 50 - maxScore);
+    const faltaChinas = Math.max(2, metaChinas - maxScore);
     const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
     customEnvidoValue = Math.min(Math.max(val, minVal), faltaChinas);
     updateCustomEnvidoUI();
@@ -2163,7 +2186,7 @@ function setEnvidoChinas(val) {
 
 function adjustEnvidoChinas(diff) {
     const maxScore = Math.max(p1Score, p2Score);
-    const faltaChinas = Math.max(2, 50 - maxScore);
+    const faltaChinas = Math.max(2, metaChinas - maxScore);
     
     const minVal = enviteState === 'none' ? 2 : (enviteChinasPending + 1);
     
@@ -2479,3 +2502,4 @@ window.onload = () => {
         }
     });
 };
+

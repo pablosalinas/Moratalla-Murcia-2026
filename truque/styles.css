@@ -1029,7 +1029,8 @@ button.btn-reveal:hover {
         grid-template-rows: auto 1fr;
         height: calc(100vh - 61px);
         height: calc(100dvh - 61px);
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     
     .sidebar {
