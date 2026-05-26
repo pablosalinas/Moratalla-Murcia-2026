@@ -6,11 +6,17 @@
 // VOICE ANNOUNCEMENT ENGINE
 // ==========================================
 
-// Voice settings — voz fija: Microsoft Pablo
+// Variables de configuración
 let voiceEnabled = true;
+let voiceVolume  = 1.0;
+let availableVoices = [];
+
+// Claves localStorage
+const LS_VOICE_NAME    = 'truque_voice_name';
+const LS_VOICE_VOLUME  = 'truque_voice_volume';
 const LS_VOICE_ENABLED = 'truque_voice_enabled';
 
-// Frases del juego
+// Frases del juego — mayúsculas en sílabas tónicas para énfasis
 const VOICE_LINES = {
     'envido':      ['¡ENVIDO!', '¡Tiro el ENVIDO!', '¡ENVIDO, compañero!'],
     'envido-mas':  ['¡ENVIDO más!', '¡Y yo MÁS!', '¡ENVIDO, subo!'],
@@ -36,7 +42,31 @@ function getRandomLine(key) {
     return lines[Math.floor(Math.random() * lines.length)];
 }
 
-// Actualiza el icono y clase del botón toggle
+// Devuelve voces en español (o todas si no hay)
+function getVoiceList() {
+    const spanish = availableVoices.filter(v => v.lang.startsWith('es'));
+    return spanish.length ? spanish : availableVoices;
+}
+
+// Obtiene la voz activa: primero la guardada en LS, luego Pablo, luego primera española
+function getActiveVoice() {
+    const voices    = window.speechSynthesis.getVoices();  // siempre fresco
+    const savedName = localStorage.getItem(LS_VOICE_NAME);
+
+    if (savedName) {
+        const found = voices.find(v => v.name === savedName);
+        if (found) return found;
+    }
+    // Default: Pablo
+    return voices.find(v => v.name === 'Microsoft Pablo - Spanish (Spain)')
+        || voices.find(v => v.name.toLowerCase().includes('pablo'))
+        || voices.find(v => v.lang === 'es-ES')
+        || voices.find(v => v.lang.startsWith('es'))
+        || voices[0]
+        || null;
+}
+
+// Actualiza UI del botón toggle
 function updateToggleUI() {
     const btn  = document.getElementById('btn-voice-toggle');
     const icon = document.getElementById('voice-toggle-icon');
@@ -47,20 +77,57 @@ function updateToggleUI() {
     if (icon) icon.className = voiceEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
 }
 
-// Obtiene la voz de Pablo (o la mejor española disponible como fallback)
-function getPabloVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    // Buscar Pablo por nombre exacto primero
-    return voices.find(v => v.name === 'Microsoft Pablo - Spanish (Spain)')
-        || voices.find(v => v.name.toLowerCase().includes('pablo'))
-        || voices.find(v => v.lang === 'es-ES')
-        || voices.find(v => v.lang.startsWith('es'))
-        || voices[0]
-        || null;
+// Rellena el selector con las voces disponibles y marca la guardada
+function populateVoiceSelector() {
+    const sel = document.getElementById('voice-select');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const list      = getVoiceList();
+    const savedName = localStorage.getItem(LS_VOICE_NAME);
+    // Si no hay preferencia guardada, Pablo es el default
+    const defaultName = savedName
+        || availableVoices.find(v => v.name === 'Microsoft Pablo - Spanish (Spain)')?.name
+        || availableVoices.find(v => v.name.toLowerCase().includes('pablo'))?.name
+        || (list[0]?.name ?? '');
+
+    list.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value       = v.name;
+        opt.textContent = `${v.name} (${v.lang})`;
+        if (v.name === defaultName) opt.selected = true;
+        sel.appendChild(opt);
+    });
 }
 
-// Core speak — voz Pablo fija, pitch y rate altos para sonar enérgico
-// Chrome requiere 50ms de delay tras cancel() para respetar la voz
+// Carga voces y restaura todas las preferencias
+function loadVoices() {
+    availableVoices = window.speechSynthesis.getVoices();
+    if (!availableVoices.length) return; // aún no han cargado
+    populateVoiceSelector();
+    restoreVoicePreferences();
+}
+
+// Restaura volumen y estado on/off desde localStorage
+function restoreVoicePreferences() {
+    const savedVolume  = localStorage.getItem(LS_VOICE_VOLUME);
+    const savedEnabled = localStorage.getItem(LS_VOICE_ENABLED);
+
+    if (savedVolume !== null) {
+        voiceVolume = parseFloat(savedVolume);
+        const slider = document.getElementById('voice-volume-slider');
+        if (slider) slider.value = voiceVolume;
+        const label  = document.getElementById('voice-volume-label');
+        if (label)  label.textContent = Math.round(voiceVolume * 100) + '%';
+    }
+    if (savedEnabled !== null) {
+        voiceEnabled = savedEnabled === 'true';
+        updateToggleUI();
+    }
+}
+
+// ─── FUNCIÓN PRINCIPAL DE VOZ ───────────────────────────────────────────────
+// CRÍTICO: Chrome ignora voz y volumen si speak() va justo tras cancel().
+// El setTimeout de 50ms da tiempo al motor TTS para limpiar el estado.
 function speakAnnouncement(text, options = {}) {
     if (!voiceEnabled) return;
     if (!window.speechSynthesis) return;
@@ -68,24 +135,25 @@ function speakAnnouncement(text, options = {}) {
     window.speechSynthesis.cancel();
 
     setTimeout(() => {
-        const voice     = getPabloVoice();
+        const voice     = getActiveVoice();   // voz fresca en cada llamada
         const utterance = new SpeechSynthesisUtterance(text);
 
-        utterance.volume = 1.0;
-        utterance.rate   = options.rate  ?? 1.05;  // ligeramente más lento para que se entienda
-        utterance.pitch  = options.pitch ?? 1.9;   // pitch máximo = voz enérgica y aguda
+        utterance.volume = voiceVolume;
+        utterance.rate   = options.rate  ?? 1.05;
+        utterance.pitch  = options.pitch ?? 1.9;  // alto = enérgico
 
         if (voice) {
             utterance.voice = voice;
-            utterance.lang  = voice.lang;
+            utterance.lang  = voice.lang; // debe coincidir con la voz para que Chrome la respete
         } else {
-            utterance.lang  = 'es-ES';
+            utterance.lang = 'es-ES';
         }
 
         flashVoiceIndicator();
         window.speechSynthesis.speak(utterance);
     }, 50);
 }
+// ────────────────────────────────────────────────────────────────────────────
 
 function speakAction(key) {
     const line = getRandomLine(key);
@@ -106,6 +174,23 @@ function toggleVoice() {
     if (voiceEnabled) speakAnnouncement('¡VOZ activada!');
 }
 
+// Cambiar voz — guarda en localStorage y prueba inmediatamente
+function selectSpecificVoice(voiceName) {
+    localStorage.setItem(LS_VOICE_NAME, voiceName);
+    speakAnnouncement('¡TRUCO!');
+}
+
+// Cambiar volumen — guarda en localStorage y prueba con debounce
+let _volTestTimer = null;
+function setVoiceVolume(val) {
+    voiceVolume = parseFloat(val);
+    localStorage.setItem(LS_VOICE_VOLUME, voiceVolume);
+    const label = document.getElementById('voice-volume-label');
+    if (label) label.textContent = Math.round(voiceVolume * 100) + '%';
+    clearTimeout(_volTestTimer);
+    _volTestTimer = setTimeout(() => speakAnnouncement('¡TRUCO!'), 400);
+}
+
 // Flash visual en el botón Cantar
 function flashVoiceIndicator() {
     const btn = document.getElementById('btn-cantar');
@@ -114,28 +199,20 @@ function flashVoiceIndicator() {
     setTimeout(() => btn.classList.remove('voice-flash'), 600);
 }
 
-// Inicialización
+// Inicialización del motor de voz
 function initVoiceEngine() {
     if (!window.speechSynthesis) {
         const panel = document.getElementById('voice-panel');
         if (panel) panel.style.display = 'none';
         return;
     }
-
-    // Restaurar estado on/off desde localStorage
-    const savedEnabled = localStorage.getItem(LS_VOICE_ENABLED);
-    if (savedEnabled !== null) {
-        voiceEnabled = savedEnabled === 'true';
-        updateToggleUI();
-    }
-
-    // Chrome carga las voces de forma asíncrona
+    // Las voces se cargan asíncronamente en Chrome — escuchar el evento
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = () => {}; // solo necesitamos que carguen
+        window.speechSynthesis.onvoiceschanged = loadVoices;
     }
-    window.speechSynthesis.getVoices(); // trigger inicial
+    loadVoices(); // intento síncrono (funciona en Firefox y Safari)
 
-    // Warmup silencioso para desbloquear el contexto de audio en Chrome
+    // Warmup silencioso — desbloquea el contexto de audio en Chrome
     const warmup = new SpeechSynthesisUtterance(' ');
     warmup.volume = 0;
     window.speechSynthesis.speak(warmup);
@@ -143,7 +220,9 @@ function initVoiceEngine() {
 
 // ==========================================
 // END VOICE ENGINE
-// ==========================================
+
+
+
 
 // ==========================================
 // PROTECCIÓN ANTI-COPIA
