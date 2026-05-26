@@ -1092,6 +1092,10 @@ function updateActionButtons() {
             btnFalta.disabled = false;
             btnFalta.innerText = "La Falta";
             
+            // Allow Truco from the very beginning, bypassing Envite
+            btnTruco.disabled = false;
+            btnTruco.innerText = "Truco (3)";
+            
             // Paso button is not needed, keep it disabled
             btnNoQuiero.disabled = true;
             btnNoQuiero.innerText = "No Quiero";
@@ -1212,6 +1216,13 @@ function handleAction(action) {
     if (pvpScreenActive) return;
     
     const inEnvite = isEnviteActive();
+    
+    // If player sings Truco before Envido was called, they skip the Envite phase
+    if (action === 'truco' && inEnvite && enviteState === 'none') {
+        enviteState = 'passed';
+        executeTruqueAction(activePlayer, action);
+        return;
+    }
     
     if (inEnvite) {
         executeEnviteAction(activePlayer, action);
