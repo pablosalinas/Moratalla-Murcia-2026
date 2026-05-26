@@ -747,6 +747,9 @@ function createCardElement(card, isOpponent = false, onClickHandler = null) {
         return cardDiv;
     }
 
+    // Add tooltip attribute for visible cards
+    cardDiv.setAttribute('data-tooltip', getCardNameSpanish(card.number, card.suit));
+
     if (isGuia) {
         cardDiv.classList.add('guia-card');
     }
@@ -2543,4 +2546,35 @@ window.onload = () => {
         }
     });
 };
+
+// --- Global Tooltip Logic ---
+document.addEventListener('DOMContentLoaded', () => {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'global-tooltip';
+    tooltip.className = 'global-tooltip';
+    document.body.appendChild(tooltip);
+
+    document.addEventListener('mouseover', (e) => {
+        const card = e.target.closest('.card:not(.back)');
+        if (card && card.hasAttribute('data-tooltip')) {
+            const title = card.getAttribute('data-tooltip');
+            tooltip.innerText = title;
+            tooltip.classList.add('active');
+            
+            const rect = card.getBoundingClientRect();
+            // Posicionar justo encima de la carta
+            tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+            tooltip.style.top = (rect.top - 10) + 'px';
+        } else {
+            tooltip.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const card = e.target.closest('.card:not(.back)');
+        if (card) {
+            tooltip.classList.remove('active');
+        }
+    });
+});
 
