@@ -674,11 +674,8 @@ function renderHands(hideAll = false) {
         if (card) {
             const isOpponentCard = (gameMode === 'pvp' && activePlayer !== 1);
             const cardEl = createCardElement(card, isOpponentCard, isOpponentCard ? null : playerPlayCard);
-            // Disable click if it's not their turn in PvP or we are in Envite phase
-            if (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') {
-                cardEl.classList.add('disabled');
-            }
-            if (activePlayer !== 1 && gameMode === 'pvp') {
+            // Disable click if it's not Player 1's turn or they have already played a card in this trick
+            if (activePlayer !== 1 || p1PlayedCard) {
                 cardEl.classList.add('disabled');
             }
             p1Container.appendChild(cardEl);
@@ -694,10 +691,8 @@ function renderHands(hideAll = false) {
                 // PvP Local
                 const isOpponentCard = (activePlayer !== 2);
                 const cardEl = createCardElement(card, isOpponentCard, isOpponentCard ? null : playerPlayCard);
-                if (enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed') {
-                    cardEl.classList.add('disabled');
-                }
-                if (activePlayer !== 2) {
+                // Disable click if it's not Player 2's turn or they have already played a card in this trick
+                if (activePlayer !== 2 || p2PlayedCard) {
                     cardEl.classList.add('disabled');
                 }
                 p2Container.appendChild(cardEl);
@@ -781,7 +776,7 @@ function updateActionButtons() {
         btnMazo.disabled = false; // can fold anytime
         
         if (enviteState === 'none') {
-            // First speaker can bid or pass
+            // First speaker can bid (passing is done by playing a card)
             btnEnvido.disabled = false;
             btnEnvido.innerText = "Envido (2)";
             btnQuique.disabled = false;
@@ -789,9 +784,9 @@ function updateActionButtons() {
             btnFalta.disabled = false;
             btnFalta.innerText = "La Falta";
             
-            // "Pass" button replaces No Quiero when there is no bet
-            btnNoQuiero.disabled = false;
-            btnNoQuiero.innerText = "Paso";
+            // Paso button is not needed, keep it disabled
+            btnNoQuiero.disabled = true;
+            btnNoQuiero.innerText = "No Quiero";
         } else {
             // There is a pending bet
             btnQuiero.disabled = false;
@@ -1159,16 +1154,9 @@ function changeTurnTruqueBet(nextPlayer) {
     }
 }
 
-// --- Player Card Clicking ---
-function playerPlayCard(card) {
-    if (pvpScreenActive) return;
-    
-    // Ensure Envite is resolved
-    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
-    if (inEnvite) return;
-
-    // Check if it's their turn
-    if (activePlayer === 1) {
+// --- Physical Card Play Helper ---
+function executeCardPlay(player, card) {
+    if (player === 1) {
         if (p1PlayedCard) return;
         p1PlayedCard = card;
         p1PlayedTaped = selectTaped;
@@ -1188,16 +1176,13 @@ function playerPlayCard(card) {
         // Reset Tapar state for next round
         selectTaped = false;
         updateTaparButtonUI();
-
-        // Check if both have played in the current trick
-        checkTrickFinished();
-    } else if (activePlayer === 2 && gameMode === 'pvp') {
-        // Player 2 in PvP
+    } else if (player === 2) {
         if (p2PlayedCard) return;
         p2PlayedCard = card;
         p2PlayedTaped = selectTaped;
         p2Hand = p2Hand.filter(c => c.id !== card.id);
         
+        // Show card in played slot
         const slot = document.getElementById('played-card-p2');
         slot.innerHTML = '';
         const cardEl = createCardElement(card, false);
@@ -1206,13 +1191,67 @@ function playerPlayCard(card) {
         }
         slot.appendChild(cardEl);
         
-        addLog(`Jugador 2 juega ${selectTaped ? 'carta tapada' : getCardNameSpanish(card.number, card.suit)}.`, 'cpu');
+        const opponentLogName = gameMode === 'pvp' ? 'Jugador 2' : 'Computadora';
+        addLog(`${opponentLogName} juega ${selectTaped ? 'carta tapada' : getCardNameSpanish(card.number, card.suit)}.`, 'cpu');
         
+        // Reset Tapar state for next round
         selectTaped = false;
         updateTaparButtonUI();
-
-        checkTrickFinished();
     }
+    renderHands();
+}
+
+// --- Player Card Clicking ---
+function playerPlayCard(card) {
+    if (pvpScreenActive) return;
+    
+    const inEnvite = enviteState !== 'accepted' && enviteState !== 'declined' && enviteState !== 'passed';
+    const player = activePlayer;
+    const opponent = player === 1 ? 2 : 1;
+    const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvp' ? 'Jugador 2' : 'Computadora');
+    const opponentName = opponent === 1 ? 'Jugador 1' : (gameMode === 'pvp' ? 'Jugador 2' : 'Computadora');
+
+    if (inEnvite) {
+        if (enviteState === 'none') {
+            // Implicit pass
+            addLog(`${playerName} pasa el Envite (al jugar carta).`, 'action');
+            if (player === manoPlayer) {
+                // Opponent still has voice to bid
+                executeCardPlay(player, card);
+                changeTurnEnvite(opponent);
+                return;
+            } else {
+                // Both have passed, so Envite is passed (desierta)
+                addLog(`Fase de Envite desierta.`, 'system');
+                enviteState = 'passed';
+                enviteChinas = 0;
+                executeCardPlay(player, card);
+                checkTrickFinished();
+                return;
+            }
+        } else {
+            // Implicit fold (No Quiero to the pending bet)
+            addLog(`${playerName} dice NO QUIERO (al jugar carta) al Envite.`, 'action');
+            enviteState = 'declined';
+            
+            // Winner gets previous bet (or 1 china if it was the initial bet)
+            const wonChinas = enviteChinasPrevious;
+            addLog(`El Envite se cierra. ${opponentName} gana ${wonChinas} china${wonChinas === 1 ? '' : 's'}.`, 'system');
+            
+            executeCardPlay(player, card);
+            awardChinas(opponent, wonChinas);
+            
+            // If the game didn't end (which checkTrickFinished might be needed if it continues)
+            if (p1Score < 50 && p2Score < 50) {
+                checkTrickFinished();
+            }
+            return;
+        }
+    }
+
+    // Normal play (Envite resolved)
+    executeCardPlay(player, card);
+    checkTrickFinished();
 }
 
 // --- Get Card Power for Truque ---

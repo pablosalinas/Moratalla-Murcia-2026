@@ -1214,6 +1214,9 @@ button.btn-reveal:hover {
 /* Replay Modal Custom Styling */
 .replay-modal-content {
     max-width: 900px !important;
+    max-height: 90vh !important;
+    display: flex;
+    flex-direction: column;
     background: rgba(18, 30, 23, 0.98) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
@@ -1269,6 +1272,9 @@ button.btn-reveal:hover {
     grid-template-columns: 1.5fr 1fr;
     gap: 20px;
     margin-bottom: 15px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 /* Replay Board Styling */
@@ -1508,19 +1514,27 @@ button.btn-reveal:hover {
 
 /* Responsive Replay Modal */
 @media (max-width: 768px) {
+    .replay-modal-content {
+        max-height: 95vh !important;
+        padding: 12px !important;
+    }
     .replay-modal-body {
         grid-template-columns: 1fr;
+        gap: 12px;
     }
     .replay-board {
-        min-height: 300px;
+        min-height: 260px;
     }
     .replay-side-panel {
-        height: 200px;
+        height: 180px;
     }
     .replay-modal-footer {
-        flex-direction: column;
-        gap: 15px;
-        align-items: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        padding-top: 10px;
+        margin-top: 10px;
     }
 }
 
