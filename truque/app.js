@@ -113,27 +113,41 @@ function populateVoiceSelector() {
     });
 }
 
-// Core speak function — queues utterances and fires them sequentially
+// Core speak function
+// NOTA: Chrome requiere delay tras cancel() para respetar voz y volumen elegidos
 function speakAnnouncement(text, options = {}) {
     if (!voiceEnabled) return;
     if (!window.speechSynthesis) return;
 
-    // Cancel any current speech and clear queue for immediacy
     window.speechSynthesis.cancel();
-    speechQueue = [];
 
-    const utterance     = new SpeechSynthesisUtterance(text);
-    utterance.lang       = 'es-ES';
-    utterance.volume     = voiceVolume;
-    utterance.rate       = options.rate  ?? 1.15;
-    utterance.pitch      = options.pitch ?? 1.0;
+    setTimeout(() => {
+        // Re-obtener voces frescas en el momento de hablar (Chrome invalida refs cacheadas)
+        const voices    = window.speechSynthesis.getVoices();
+        const savedName = localStorage.getItem(LS_VOICE_NAME);
+        const voice     = savedName
+            ? voices.find(v => v.name === savedName)
+                || voices.find(v => v.lang.startsWith('es'))
+                || voices[0]
+            : voices.find(v => v.lang.startsWith('es')) || voices[0];
 
-    const voice = getSelectedVoice();
-    if (voice) utterance.voice = voice;
+        const utterance  = new SpeechSynthesisUtterance(text);
+        utterance.volume = voiceVolume;
+        utterance.rate   = options.rate  ?? 1.15;
+        utterance.pitch  = options.pitch ?? 1.0;
 
-    flashVoiceIndicator();
-    window.speechSynthesis.speak(utterance);
+        if (voice) {
+            utterance.voice = voice;
+            utterance.lang  = voice.lang; // debe coincidir con el idioma de la voz
+        } else {
+            utterance.lang  = 'es-ES';
+        }
+
+        flashVoiceIndicator();
+        window.speechSynthesis.speak(utterance);
+    }, 50); // 50 ms es suficiente para que Chrome procese el cancel()
 }
+
 
 // Speak a game action key (picks random phrase from VOICE_LINES)
 function speakAction(key) {
@@ -162,12 +176,16 @@ function selectSpecificVoice(voiceName) {
     speakAnnouncement('¡Truco!');
 }
 
-// Cambiar volumen — persiste en localStorage
+// Cambiar volumen — persiste en localStorage y reproduce sonido de prueba
+let _volTestTimer = null;
 function setVoiceVolume(val) {
     voiceVolume = parseFloat(val);
     localStorage.setItem(LS_VOICE_VOLUME, voiceVolume);
     const label = document.getElementById('voice-volume-label');
     if (label) label.textContent = Math.round(voiceVolume * 100) + '%';
+    // Prueba de sonido con debounce (300 ms) para escuchar el cambio
+    clearTimeout(_volTestTimer);
+    _volTestTimer = setTimeout(() => speakAnnouncement('¡Truco!'), 300);
 }
 
 // Flash the cantar/voice button briefly as visual feedback
