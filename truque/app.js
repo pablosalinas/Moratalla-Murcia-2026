@@ -2132,39 +2132,9 @@ function cancelCustomEnvido() {
     document.querySelector('.action-buttons').style.display = 'flex';
 }
 
-// --- Speech Synthesis Utilities ---
-function speakAnnouncement(text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'es-ES';
-    utter.rate = 0.95;
-    utter.pitch = 1.1;
-    utter.volume = 1.0;
-    window.speechSynthesis.speak(utter);
-}
+// speakAnnouncement y cantarMarcador definidas en el bloque VOICE ENGINE (inicio del archivo)
 
-function cantarMarcador() {
-    const p2Name = gameMode === 'pvc' ? 'la Computadora' : 'el Jugador Dos';
-    const p1Malas = Math.min(p1Score, 25);
-    const p1Buenas = Math.max(0, p1Score - 25);
-    const p2Malas = Math.min(p2Score, 25);
-    const p2Buenas = Math.max(0, p2Score - 25);
-    
-    let texto = '';
-    if (p1Score === 0 && p2Score === 0) {
-        texto = 'Partida sin puntos. Todo por ganar.';
-    } else {
-        texto = `Marcador actual. Jugador Uno: ${p1Malas} malas`;
-        if (p1Buenas > 0) texto += ` y ${p1Buenas} buenas`;
-        texto += `. ${p2Name}: ${p2Malas} malas`;
-        if (p2Buenas > 0) texto += ` y ${p2Buenas} buenas`;
-        texto += '.';
-    }
-    
-    addLog(`[Cantar] ${texto}`, 'system');
-    speakAnnouncement(texto);
-}
+
 
 // --- Download Game History Report ---
 function downloadGameHistory() {
