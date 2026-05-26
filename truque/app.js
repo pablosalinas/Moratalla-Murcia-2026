@@ -43,12 +43,9 @@ function getRandomLine(key) {
 }
 
 // Devuelve solo las voces en español (incluyendo las de Microsoft)
+// Devuelve todas las voces disponibles (se pueden añadir filtros si se desea)
 function getVoiceList() {
-    return availableVoices.filter(v => 
-        v.lang.toLowerCase().startsWith('es') || 
-        v.name.toLowerCase().includes('spanish') || 
-        v.name.toLowerCase().includes('español')
-    ).sort((a, b) => a.name.localeCompare(b.name));
+    return availableVoices.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Obtiene la voz activa: primero la guardada en LS, luego Pablo, luego primera española
@@ -168,12 +165,20 @@ function cantarMarcador() {
     const mitad = Math.floor(metaChinas / 2);
     
     const getScoreText = (score) => {
-        if (score === 0) return "cero chinas";
+        if (score === 0) return null;
         if (score <= mitad) return `${score} malas`;
         return `${score - mitad} buenas`;
     };
 
-    const text = `Marcador. Jugador uno: ${getScoreText(p1Score)}. ${p2Name}: ${getScoreText(p2Score)}.`;
+    const p1Text = getScoreText(p1Score);
+    const p2Text = getScoreText(p2Score);
+
+    if (!p1Text && !p2Text) return; // Si ambos están a cero, no canta nada
+
+    const t1 = p1Text ? `Jugador uno: ${p1Text}.` : 'Jugador uno a cero.';
+    const t2 = p2Text ? `${p2Name}: ${p2Text}.` : `${p2Name} a cero.`;
+
+    const text = `Marcador. ${t1} ${t2}`;
     speakAnnouncement(text, { rate: 0.95, pitch: 1.6 });
 }
 
@@ -1222,6 +1227,16 @@ function executeEnviteAction(player, action, customChinas = null) {
     const actBtns = document.querySelector('.action-buttons');
     if (actBtns) actBtns.style.display = 'flex';
 
+    // Conversión automática a Falta si la apuesta cubre lo que le queda al líder
+    const maxScore = Math.max(p1Score, p2Score);
+    const faltaChinas = (metaChinas - maxScore);
+    if (action === 'envido' || action === 'quique') {
+        const bidVal = action === 'quique' ? 5 : (customChinas || 2);
+        if (bidVal >= faltaChinas) {
+            action = 'falta';
+        }
+    }
+
     if (action === 'envido') {
         const bidVal = customChinas || 2;
         if (enviteState === 'none') {
@@ -1780,9 +1795,11 @@ function awardChinas(player, amount) {
     // Check Win Condition
     if (p1Score >= metaChinas) {
         showGameOverModal('¡Victoria de Jugador 1!', '🏆', `Has logrado vencer alcanzando las ${metaChinas} chinas.`);
+        speakAnnouncement(`¡Fin del juego! ¡Has ganado la partida con ${metaChinas} chinas!`);
     } else if (p2Score >= metaChinas) {
         const p2Name = gameMode === 'pvc' ? 'La Computadora' : 'Jugador 2';
         showGameOverModal(`¡Victoria de ${p2Name}!`, '💀', `El oponente ha ganado la partida con ${metaChinas} chinas.`);
+        speakAnnouncement(`¡Fin del juego! ${p2Name} ha ganado la partida con ${metaChinas} chinas.`);
     }
 }
 

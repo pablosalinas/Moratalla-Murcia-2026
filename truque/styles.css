@@ -1051,16 +1051,24 @@ button.btn-reveal:hover {
         margin-bottom: 0;
     }
     
-    /* Hide log-panel and dot tracks on mobile to save vertical space */
-    .sidebar .log-panel,
+    /* Ocultamos las pistas de puntos visuales en móvil para ahorrar espacio, pero mantenemos el log */
     .sidebar .china-track {
         display: none;
+    }
+    
+    .sidebar .log-panel {
+        flex: 1 1 100%;
+        min-height: 150px;
+        max-height: 200px;
+        margin-top: 5px;
     }
     
     .board {
         padding: 8px;
         gap: 8px;
         grid-template-rows: auto 1fr auto auto;
+        height: auto;
+        overflow: visible;
     }
     
     .play-field {
