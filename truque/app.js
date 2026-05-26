@@ -1365,13 +1365,22 @@ function executeTruqueAction(player, action) {
     const opponentName = opponent === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
     const playerName = player === 1 ? 'Jugador 1' : (gameMode === 'pvc' ? 'Computadora' : 'Jugador 2');
 
+    if (action === 'truco' || action === 'escalar-truque') {
+        if (truqueLevel === 0) action = 'truco';
+        else if (truqueLevel === 1) action = 'retruco';
+        else if (truqueLevel === 2) action = 'renueve';
+        else if (truqueLevel === 3) action = 'redoce';
+        else if (truqueLevel === 4) action = 'requince';
+        else if (truqueLevel === 5) action = 'rejuego';
+    }
+
     if (action === 'truco') {
         truqueLevel = 1;
         truqueChinasPending = 3;
         truqueState = 'truco';
         truqueProposer = player;
         addLog(`${playerName} canta TRUCO (3 chinas).`, 'action');
-        speakAnnouncement('¡Truco!');
+        speakAction('¡Truco!', player);
         changeTurnTruqueBet(opponent);
     } else if (action === 'retruco') {
         truqueLevel = 2;
@@ -1379,7 +1388,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'retruco';
         truqueProposer = player;
         addLog(`${playerName} canta RETRUCO (6 chinas).`, 'action');
-        speakAnnouncement('¡Retruco!');
+        speakAction('¡Retruco!', player);
         changeTurnTruqueBet(opponent);
     } else if (action === 'renueve') {
         truqueLevel = 3;
@@ -1387,7 +1396,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'renueve';
         truqueProposer = player;
         addLog(`${playerName} canta RENUEVE (9 chinas).`, 'action');
-        speakAnnouncement('¡Renueve!');
+        speakAction('¡Renueve!', player);
         changeTurnTruqueBet(opponent);
     } else if (action === 'redoce') {
         truqueLevel = 4;
@@ -1395,7 +1404,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'redoce';
         truqueProposer = player;
         addLog(`${playerName} canta REDOCE (12 chinas).`, 'action');
-        speakAnnouncement('¡Redoce!');
+        speakAction('¡Redoce!', player);
         changeTurnTruqueBet(opponent);
     } else if (action === 'requince') {
         truqueLevel = 5;
@@ -1403,7 +1412,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'requince';
         truqueProposer = player;
         addLog(`${playerName} canta REQUINCE (15 chinas).`, 'action');
-        speakAnnouncement('¡Requince!');
+        speakAction('¡Requince!', player);
         changeTurnTruqueBet(opponent);
     } else if (action === 'rejuego') {
         truqueLevel = 6;
@@ -1412,7 +1421,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'rejuego';
         truqueProposer = player;
         addLog(`${playerName} canta REJUEGO (Todas las chinas).`, 'action');
-        speakAnnouncement('¡Rejuego!');
+        speakAction('¡Rejuego!', player);
         changeTurnTruqueBet(opponent);
     } else if (action === 'quiero') {
         addLog(`${playerName} dice QUIERO al Truque. Se jugará por ${truqueChinasPending} chinas.`, 'action');
