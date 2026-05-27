@@ -70,12 +70,39 @@ function renderHorizontalMenu($parentId = null) {
     else $stmt->execute([$parentId]);
     
     $categories = $stmt->fetchAll();
-    if (count($categories) > 0) {
+    
+    $pages = [];
+    $extLinks = [];
+    if ($parentId !== null) {
+        $stmtPages = $pdo->prepare("SELECT id, title FROM pages WHERE category_id = ? ORDER BY sort_order ASC, title ASC");
+        $stmtPages->execute([$parentId]);
+        $pages = $stmtPages->fetchAll();
+        
+        $stmtExt = $pdo->prepare("SELECT title, url FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+        $stmtExt->execute([$parentId]);
+        $extLinks = $stmtExt->fetchAll();
+    }
+    
+    $totalItems = count($categories) + count($pages) + count($extLinks);
+    
+    if ($totalItems > 0) {
         echo $parentId === null ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
+        
+        // Render Subcategorías
         foreach ($categories as $cat) {
             $stmtChild = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AND is_visible = 1");
             $stmtChild->execute([$cat['id']]);
-            $hasChildren = $stmtChild->fetchColumn() > 0;
+            $numCat = $stmtChild->fetchColumn();
+            
+            $stmtP = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ?");
+            $stmtP->execute([$cat['id']]);
+            $numP = $stmtP->fetchColumn();
+            
+            $stmtE = $pdo->prepare("SELECT COUNT(*) FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1");
+            $stmtE->execute([$cat['id']]);
+            $numE = $stmtE->fetchColumn();
+            
+            $hasChildren = ($numCat + $numP + $numE) > 0;
             
             $url = "category.php?id={$cat['id']}";
             if (mb_strtolower(trim($cat['name']), 'UTF-8') === 'contacto') {
@@ -95,6 +122,22 @@ function renderHorizontalMenu($parentId = null) {
             renderHorizontalMenu($cat['id']);
             echo "</li>";
         }
+        
+        // Separador si hay tanto categorías como páginas/enlaces
+        if (count($categories) > 0 && (count($pages) > 0 || count($extLinks) > 0)) {
+            echo '<li style="height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;"></li>';
+        }
+        
+        // Render Páginas
+        foreach ($pages as $p) {
+            echo "<li><a href='page.php?id={$p['id']}'><i class='far fa-file-alt' style='margin-right:8px; opacity:0.6;'></i>" . htmlspecialchars($p['title']) . "</a></li>";
+        }
+        
+        // Render Enlaces Externos
+        foreach ($extLinks as $e) {
+            echo "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'><i class='fas fa-external-link-alt' style='margin-right:8px; opacity:0.6; color:#d4af37;'></i>" . htmlspecialchars($e['title']) . "</a></li>";
+        }
+        
         echo "</ul>";
     }
 }

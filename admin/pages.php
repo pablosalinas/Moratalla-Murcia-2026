@@ -203,8 +203,13 @@ if ($action == 'list') {
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Contenido (HTML) / Biografía</label>
-                    <textarea name="content" style="width: 100%; height: 300px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: 6px; font-family: monospace;"><?php echo htmlspecialchars($page['content']); ?></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label style="font-weight: 600; margin: 0;">Contenido (HTML) / Biografía</label>
+                        <button type="button" class="btn btn-sm" style="background: var(--gray-200); color: #333; font-size: 0.85rem;" onclick="loadTemplate()">
+                            <i class="fas fa-file-code"></i> Cargar Plantilla Base
+                        </button>
+                    </div>
+                    <textarea id="page_content" name="content" style="width: 100%; height: 300px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: 6px; font-family: monospace;"><?php echo htmlspecialchars($page['content']); ?></textarea>
                 </div>
                 
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 2rem 0;">
@@ -283,6 +288,39 @@ if ($action == 'list') {
             </div>
         <?php endif; ?>
     </div>
+
+    <script>
+    function loadTemplate() {
+        const ta = document.getElementById('page_content');
+        if (ta.value.trim() !== '') {
+            if (!confirm('El área de contenido no está vacía. ¿Sobrescribir con la plantilla base? Perderás lo que hayas escrito.')) {
+                return;
+            }
+        }
+        
+        const template = `<div style="max-width: 800px; margin: 0 auto;">
+    <h2 style="color: var(--primary); font-size: 2rem; margin-bottom: 1rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem;">[TÍTULO PRINCIPAL]</h2>
+    
+    <div style="font-size: 1.1rem; line-height: 1.8; color: #444; margin-bottom: 2rem;">
+        <p>[Escribe aquí el primer párrafo de descripción o biografía...]</p>
+        <p>[Escribe aquí el segundo párrafo...]</p>
+    </div>
+    
+    <div style="background: var(--bg-alt); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 2rem;">
+        <h4 style="margin-top: 0; color: var(--primary); margin-bottom: 0.5rem;"><i class="fas fa-info-circle"></i> Información de Interés</h4>
+        <p style="margin: 0;">[Añade aquí detalles técnicos, ubicación o información extra]</p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 3rem;">
+        <a href="[URL_DEL_ENLACE]" target="_blank" rel="noopener" class="btn-nav" style="display: inline-block; padding: 1rem 2rem; background: var(--primary); color: white; border-radius: 30px; text-decoration: none; font-weight: 600;">
+            <i class="fas fa-external-link-alt"></i> [TEXTO DEL BOTÓN]
+        </a>
+    </div>
+</div>`;
+        
+        ta.value = template;
+    }
+    </script>
     <?php
 }
 adminFooter(); ?>

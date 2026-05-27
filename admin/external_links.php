@@ -18,19 +18,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $url         = trim($_POST['url'] ?? '');
         $is_visible  = isset($_POST['is_visible']) ? 1 : 0;
         $sort_order  = (int)($_POST['sort_order'] ?? 0);
+        $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
+        $show_in_category = isset($_POST['show_in_category']) ? 1 : 0;
 
         if (empty($title) || empty($url)) {
             $message     = 'El título y la URL son obligatorios.';
             $messageType = 'error';
         } else {
             if ($action === 'create') {
-                $pdo->prepare("INSERT INTO external_links (title, description, url, is_visible, sort_order) VALUES (?, ?, ?, ?, ?)")
-                    ->execute([$title, $description, $url, $is_visible, $sort_order]);
+                $pdo->prepare("INSERT INTO external_links (title, description, url, is_visible, sort_order, category_id, show_in_category) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    ->execute([$title, $description, $url, $is_visible, $sort_order, $category_id, $show_in_category]);
                 $message = 'Acceso externo creado correctamente.';
             } else {
                 $id = (int)($_POST['id'] ?? 0);
-                $pdo->prepare("UPDATE external_links SET title=?, description=?, url=?, is_visible=?, sort_order=? WHERE id=?")
-                    ->execute([$title, $description, $url, $is_visible, $sort_order, $id]);
+                $pdo->prepare("UPDATE external_links SET title=?, description=?, url=?, is_visible=?, sort_order=?, category_id=?, show_in_category=? WHERE id=?")
+                    ->execute([$title, $description, $url, $is_visible, $sort_order, $category_id, $show_in_category, $id]);
                 $message = 'Acceso externo actualizado correctamente.';
             }
         }
@@ -60,7 +62,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 }
 
 // ─── Obtener todos los registros ─────────────────────────────────────────────
-$links = $pdo->query("SELECT * FROM external_links ORDER BY sort_order ASC, id ASC")->fetchAll();
+$links = $pdo->query("SELECT el.*, c.name as cat_name FROM external_links el LEFT JOIN categories c ON el.category_id = c.id ORDER BY el.sort_order ASC, el.id ASC")->fetchAll();
+
+// ─── Obtener categorías para el selector ─────────────────────────────────────
+$cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
 
 adminHeader("Accesos Externos / Curiosidades");
 ?>
@@ -106,11 +111,12 @@ adminHeader("Accesos Externos / Curiosidades");
         box-shadow: 0 0 0 3px rgba(27,67,50,0.1);
     }
     .toggle-switch {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 0.8rem;
         cursor: pointer;
         user-select: none;
+        white-space: nowrap;
     }
     .toggle-switch input { display: none; }
     .toggle-slider {
@@ -119,6 +125,7 @@ adminHeader("Accesos Externos / Curiosidades");
         border-radius: 13px;
         position: relative;
         transition: background 0.3s;
+        flex-shrink: 0;
     }
     .toggle-slider::after {
         content: '';
@@ -223,6 +230,7 @@ adminHeader("Accesos Externos / Curiosidades");
                     <th>Descripción</th>
                     <th>URL</th>
                     <th style="width: 100px;">Orden</th>
+                    <th>Categoría</th>
                     <th style="width: 110px;">Visibilidad</th>
                     <th style="width: 200px;">Acciones</th>
                 </tr>
@@ -240,6 +248,16 @@ adminHeader("Accesos Externos / Curiosidades");
                         </a>
                     </td>
                     <td style="text-align: center;"><?php echo (int)$link['sort_order']; ?></td>
+                    <td>
+                        <?php if ($link['category_id']): ?>
+                            <span class="badge" style="background: #e3f2fd; color: #1565c0; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;"><?php echo htmlspecialchars($link['cat_name']); ?></span>
+                            <?php if ($link['show_in_category']): ?>
+                                <i class="fas fa-check-circle" style="color: #2e7d32; font-size: 0.85rem;" title="Visible en la categoría"></i>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span style="color: #aaa; font-size: 0.85rem;">-</span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php if ($link['is_visible']): ?>
                             <span class="badge-visible"><i class="fas fa-eye"></i> Visible</span>
@@ -320,6 +338,27 @@ adminHeader("Accesos Externos / Curiosidades");
                     <label for="description"><i class="fas fa-align-left"></i> Descripción</label>
                     <textarea id="description" name="description" rows="3"
                               placeholder="Breve explicación de qué encontrará el visitante al hacer clic..."><?php echo htmlspecialchars($editItem['description'] ?? ''); ?></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category_id"><i class="fas fa-folder-open"></i> Asignar a Categoría (Opcional)</label>
+                    <select name="category_id" id="category_id" style="width: 100%; padding: 0.85rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                        <option value="">-- Ninguna --</option>
+                        <?php foreach($cats as $c): ?>
+                            <option value="<?php echo $c['id']; ?>" <?php echo (isset($editItem['category_id']) && $editItem['category_id'] == $c['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($c['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: center; margin-top: 1.5rem;">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="show_in_category" id="show_in_category"
+                               <?php echo (!isset($editItem) || !empty($editItem['show_in_category'])) ? 'checked' : ''; ?>>
+                        <span class="toggle-slider"></span>
+                        <span id="show-cat-label" style="font-weight: 600;">Mostrar en la categoría</span>
+                    </label>
                 </div>
                 <div class="form-group full">
                     <label class="toggle-switch">

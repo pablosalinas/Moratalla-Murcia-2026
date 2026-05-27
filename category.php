@@ -22,8 +22,13 @@ $stmtPage = $pdo->prepare("SELECT * FROM pages WHERE category_id = ? ORDER BY so
 $stmtPage->execute([$id]);
 $pages = $stmtPage->fetchAll();
 
-// Si solo hay una página y no hay subcategorías, redirigimos a la página
-if (count($pages) === 1 && count($subcategories) === 0) {
+// Enlaces externos
+$stmtExt = $pdo->prepare("SELECT * FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+$stmtExt->execute([$id]);
+$externalLinks = $stmtExt->fetchAll();
+
+// Si solo hay una página y no hay subcategorías ni enlaces externos, redirigimos a la página
+if (count($pages) === 1 && count($subcategories) === 0 && count($externalLinks) === 0) {
     header("Location: page.php?id=" . $pages[0]['id']);
     exit;
 }
@@ -144,7 +149,7 @@ require_once 'inc/header.php';
             </div>
         <?php endif; ?>
 
-        <?php if (count($pages) > 0): ?>
+        <?php if (count($pages) > 0 || count($externalLinks) > 0): ?>
             <h3 style="margin-bottom: 2rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--primary); padding-left: 1.2rem;">Páginas en esta sección</h3>
             <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
                 <?php foreach ($pages as $p): ?>
@@ -153,9 +158,16 @@ require_once 'inc/header.php';
                         <span><?php echo htmlspecialchars($p['title']); ?></span>
                     </a>
                 <?php endforeach; ?>
+                
+                <?php foreach ($externalLinks as $el): ?>
+                    <a href="<?php echo htmlspecialchars($el['url']); ?>" target="_blank" rel="noopener" class="btn-creative" style="border-left: 6px solid #d4af37; background: #fffcf2;">
+                        <i class="fas fa-external-link-alt" style="color: #d4af37;"></i>
+                        <span><?php echo htmlspecialchars($el['title']); ?></span>
+                    </a>
+                <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <?php if (count($subcategories) == 0): ?>
+            <?php if (count($subcategories) == 0 && count($categoryNews) == 0): ?>
                 <div style="text-align: center; padding: 5rem 0; background: var(--bg-alt); border-radius: 20px; border: 2px dashed var(--gray-300);">
                     <i class="fas fa-search" style="font-size: 4rem; color: var(--gray-300); margin-bottom: 1.5rem; display: block;"></i>
                     <p style="font-size: 1.2rem; color: var(--text-light);">No se ha encontrado contenido directo en esta sección todavía.</p>
