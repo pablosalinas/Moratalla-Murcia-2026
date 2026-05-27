@@ -19,6 +19,13 @@ try {
     $results[] = "Nota show_in_category: " . $e->getMessage();
 }
 
+try {
+    $pdo->exec("ALTER TABLE `pages` ADD COLUMN `sort_order` INT DEFAULT 0;");
+    $results[] = "Columna sort_order añadida a páginas correctamente.";
+} catch (Exception $e) {
+    $results[] = "Nota sort_order en pages: " . $e->getMessage();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
