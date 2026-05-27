@@ -30,12 +30,13 @@ if ($action == 'save') {
     $title = isset($_POST['title']) ? trim($_POST['title']) : '';
     $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
+    $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
     
     if (empty($category_id)) $category_id = null;
 
     if ($id) {
-        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=? WHERE id=?");
-        $stmt->execute([$title, $category_id, $content, $id]);
+        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, sort_order=? WHERE id=?");
+        $stmt->execute([$title, $category_id, $content, $sort_order, $id]);
         $msg = "Página actualizada.";
     } else {
         $slug = slugify($title);
@@ -46,8 +47,8 @@ if ($action == 'save') {
             $slug .= '-' . rand(100, 999);
         }
         
-        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, slug) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $slug]);
+        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, slug, sort_order) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $slug, $sort_order]);
         $id = $pdo->lastInsertId();
         $msg = "Página creada.";
     }
@@ -183,7 +184,7 @@ if ($action == 'list') {
     </script>
     <?php
 } else if ($action == 'edit' || $action == 'add') {
-    $page = ['id' => '', 'title' => '', 'category_id' => '', 'content' => ''];
+    $page = ['id' => '', 'title' => '', 'category_id' => '', 'content' => '', 'sort_order' => 0];
     if ($action == 'edit') {
         $id = $_GET['id'];
         $stmt = $pdo->prepare("SELECT * FROM pages WHERE id = ?");
@@ -223,6 +224,12 @@ if ($action == 'list') {
                             <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $page['category_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Orden de Visualización</label>
+                    <input type="number" name="sort_order" required value="<?php echo (int)($page['sort_order']); ?>" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Define la posición de esta página en el menú desplegable. Se ordena de menor a mayor.</small>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
