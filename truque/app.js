@@ -44,25 +44,12 @@ function getRandomLine(key) {
 
 // Filtra priorizando voces de Microsoft y evitando las de Google por ser muy agudas
 function getVoiceList() {
-    let list = availableVoices.filter(v => 
+    // Filtramos para mostrar estrictamente todas las voces disponibles en español
+    return availableVoices.filter(v => 
         v.lang.toLowerCase().startsWith('es') || 
         v.name.toLowerCase().includes('spanish') || 
         v.name.toLowerCase().includes('español')
-    );
-    
-    // Intentar dejar solo las voces de Microsoft según petición
-    const microsoftVoices = list.filter(v => v.name.toLowerCase().includes('microsoft'));
-    if (microsoftVoices.length > 0) {
-        list = microsoftVoices;
-    } else {
-        // Si no hay Microsoft (ej. Android/Mac), intentar quitar las de Google si hay alternativas
-        const nonGoogle = list.filter(v => !v.name.toLowerCase().includes('google'));
-        if (nonGoogle.length > 0) {
-            list = nonGoogle;
-        }
-    }
-    
-    return list.sort((a, b) => a.name.localeCompare(b.name));
+    ).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Obtiene la voz activa: primero la guardada en LS, luego Pablo, luego primera española
@@ -157,7 +144,23 @@ function speakAnnouncement(text, options = {}) {
 
         utterance.volume = voiceVolume;
         utterance.rate   = options.rate  ?? 1.05;
-        utterance.pitch  = options.pitch ?? 1.9;  // alto = enérgico
+        
+        let targetPitch = options.pitch ?? 1.9; // alto = enérgico (ideal para Microsoft Pablo)
+
+        if (voice) {
+            const voiceNameLower = voice.name.toLowerCase();
+            // En Android/móviles las voces de Microsoft no están instaladas nativamente por defecto.
+            // Las voces de Google/Android suenan muy agudas ("ardilla") con pitch > 1.0.
+            // Las hacemos más graves (0.7) para cumplir la petición de voces graves.
+            const isGoogleOrAndroid = voiceNameLower.includes('google') || 
+                (/android|mobile/i.test(navigator.userAgent) && !voiceNameLower.includes('microsoft'));
+
+            if (isGoogleOrAndroid && targetPitch > 1.0) {
+                targetPitch = 0.7; // Tono más grave
+            }
+        }
+
+        utterance.pitch = targetPitch;
 
         if (voice) {
             utterance.voice = voice;
