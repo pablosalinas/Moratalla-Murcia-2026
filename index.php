@@ -1,6 +1,14 @@
 <?php
 // index.php - v1.3.0 (Curiosidades / Accesos externos)
 require_once 'inc/header.php';
+
+// Contador global de visitas a la web
+if (!isset($_SESSION['global_visit_counted'])) {
+    $pdo->exec("UPDATE settings SET setting_value = setting_value + 1 WHERE setting_key = 'global_visits'");
+    $_SESSION['global_visit_counted'] = true;
+}
+$stmtGlobal = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'global_visits'");
+$globalVisits = $stmtGlobal->fetchColumn() ?: 0;
 ?>
 
 
@@ -232,5 +240,12 @@ if (count($externalLinks) > 0):
     }
 </style>
 <?php endif; ?>
+
+<!-- Contador discreto de accesos globales -->
+<div class="container" style="text-align: right; padding: 1rem 0; margin-top: 2rem; border-top: 1px solid var(--gray-200);">
+    <span style="font-size: 0.85rem; color: var(--text-light); font-family: monospace; opacity: 0.7;">
+        <i class="fas fa-chart-line"></i> Accesos totales: <?php echo number_format($globalVisits, 0, ',', '.'); ?>
+    </span>
+</div>
 
 <?php require_once 'inc/footer.php'; ?>

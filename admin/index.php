@@ -12,6 +12,10 @@ $catCount = $pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
 $pageCount = $pdo->query("SELECT COUNT(*) FROM pages")->fetchColumn();
 $imgCount = $pdo->query("SELECT COUNT(*) FROM page_images")->fetchColumn();
 
+$globalVisitsStmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'global_visits'");
+$globalVisits = $globalVisitsStmt ? $globalVisitsStmt->fetchColumn() : 0;
+$globalVisits = $globalVisits ?: 0;
+
 adminHeader("Dashboard");
 ?>
 
@@ -30,6 +34,11 @@ adminHeader("Dashboard");
         <h3><i class="fas fa-images" style="color: var(--primary);"></i> Imágenes</h3>
         <p style="font-size: 2.5rem; font-weight: 700;"><?php echo $imgCount; ?></p>
         <span class="badge badge-info">Galería multimedia</span>
+    </div>
+    <div class="card stat-card">
+        <h3><i class="fas fa-chart-line" style="color: var(--primary);"></i> Accesos</h3>
+        <p style="font-size: 2.5rem; font-weight: 700; color: var(--accent);"><?php echo number_format((int)$globalVisits, 0, ',', '.'); ?></p>
+        <span class="badge badge-info">Visitas totales a la web</span>
     </div>
 </div>
 

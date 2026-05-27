@@ -12,6 +12,15 @@ $page = $stmt->fetch();
 
 if (!$page) { header("Location: index.php"); exit; }
 
+// Contador de visitas por página (única por sesión)
+if (!isset($_SESSION['viewed_pages'])) {
+    $_SESSION['viewed_pages'] = [];
+}
+if (!in_array($id, $_SESSION['viewed_pages'])) {
+    $pdo->exec("UPDATE pages SET views = views + 1 WHERE id = " . (int)$id);
+    $_SESSION['viewed_pages'][] = $id;
+}
+
 // Si la página en sí no es visible, o si pertenece a una categoría oculta, denegar acceso
 if ($page['is_visible'] == 0 || ($page['cat_id'] && $page['cat_is_visible'] == 0)) {
     header("Location: index.php");

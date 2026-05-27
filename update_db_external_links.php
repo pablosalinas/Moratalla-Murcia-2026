@@ -33,6 +33,24 @@ try {
     $results[] = "Nota is_visible en pages: " . $e->getMessage();
 }
 
+try {
+    $pdo->exec("ALTER TABLE `pages` ADD COLUMN `views` INT DEFAULT 0;");
+    $results[] = "Columna views añadida a páginas correctamente.";
+} catch (Exception $e) {
+    $results[] = "Nota views en pages: " . $e->getMessage();
+}
+
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `settings` (
+        `setting_key` VARCHAR(191) PRIMARY KEY,
+        `setting_value` TEXT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    $pdo->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('global_visits', '0');");
+    $results[] = "Clave global_visits asegurada en tabla settings.";
+} catch (Exception $e) {
+    $results[] = "Nota global_visits en settings: " . $e->getMessage();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">

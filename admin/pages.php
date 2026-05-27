@@ -146,6 +146,7 @@ if ($action == 'list') {
                 <tr style="border-bottom: 2px solid var(--gray-200); text-align: left;">
                     <th style="padding: 1rem;">Título</th>
                     <th>Categoría</th>
+                    <th>Visitas</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -157,6 +158,7 @@ if ($action == 'list') {
                     echo "<tr style='border-bottom: 1px solid var(--gray-100);'>";
                     echo "<td style='padding: 1rem;'><strong>{$row['title']}</strong><br>{$visBadge}</td>";
                     echo "<td><span class='badge badge-info'>{$row['cat_name']}</span></td>";
+                    echo "<td>" . number_format((int)$row['views'], 0, ',', '.') . "</td>";
                     echo "<td>
                             <a href='?action=edit&id={$row['id']}' class='btn btn-sm btn-primary'>Editar y Galería</a>
                             <a href='../page.php?id={$row['id']}' target='_blank' class='btn btn-sm' style='background: #eee;'><i class='fas fa-eye'></i> Ver</a>
