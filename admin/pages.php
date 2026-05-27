@@ -9,10 +9,25 @@ require_once 'inc/image_helper.php';
 $pdo = getDB();
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 
+// Función para generar slugs limpios
+function slugify($text) {
+    $text = preg_replace('~[^\pL\d]+~u', '-', $text);
+    $text = str_replace(
+        ['á','é','í','ó','ú','Á','É','Í','Ó','Ú','ñ','Ñ','ü','Ü'],
+        ['a','e','i','o','u','a','e','i','o','u','n','n','u','u'],
+        $text
+    );
+    $text = preg_replace('~[^-\w]+~', '', $text);
+    $text = trim($text, '-');
+    $text = preg_replace('~-+~', '-', $text);
+    $text = strtolower($text);
+    return empty($text) ? 'n-a' : $text;
+}
+
 // Procesado de guardado
 if ($action == 'save') {
     $id = isset($_POST['id']) ? $_POST['id'] : '';
-    $title = isset($_POST['title']) ? $_POST['title'] : '';
+    $title = isset($_POST['title']) ? trim($_POST['title']) : '';
     $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
     
@@ -23,8 +38,16 @@ if ($action == 'save') {
         $stmt->execute([$title, $category_id, $content, $id]);
         $msg = "Página actualizada.";
     } else {
-        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html']);
+        $slug = slugify($title);
+        // Evitar duplicados
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE slug = ?");
+        $stmtCheck->execute([$slug]);
+        if ($stmtCheck->fetchColumn() > 0) {
+            $slug .= '-' . rand(100, 999);
+        }
+        
+        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, slug) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $slug]);
         $id = $pdo->lastInsertId();
         $msg = "Página creada.";
     }
