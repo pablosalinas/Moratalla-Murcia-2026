@@ -988,6 +988,8 @@ function renderHands(hideAll = false) {
             // Disable click if it's not Player 1's turn or they have already played a card in this trick
             if (activePlayer !== 1 || p1PlayedCard) {
                 cardEl.classList.add('disabled');
+            } else if (card.id === selectedCardId) {
+                cardEl.classList.add('selected-for-play');
             }
             p1Container.appendChild(cardEl);
         }
@@ -1005,6 +1007,8 @@ function renderHands(hideAll = false) {
                 // Disable click if it's not Player 2's turn or they have already played a card in this trick
                 if (activePlayer !== 2 || p2PlayedCard) {
                     cardEl.classList.add('disabled');
+                } else if (card.id === selectedCardId) {
+                    cardEl.classList.add('selected-for-play');
                 }
                 p2Container.appendChild(cardEl);
             }
@@ -1432,7 +1436,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'truco';
         truqueProposer = player;
         addLog(`${playerName} canta TRUCO (3 chinas).`, 'action');
-        speakAction('¡Truco!', player);
+        speakAction('truco');
         changeTurnTruqueBet(opponent);
     } else if (action === 'retruco') {
         truqueLevel = 2;
@@ -1440,7 +1444,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'retruco';
         truqueProposer = player;
         addLog(`${playerName} canta RETRUCO (6 chinas).`, 'action');
-        speakAction('¡Retruco!', player);
+        speakAction('retruco');
         changeTurnTruqueBet(opponent);
     } else if (action === 'renueve') {
         truqueLevel = 3;
@@ -1448,7 +1452,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'renueve';
         truqueProposer = player;
         addLog(`${playerName} canta RENUEVE (9 chinas).`, 'action');
-        speakAction('¡Renueve!', player);
+        speakAction('renueve');
         changeTurnTruqueBet(opponent);
     } else if (action === 'redoce') {
         truqueLevel = 4;
@@ -1456,7 +1460,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'redoce';
         truqueProposer = player;
         addLog(`${playerName} canta REDOCE (12 chinas).`, 'action');
-        speakAction('¡Redoce!', player);
+        speakAction('redoce');
         changeTurnTruqueBet(opponent);
     } else if (action === 'requince') {
         truqueLevel = 5;
@@ -1464,7 +1468,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'requince';
         truqueProposer = player;
         addLog(`${playerName} canta REQUINCE (15 chinas).`, 'action');
-        speakAction('¡Requince!', player);
+        speakAction('requince');
         changeTurnTruqueBet(opponent);
     } else if (action === 'rejuego') {
         truqueLevel = 6;
@@ -1473,7 +1477,7 @@ function executeTruqueAction(player, action) {
         truqueState = 'rejuego';
         truqueProposer = player;
         addLog(`${playerName} canta REJUEGO (Todas las chinas).`, 'action');
-        speakAction('¡Rejuego!', player);
+        speakAction('rejuego');
         changeTurnTruqueBet(opponent);
     } else if (action === 'quiero') {
         addLog(`${playerName} dice QUIERO al Truque. Se jugará por ${truqueChinasPending} chinas.`, 'action');
@@ -1579,9 +1583,18 @@ function executeCardPlay(player, card) {
 }
 
 // --- Player Card Clicking ---
+let selectedCardId = null;
+
 function playerPlayCard(card) {
     if (pvpScreenActive) return;
-    
+
+    if (selectedCardId !== card.id) {
+        selectedCardId = card.id;
+        renderHands();
+        return;
+    }
+    selectedCardId = null; // Segundo clic confirma la jugada
+
     const inEnvite = isEnviteActive();
     const player = activePlayer;
     const opponent = player === 1 ? 2 : 1;
@@ -1671,19 +1684,21 @@ function checkTrickFinished() {
         // Both played, evaluate trick winner
         setTimeout(resolveTrick, 1500);
     } else {
-        // Move to the next player
+        // Move to the next player con medio segundo de pausa
         const next = activePlayer === 1 ? 2 : 1;
-        if (gameMode === 'pvp') {
-            switchPvPTurn(next, 'play');
-        } else {
-            activePlayer = next;
-            updateStatusBar(`Fase de Truque. Juega una carta ${activePlayer === 1 ? 'Jugador 1' : 'Computadora'}.`);
-            renderHands();
-            updateActionButtons();
-            if (activePlayer === 2) {
-                setTimeout(cpuTruqueTurn, 1500);
+        setTimeout(() => {
+            if (gameMode === 'pvp') {
+                switchPvPTurn(next, 'play');
+            } else {
+                activePlayer = next;
+                updateStatusBar(`Fase de Truque. Juega una carta ${activePlayer === 1 ? 'Jugador 1' : 'Computadora'}.`);
+                renderHands();
+                updateActionButtons();
+                if (activePlayer === 2) {
+                    setTimeout(cpuTruqueTurn, 1000);
+                }
             }
-        }
+        }, 500);
     }
 }
 
@@ -1802,17 +1817,19 @@ function checkHandWinner(trickWinner) {
         awardChinas(finalWinner, truqueChinasPending);
         endHand();
     } else {
-        // Next Trick Turn Setup
-        updateStatusBar(`Ronda de ${currentTrick === 1 ? 'Segundas' : 'Terceras'}. Turno de Jugador ${activePlayer}.`);
-        if (gameMode === 'pvp') {
-            switchPvPTurn(activePlayer, 'play');
-        } else {
-            renderHands();
-            updateActionButtons();
-            if (activePlayer === 2) {
-                setTimeout(cpuTruqueTurn, 1500);
+        // Next Trick Turn Setup con medio segundo de pausa
+        setTimeout(() => {
+            updateStatusBar(`Ronda de ${currentTrick === 1 ? 'Segundas' : 'Terceras'}. Turno de Jugador ${activePlayer}.`);
+            if (gameMode === 'pvp') {
+                switchPvPTurn(activePlayer, 'play');
+            } else {
+                renderHands();
+                updateActionButtons();
+                if (activePlayer === 2) {
+                    setTimeout(cpuTruqueTurn, 1000);
+                }
             }
-        }
+        }, 500);
     }
 }
 

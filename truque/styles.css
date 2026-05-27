@@ -1975,3 +1975,11 @@ button.btn-cantar:hover:not(:disabled) {
 button.btn-cantar.voice-flash {
     animation: voice-flash-pulse 0.6s ease-out forwards;
 }
+
+/* Doble clic - Selección de carta */
+.card.selected-for-play {
+    transform: translateY(-20px) scale(1.05);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 175, 55, 0.6);
+    border-color: #d4af37;
+    z-index: 20;
+}
