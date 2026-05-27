@@ -12,8 +12,8 @@ $page = $stmt->fetch();
 
 if (!$page) { header("Location: index.php"); exit; }
 
-// Si la página pertenece a una categoría y esa categoría está oculta/invisible, no permitir el acceso
-if ($page['cat_id'] && $page['cat_is_visible'] == 0) {
+// Si la página en sí no es visible, o si pertenece a una categoría oculta, denegar acceso
+if ($page['is_visible'] == 0 || ($page['cat_id'] && $page['cat_is_visible'] == 0)) {
     header("Location: index.php");
     exit;
 }
@@ -36,7 +36,7 @@ $stmtSub = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AN
 $stmtSub->execute([$page['cat_id']]);
 $subCount = $stmtSub->fetchColumn();
 
-$stmtPg = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ?");
+$stmtPg = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ? AND is_visible = 1");
 $stmtPg->execute([$page['cat_id']]);
 $pgCount = $stmtPg->fetchColumn();
 

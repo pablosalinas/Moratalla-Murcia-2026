@@ -74,7 +74,7 @@ function renderHorizontalMenu($parentId = null) {
     $pages = [];
     $extLinks = [];
     if ($parentId !== null) {
-        $stmtPages = $pdo->prepare("SELECT id, title FROM pages WHERE category_id = ? ORDER BY sort_order ASC, title ASC");
+        $stmtPages = $pdo->prepare("SELECT id, title FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
         $stmtPages->execute([$parentId]);
         $pages = $stmtPages->fetchAll();
         
@@ -94,7 +94,7 @@ function renderHorizontalMenu($parentId = null) {
             $stmtChild->execute([$cat['id']]);
             $numCat = $stmtChild->fetchColumn();
             
-            $stmtP = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ?");
+            $stmtP = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ? AND is_visible = 1");
             $stmtP->execute([$cat['id']]);
             $numP = $stmtP->fetchColumn();
             

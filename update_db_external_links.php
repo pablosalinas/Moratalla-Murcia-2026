@@ -26,6 +26,13 @@ try {
     $results[] = "Nota sort_order en pages: " . $e->getMessage();
 }
 
+try {
+    $pdo->exec("ALTER TABLE `pages` ADD COLUMN `is_visible` TINYINT(1) DEFAULT 1;");
+    $results[] = "Columna is_visible añadida a páginas correctamente.";
+} catch (Exception $e) {
+    $results[] = "Nota is_visible en pages: " . $e->getMessage();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">

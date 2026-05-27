@@ -18,7 +18,7 @@ $stmtSub->execute([$id]);
 $subcategories = $stmtSub->fetchAll();
 
 // Buscamos páginas directas
-$stmtPage = $pdo->prepare("SELECT * FROM pages WHERE category_id = ? ORDER BY sort_order ASC, title ASC");
+$stmtPage = $pdo->prepare("SELECT * FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
 $stmtPage->execute([$id]);
 $pages = $stmtPage->fetchAll();
 

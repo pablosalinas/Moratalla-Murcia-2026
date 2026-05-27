@@ -31,12 +31,13 @@ if ($action == 'save') {
     $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
     $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
+    $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     
     if (empty($category_id)) $category_id = null;
 
     if ($id) {
-        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, sort_order=? WHERE id=?");
-        $stmt->execute([$title, $category_id, $content, $sort_order, $id]);
+        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, sort_order=?, is_visible=? WHERE id=?");
+        $stmt->execute([$title, $category_id, $content, $sort_order, $is_visible, $id]);
         $msg = "Página actualizada.";
     } else {
         $slug = slugify($title);
@@ -47,8 +48,8 @@ if ($action == 'save') {
             $slug .= '-' . rand(100, 999);
         }
         
-        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, slug, sort_order) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $slug, $sort_order]);
+        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $slug, $sort_order, $is_visible]);
         $id = $pdo->lastInsertId();
         $msg = "Página creada.";
     }
@@ -152,8 +153,9 @@ if ($action == 'list') {
                 <?php
                 $stmt = $pdo->query("SELECT p.*, c.name as cat_name FROM pages p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC, p.title ASC");
                 while ($row = $stmt->fetch()) {
+                    $visBadge = $row['is_visible'] ? '<span class="badge" style="background: #e8f5e9; color: #2e7d32; font-size: 0.75rem;"><i class="fas fa-eye"></i> Visible</span>' : '<span class="badge" style="background: #ffebee; color: #c62828; font-size: 0.75rem;"><i class="fas fa-eye-slash"></i> Oculta</span>';
                     echo "<tr style='border-bottom: 1px solid var(--gray-100);'>";
-                    echo "<td style='padding: 1rem;'><strong>{$row['title']}</strong></td>";
+                    echo "<td style='padding: 1rem;'><strong>{$row['title']}</strong><br>{$visBadge}</td>";
                     echo "<td><span class='badge badge-info'>{$row['cat_name']}</span></td>";
                     echo "<td>
                             <a href='?action=edit&id={$row['id']}' class='btn btn-sm btn-primary'>Editar y Galería</a>
@@ -184,7 +186,7 @@ if ($action == 'list') {
     </script>
     <?php
 } else if ($action == 'edit' || $action == 'add') {
-    $page = ['id' => '', 'title' => '', 'category_id' => '', 'content' => '', 'sort_order' => 0];
+    $page = ['id' => '', 'title' => '', 'category_id' => '', 'content' => '', 'sort_order' => 0, 'is_visible' => 1];
     if ($action == 'edit') {
         $id = $_GET['id'];
         $stmt = $pdo->prepare("SELECT * FROM pages WHERE id = ?");
@@ -230,6 +232,11 @@ if ($action == 'list') {
                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Orden de Visualización</label>
                     <input type="number" name="sort_order" required value="<?php echo (int)($page['sort_order']); ?>" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
                     <small style="color: #666; display: block; margin-top: 0.4rem;">Define la posición de esta página en el menú desplegable. Se ordena de menor a mayor.</small>
+                </div>
+                
+                <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" name="is_visible" id="is_visible" value="1" <?php echo ($page['is_visible'] ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
+                    <label for="is_visible" style="font-weight: 600; color: var(--primary); cursor: pointer; user-select: none;">¿Página visible al público?</label>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
