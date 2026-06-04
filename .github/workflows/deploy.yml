@@ -28,24 +28,34 @@ jobs:
           sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r ./truque/* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../truque
 
       - name: 🍲 Clonar y desplegar Recetario
+        env:
+          SPASS: ${{ secrets.SFTP_PASS }}
+          SUSER: ${{ secrets.SFTP_USER }}
+          SHOST: ${{ secrets.SFTP_HOST }}
+          SPATH: ${{ secrets.SFTP_REMOTE_PATH }}
         run: |
           # Clonar el repo público del recetario (sin credenciales)
           git clone --depth=1 https://github.com/pablosalinas/recetario-moratalla.git /tmp/recetario
 
-          # Crear directorio remoto si no existe
-          sshpass -p "${{ secrets.SFTP_PASS }}" ssh -p 22 -o StrictHostKeyChecking=no \
-            ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }} \
-            "mkdir -p ${{ secrets.SFTP_REMOTE_PATH }}/../recetario"
+          # Crear directorio remoto con sftp en modo batch
+          # (Ionos no permite sesión SSH interactiva, pero sí SFTP)
+          # El prefijo '-' en '-mkdir' ignora el error si el directorio ya existe
+          printf "cd %s/..\n-mkdir recetario\nquit\n" "$SPATH" | \
+            sshpass -p "$SPASS" sftp \
+              -o StrictHostKeyChecking=no \
+              -b - \
+              "$SUSER@$SHOST"
 
-          # Subir solo los archivos web (index, css, js, img, data) — excluir carpetas de imágenes del libro físico
-          sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no \
+          # Subir index.html
+          sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no \
             /tmp/recetario/index.html \
-            ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../recetario/
+            "$SUSER@$SHOST:$SPATH/../recetario/"
 
+          # Subir carpetas de assets (excluye carpetas de fotos del libro físico)
           for dir in css js img data; do
-            sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r \
+            sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no -r \
               /tmp/recetario/$dir \
-              ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../recetario/
+              "$SUSER@$SHOST:$SPATH/../recetario/"
           done
 
           echo "✅ Recetario desplegado correctamente."
