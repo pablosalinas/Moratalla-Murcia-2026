@@ -28,42 +28,15 @@ jobs:
           sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r ./truque/* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../truque
 
       - name: 🍲 Clonar y desplegar Recetario
-        env:
-          SPASS: ${{ secrets.SFTP_PASS }}
-          SUSER: ${{ secrets.SFTP_USER }}
-          SHOST: ${{ secrets.SFTP_HOST }}
-          SPATH: ${{ secrets.SFTP_REMOTE_PATH }}
         run: |
-          # Clonar el repo del recetario (asumiendo que es público, o fallará si requiere un PAT válido)
+          # Clonar el repo del recetario
           git clone --depth=1 https://github.com/pablosalinas/recetario-moratalla.git /tmp/recetario
 
-          # Crear directorio remoto con sftp en modo batch
-          # Crear directorio remoto con sftp en modo batch
-          # El prefijo '-' en comandos como '-mkdir' o '-rm' ignora el error si falla
-          printf "cd %s\n-mkdir recetario\ncd recetario\n-rm index.html\nquit\n" "$SPATH" | \
-            sshpass -p "$SPASS" sftp \
-              -o StrictHostKeyChecking=no \
-              -b - \
-              "$SUSER@$SHOST"
+          # Subir el recetario usando exactamente el mismo método y sintaxis que el paso de SCP manual
+          sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r /tmp/recetario/* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/recetario/
+          sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r /tmp/recetario/.htaccess ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/recetario/
 
-          # Subir archivos base PHP
-          for file in index.php login.php logout.php; do
-            if [ -f /tmp/recetario/$file ]; then
-              sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no \
-                /tmp/recetario/$file \
-                "$SUSER@$SHOST:$SPATH/recetario/"
-            fi
-          done
-
-          # Subir carpetas
-          for dir in admin api inc css js img data; do
-            if [ -d /tmp/recetario/$dir ]; then
-              sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no -r \
-                /tmp/recetario/$dir \
-                "$SUSER@$SHOST:$SPATH/recetario/"
-            fi
-          done
-
+          echo "✅ Recetario desplegado correctamente."
           echo "✅ Recetario desplegado correctamente."
 
       - name: 🐬 Migraciones
