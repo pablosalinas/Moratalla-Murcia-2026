@@ -46,16 +46,22 @@ jobs:
               -b - \
               "$SUSER@$SHOST"
 
-          # Subir index.html
-          sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no \
-            /tmp/recetario/index.html \
-            "$SUSER@$SHOST:$SPATH/../recetario/"
+          # Subir archivos base PHP
+          for file in index.php login.php logout.php; do
+            if [ -f /tmp/recetario/$file ]; then
+              sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no \
+                /tmp/recetario/$file \
+                "$SUSER@$SHOST:$SPATH/../recetario/"
+            fi
+          done
 
-          # Subir carpetas de assets (excluye carpetas de fotos del libro físico)
-          for dir in css js img data; do
-            sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no -r \
-              /tmp/recetario/$dir \
-              "$SUSER@$SHOST:$SPATH/../recetario/"
+          # Subir carpetas
+          for dir in admin api inc css js img data; do
+            if [ -d /tmp/recetario/$dir ]; then
+              sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no -r \
+                /tmp/recetario/$dir \
+                "$SUSER@$SHOST:$SPATH/../recetario/"
+            fi
           done
 
           echo "✅ Recetario desplegado correctamente."
