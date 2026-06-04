@@ -40,7 +40,7 @@ jobs:
           # Crear directorio remoto con sftp en modo batch
           # (Ionos no permite sesión SSH interactiva, pero sí SFTP)
           # El prefijo '-' en '-mkdir' ignora el error si el directorio ya existe
-          printf "cd %s/..\n-mkdir recetario\nquit\n" "$SPATH" | \
+          printf "cd %s\n-mkdir recetario\nquit\n" "$SPATH" | \
             sshpass -p "$SPASS" sftp \
               -o StrictHostKeyChecking=no \
               -b - \
@@ -51,7 +51,7 @@ jobs:
             if [ -f /tmp/recetario/$file ]; then
               sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no \
                 /tmp/recetario/$file \
-                "$SUSER@$SHOST:$SPATH/../recetario/"
+                "$SUSER@$SHOST:$SPATH/recetario/"
             fi
           done
 
@@ -60,7 +60,7 @@ jobs:
             if [ -d /tmp/recetario/$dir ]; then
               sshpass -p "$SPASS" scp -P 22 -o StrictHostKeyChecking=no -r \
                 /tmp/recetario/$dir \
-                "$SUSER@$SHOST:$SPATH/../recetario/"
+                "$SUSER@$SHOST:$SPATH/recetario/"
             fi
           done
 
