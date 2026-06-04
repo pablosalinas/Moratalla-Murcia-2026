@@ -34,8 +34,8 @@ jobs:
           SHOST: ${{ secrets.SFTP_HOST }}
           SPATH: ${{ secrets.SFTP_REMOTE_PATH }}
         run: |
-          # Clonar el repo público del recetario (sin credenciales)
-          git clone --depth=1 https://github.com/pablosalinas/recetario-moratalla.git /tmp/recetario
+          # Clonar el repo privado del recetario usando PAT de GitHub
+          git clone --depth=1 https://x-access-token:${{ secrets.GH_PAT }}@github.com/pablosalinas/recetario-moratalla.git /tmp/recetario
 
           # Crear directorio remoto con sftp en modo batch
           # (Ionos no permite sesión SSH interactiva, pero sí SFTP)
