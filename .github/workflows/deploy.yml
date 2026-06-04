@@ -27,6 +27,29 @@ jobs:
           sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r ./* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}
           sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r ./truque/* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../truque
 
+      - name: 🍲 Clonar y desplegar Recetario
+        run: |
+          # Clonar el repo público del recetario (sin credenciales)
+          git clone --depth=1 https://github.com/pablosalinas/recetario-moratalla.git /tmp/recetario
+
+          # Crear directorio remoto si no existe
+          sshpass -p "${{ secrets.SFTP_PASS }}" ssh -p 22 -o StrictHostKeyChecking=no \
+            ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }} \
+            "mkdir -p ${{ secrets.SFTP_REMOTE_PATH }}/../recetario"
+
+          # Subir solo los archivos web (index, css, js, img, data) — excluir carpetas de imágenes del libro físico
+          sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no \
+            /tmp/recetario/index.html \
+            ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../recetario/
+
+          for dir in css js img data; do
+            sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r \
+              /tmp/recetario/$dir \
+              ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../recetario/
+          done
+
+          echo "✅ Recetario desplegado correctamente."
+
       - name: 🐬 Migraciones
         run: |
           echo "Ejecutando migraciones en la raíz..."
