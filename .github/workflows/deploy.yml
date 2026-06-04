@@ -32,9 +32,12 @@ jobs:
           # Clonar el repo del recetario
           git clone --depth=1 https://github.com/pablosalinas/recetario-moratalla.git /tmp/recetario
 
-          # Eliminar carpetas pesadas que no son necesarias en producción
+          # Eliminar carpetas pesadas localmente
           rm -rf "/tmp/recetario/COCINA TRADICIONAL DE MORATALLA" "/tmp/recetario/GASTRONOMIA DE MORATALLA"
           rm -f "/tmp/recetario/test_auth.php" "/tmp/recetario/test_http.php" "/tmp/recetario/cookie.txt" "/tmp/recetario/cookie2.txt"
+
+          # IMPORTANTE: Eliminar las carpetas pesadas del servidor remoto de Ionos para liberar espacio
+          sshpass -p "${{ secrets.SFTP_PASS }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }} "rm -rf \"${{ secrets.SFTP_REMOTE_PATH }}/recetario/COCINA TRADICIONAL DE MORATALLA\" \"${{ secrets.SFTP_REMOTE_PATH }}/recetario/GASTRONOMIA DE MORATALLA\"" || true
 
           # Subir el recetario usando exactamente el mismo método y sintaxis que el paso de SCP manual
           sshpass -p "${{ secrets.SFTP_PASS }}" scp -P 22 -o StrictHostKeyChecking=no -r /tmp/recetario/* ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/recetario/
