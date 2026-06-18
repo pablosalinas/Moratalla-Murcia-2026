@@ -63,19 +63,29 @@ if ($action === 'save') {
         $msg = "Alojamiento creado correctamente.";
     }
 
-    // Subir foto a galería (si se seleccionó)
+    // Subir foto o vídeo a galería (si se seleccionó)
     if (isset($_FILES['foto_nueva']) && $_FILES['foto_nueva']['error'] == UPLOAD_ERR_OK) {
         $uploadDir = '../uploads/alojamientos/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
         $filename   = uniqid('aloj_') . '_' . basename($_FILES['foto_nueva']['name']);
         $targetFile = $uploadDir . $filename;
-        if (processUploadedImage($_FILES['foto_nueva']['tmp_name'], $targetFile, true, 1200, 85)) {
+        
+        $ext = strtolower(pathinfo($_FILES['foto_nueva']['name'], PATHINFO_EXTENSION));
+        $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
+
+        if ($isVid) {
+            $uploaded = move_uploaded_file($_FILES['foto_nueva']['tmp_name'], $targetFile);
+        } else {
+            $uploaded = processUploadedImage($_FILES['foto_nueva']['tmp_name'], $targetFile, true, 1200, 85);
+        }
+
+        if ($uploaded) {
             $dbPath = 'uploads/alojamientos/' . $filename;
-            // ¿Es la primera imagen? Si sí, poner como portada
+            // ¿Es la primera imagen? Si sí, y no es vídeo, poner como portada
             $countImg = $pdo->prepare("SELECT COUNT(*) FROM alojamiento_images WHERE alojamiento_id=?"); $countImg->execute([$id]);
-            $esCover  = ($countImg->fetchColumn() == 0) ? 1 : 0;
-            $pdo->prepare("INSERT INTO alojamiento_images (alojamiento_id, image_path, is_cover, is_visible, sort_order) VALUES (?,?,?,1,0)")
-                ->execute([$id, $dbPath, $esCover]);
+            $esCover  = ($countImg->fetchColumn() == 0 && !$isVid) ? 1 : 0;
+            $pdo->prepare("INSERT INTO alojamiento_images (alojamiento_id, image_path, is_cover, is_visible, sort_order, is_video) VALUES (?,?,?,1,0,?)")
+                ->execute([$id, $dbPath, $esCover, $isVid]);
         }
     }
 
@@ -324,9 +334,9 @@ async function toggleVisible(id) {
 
             <hr style="border:0; border-top:1px solid #eee; margin:1.5rem 0;">
 
-            <h4><i class="fas fa-camera"></i> Subir foto a la galería</h4>
-            <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">La primera foto subida se asigna automáticamente como portada.</p>
-            <input type="file" name="foto_nueva" accept="image/*" style="padding:0.5rem; margin-bottom:1.5rem;">
+            <h4><i class="fas fa-camera"></i> Subir foto o vídeo a la galería</h4>
+            <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">La primera foto (imagen) subida se asigna automáticamente como portada.</p>
+            <input type="file" name="foto_nueva" accept="image/*,video/*" style="padding:0.5rem; margin-bottom:1.5rem;">
 
             <div style="display:flex; gap:1rem; flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary" style="font-size:1.05rem; padding:0.9rem 2rem;"><i class="fas fa-save"></i> Guardar</button>
@@ -341,7 +351,7 @@ async function toggleVisible(id) {
     <!-- ── Galería ── -->
     <?php if ($action === 'edit'): ?>
     <div class="card" style="flex:1; min-width:360px; background:#f9f9f9;">
-        <h3><i class="fas fa-images"></i> Galería de Fotos</h3>
+        <h3><i class="fas fa-images"></i> Galería Multimedia</h3>
         <form method="POST" action="?action=save_gallery">
             <input type="hidden" name="alojamiento_id" value="<?php echo $id; ?>">
             <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem;">
@@ -350,7 +360,7 @@ async function toggleVisible(id) {
                 $iStmt->execute([$id]);
                 $images = $iStmt->fetchAll();
                 if (count($images) === 0) {
-                    echo '<p style="color:#888; font-style:italic;">No hay fotos todavía. Usa el formulario de la izquierda para subir la primera.</p>';
+                    echo '<p style="color:#888; font-style:italic;">No hay fotos ni vídeos todavía. Usa el formulario de la izquierda para subir la primera.</p>';
                 }
                 foreach ($images as $img):
                     $isVisible = $img['is_visible'] ? 'checked' : '';
@@ -359,8 +369,12 @@ async function toggleVisible(id) {
                 <div style="background:white; border:1px solid #ddd; border-radius:8px; padding:0.9rem; display:flex; flex-direction:column; gap:0.5rem;">
                     <div style="display:flex; gap:1rem;">
                         <div style="flex-shrink:0;">
-                            <img src="../<?php echo htmlspecialchars($img['image_path']); ?>" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
-                            <?php if ($img['is_cover']): ?><div style="text-align:center; font-size:0.7rem; color:#e65100; font-weight:700; margin-top:3px;">★ Portada</div><?php endif; ?>
+                            <?php if ($img['is_video']): ?>
+                                <video src="../<?php echo htmlspecialchars($img['image_path']); ?>" style="width:120px; height:80px; object-fit:cover; border-radius:6px; background:#000;" controls preload="metadata"></video>
+                            <?php else: ?>
+                                <img src="../<?php echo htmlspecialchars($img['image_path']); ?>" style="width:80px; height:80px; object-fit:cover; border-radius:6px;">
+                            <?php endif; ?>
+                            <?php if ($img['is_cover'] && !$img['is_video']): ?><div style="text-align:center; font-size:0.7rem; color:#e65100; font-weight:700; margin-top:3px;">★ Portada</div><?php endif; ?>
                         </div>
                         <div style="flex:1; display:flex; flex-direction:column; gap:0.5rem;">
                             <div style="display:flex; gap:1rem;">
@@ -372,20 +386,22 @@ async function toggleVisible(id) {
                                     <label style="font-size:0.8rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
                                         <input type="checkbox" name="images[<?php echo $img['id']; ?>][is_visible]" value="1" <?php echo $isVisible; ?>> Visible
                                     </label>
+                                    <?php if (!$img['is_video']): ?>
                                     <label style="font-size:0.8rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
                                         <input type="checkbox" name="images[<?php echo $img['id']; ?>][is_cover]" value="1" <?php echo $isCover; ?>> Portada
                                     </label>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div>
-                        <label style="font-size:0.78rem; font-weight:600; display:block;">Pie de foto</label>
+                        <label style="font-size:0.78rem; font-weight:600; display:block;">Pie de foto / Descripción</label>
                         <input type="text" name="images[<?php echo $img['id']; ?>][caption]" value="<?php echo htmlspecialchars($img['caption'] ?? ''); ?>" style="width:100%; padding:0.35rem; border:1px solid #ccc; border-radius:4px; font-size:0.88rem;" placeholder="Descripción...">
                     </div>
                     <div style="text-align:right; padding-top:0.4rem; border-top:1px solid #f0f0f0;">
-                        <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&aid=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto definitivamente?');" style="color:#d32f2f; font-size:0.82rem; font-weight:600; text-decoration:none;">
-                            <i class="fas fa-trash"></i> Eliminar foto
+                        <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&aid=<?php echo $id; ?>" onclick="return confirm('¿Eliminar definitivamente?');" style="color:#d32f2f; font-size:0.82rem; font-weight:600; text-decoration:none;">
+                            <i class="fas fa-trash"></i> Eliminar
                         </a>
                     </div>
                 </div>

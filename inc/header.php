@@ -198,6 +198,22 @@ function renderHorizontalMenu($parentId = null) {
             animation: ticker-animation <?php echo (int)$tickerSpeed; ?>s linear infinite !important;
         }
     </style>
+    <script>
+    function toggleVideoMute(buttonEl, videoEl) {
+        if (!videoEl) return;
+        videoEl.muted = !videoEl.muted;
+        const icon = buttonEl.querySelector('i');
+        if (icon) {
+            if (videoEl.muted) {
+                icon.className = 'fas fa-volume-mute';
+                buttonEl.setAttribute('title', 'Activar sonido');
+            } else {
+                icon.className = 'fas fa-volume-up';
+                buttonEl.setAttribute('title', 'Silenciar');
+            }
+        }
+    }
+    </script>
 </head>
 <body>
     <div class="ticker-wrapper">
@@ -237,28 +253,43 @@ function renderHorizontalMenu($parentId = null) {
                 $banners = $bannerStmt->fetchAll();
                 if (count($banners) > 0) {
                     foreach ($banners as $banner) {
-                        echo '<div class="swiper-slide">';
-                        $baseExt = pathinfo($banner['image_path'], PATHINFO_EXTENSION);
-                        $baseName = pathinfo($banner['image_path'], PATHINFO_FILENAME);
-                        $dirName = pathinfo($banner['image_path'], PATHINFO_DIRNAME);
-                        
-                        $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
-                        $mobilePath = $dirName . '/' . $baseName . '_mobile.' . $baseExt;
-                        
-                        if (!file_exists(__DIR__ . '/../' . $desktopPath)) {
-                            $desktopPath = $banner['image_path'];
-                            $mobilePath = $banner['image_path'];
-                        }
+                        $ext = strtolower(pathinfo($banner['image_path'], PATHINFO_EXTENSION));
+                        $isVideo = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
 
-                        echo '<picture>';
-                        echo '<source media="(max-width: 768px)" srcset="' . htmlspecialchars($mobilePath) . '">';
-                        echo '<source media="(min-width: 769px)" srcset="' . htmlspecialchars($desktopPath) . '">';
-                        echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title']) . '" style="cursor: pointer;" onclick="openBannerModal(this.currentSrc || this.src)">';
-                        echo '</picture>';
-                        if ($banner['title']) {
-                            echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
+                        if ($isVideo) {
+                            echo '<div class="swiper-slide" style="position: relative; width: 100%; height: 100%;">';
+                            echo '<video class="banner-video-el" src="' . htmlspecialchars($banner['image_path']) . '" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;" autoplay loop muted playsinline onclick="openBannerModal(this.src, true)"></video>';
+                            echo '<div class="video-mute-btn" style="position: absolute; bottom: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.6); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;" onclick="event.stopPropagation(); toggleVideoMute(this, this.previousElementSibling)">';
+                            echo '<i class="fas fa-volume-mute"></i>';
+                            echo '</div>';
+                            if ($banner['title']) {
+                                echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
+                            }
+                            echo '</div>';
+                        } else {
+                            echo '<div class="swiper-slide">';
+                            $baseExt = pathinfo($banner['image_path'], PATHINFO_EXTENSION);
+                            $baseName = pathinfo($banner['image_path'], PATHINFO_FILENAME);
+                            $dirName = pathinfo($banner['image_path'], PATHINFO_DIRNAME);
+                            
+                            $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
+                            $mobilePath = $dirName . '/' . $baseName . '_mobile.' . $baseExt;
+                            
+                            if (!file_exists(__DIR__ . '/../' . $desktopPath)) {
+                                $desktopPath = $banner['image_path'];
+                                $mobilePath = $banner['image_path'];
+                            }
+
+                            echo '<picture>';
+                            echo '<source media="(max-width: 768px)" srcset="' . htmlspecialchars($mobilePath) . '">';
+                            echo '<source media="(min-width: 769px)" srcset="' . htmlspecialchars($desktopPath) . '">';
+                            echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title']) . '" style="cursor: pointer;" onclick="openBannerModal(this.currentSrc || this.src)">';
+                            echo '</picture>';
+                            if ($banner['title']) {
+                                echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
+                            }
+                            echo '</div>';
                         }
-                        echo '</div>';
                     }
                 } else {
                     // Fallback if no banners are active

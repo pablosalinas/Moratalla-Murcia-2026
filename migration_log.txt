@@ -262,3 +262,15 @@ BEGIN
 [2026-06-18 23:45:12] [✓] 088_setup_tourism_categories.sql — OK.
 [2026-06-18 23:45:12] --------------------------------------------------
 [2026-06-18 23:45:12] Finalizado. Éxitos: 1 | Errores: 0
+[2026-06-18 23:54:53] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:54:53] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:54:53] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:54:53] [>>] Ejecutando: 089_add_is_video_column.sql ...
+[2026-06-18 23:54:53] [✓] 089_add_is_video_column.sql — OK.
+[2026-06-18 23:54:53] --------------------------------------------------
+[2026-06-18 23:54:53] Finalizado. Éxitos: 1 | Errores: 0
+[2026-06-19 00:05:49] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-19 00:05:49] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-19 00:05:49] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-19 00:05:49] --------------------------------------------------
+[2026-06-19 00:05:49] Sin cambios pendientes.

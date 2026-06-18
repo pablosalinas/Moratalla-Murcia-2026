@@ -13,7 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($_POST['action'] === 'upload') {
             if (isset($_FILES['banner_image']) && $_FILES['banner_image']['error'] === 0) {
                 $ext = strtolower(pathinfo($_FILES['banner_image']['name'], PATHINFO_EXTENSION));
-                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
+                $isVideo = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                
+                if (!$isVideo && !in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'])) {
                     $ext = 'jpg';
                 }
                 
@@ -26,35 +28,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $tmpName = $_FILES['banner_image']['tmp_name'];
                 
-                require_once 'inc/image_helper.php';
-
-                $desktopFilename = $baseFilename . '_desktop.' . $ext;
-                $mobileFilename = $baseFilename . '_mobile.' . $ext;
-                
-                $desktopPath = $targetDir . $desktopFilename;
-                $mobilePath = $targetDir . $mobileFilename;
-                
-                // Hacer una copia del temp porque processUploadedImage borra el origen por defecto
-                $tmpNameMobile = $tmpName . '_mobile';
-                copy($tmpName, $tmpNameMobile);
-                
-                $successDesktop = processUploadedImage($tmpName, $desktopPath, true, 1920, 85);
-                $successMobile = processUploadedImage($tmpNameMobile, $mobilePath, true, 768, 80);
-                
-                // Si la principal falla, intentar un move básico (fallback extremo)
-                if (!$successDesktop && @move_uploaded_file($tmpName, $desktopPath)) {
-                    $successDesktop = true;
-                    @copy($desktopPath, $mobilePath);
-                }
-
-                if ($successDesktop) {
-                    $dbPath = 'uploads/banners/' . $baseFilename . '.' . $ext;
-                    
-                    $stmt = $pdo->prepare("INSERT INTO banners (image_path, title, sort_order, is_active) VALUES (?, ?, ?, 1)");
-                    $stmt->execute([$dbPath, $_POST['title'] ?? '', (int)($_POST['sort_order'] ?? 0)]);
-                    $message = '<div class="alert alert-success">Banner subido y optimizado (Desktop/Móvil).</div>';
+                if ($isVideo) {
+                    $targetFile = $targetDir . $baseFilename . '.' . $ext;
+                    if (move_uploaded_file($tmpName, $targetFile)) {
+                        $dbPath = 'uploads/banners/' . $baseFilename . '.' . $ext;
+                        $stmt = $pdo->prepare("INSERT INTO banners (image_path, title, sort_order, is_active) VALUES (?, ?, ?, 1)");
+                        $stmt->execute([$dbPath, $_POST['title'] ?? '', (int)($_POST['sort_order'] ?? 0)]);
+                        $message = '<div class="alert alert-success">Vídeo de banner subido con éxito.</div>';
+                    } else {
+                        $message = '<div class="alert alert-danger">Error al subir el vídeo del banner.</div>';
+                    }
                 } else {
-                    $message = '<div class="alert alert-danger">Error al procesar la imagen del banner.</div>';
+                    require_once 'inc/image_helper.php';
+
+                    $desktopFilename = $baseFilename . '_desktop.' . $ext;
+                    $mobileFilename = $baseFilename . '_mobile.' . $ext;
+                    
+                    $desktopPath = $targetDir . $desktopFilename;
+                    $mobilePath = $targetDir . $mobileFilename;
+                    
+                    // Hacer una copia del temp porque processUploadedImage borra el origen por defecto
+                    $tmpNameMobile = $tmpName . '_mobile';
+                    copy($tmpName, $tmpNameMobile);
+                    
+                    $successDesktop = processUploadedImage($tmpName, $desktopPath, true, 1920, 85);
+                    $successMobile = processUploadedImage($tmpNameMobile, $mobilePath, true, 768, 80);
+                    
+                    // Si la principal falla, intentar un move básico (fallback extremo)
+                    if (!$successDesktop && @move_uploaded_file($tmpName, $desktopPath)) {
+                        $successDesktop = true;
+                        @copy($desktopPath, $mobilePath);
+                    }
+
+                    if ($successDesktop) {
+                        $dbPath = 'uploads/banners/' . $baseFilename . '.' . $ext;
+                        
+                        $stmt = $pdo->prepare("INSERT INTO banners (image_path, title, sort_order, is_active) VALUES (?, ?, ?, 1)");
+                        $stmt->execute([$dbPath, $_POST['title'] ?? '', (int)($_POST['sort_order'] ?? 0)]);
+                        $message = '<div class="alert alert-success">Banner subido y optimizado (Desktop/Móvil).</div>';
+                    } else {
+                        $message = '<div class="alert alert-danger">Error al procesar la imagen del banner.</div>';
+                    }
                 }
             }
         } elseif ($_POST['action'] === 'update_field') {
@@ -119,7 +133,7 @@ adminHeader("Gestión de Banners");
         <div style="display: grid; grid-template-columns: 1fr 1fr 100px auto; gap: 1rem; align-items: end;">
             <div class="form-group">
                 <label>Imagen del Banner</label>
-                <input type="file" name="banner_image" class="form-control" required accept="image/*">
+                <input type="file" name="banner_image" class="form-control" required accept="image/*,video/*">
             </div>
             <div class="form-group">
                 <label>Título (Opcional)</label>
@@ -179,18 +193,25 @@ document.getElementById('bannerSpeedSlider').addEventListener('input', function(
         while ($row = $stmt->fetch()) {
             ?>
             <div class="banner-card" style="background: white; border: 1px solid var(--gray-200); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                <div style="position: relative; height: 180px;">
+                <div style="position: relative; height: 180px; background: #000;">
                     <?php
                     $previewPath = $row['image_path'];
                     $baseExt = pathinfo($previewPath, PATHINFO_EXTENSION);
-                    $baseName = pathinfo($previewPath, PATHINFO_FILENAME);
-                    $dirName = pathinfo($previewPath, PATHINFO_DIRNAME);
-                    $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
-                    if (file_exists('../' . $desktopPath)) {
-                        $previewPath = $desktopPath;
+                    $isVideo = in_array($baseExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                    if (!$isVideo) {
+                        $baseName = pathinfo($previewPath, PATHINFO_FILENAME);
+                        $dirName = pathinfo($previewPath, PATHINFO_DIRNAME);
+                        $desktopPath = $dirName . '/' . $baseName . '_desktop.' . $baseExt;
+                        if (file_exists('../' . $desktopPath)) {
+                            $previewPath = $desktopPath;
+                        }
                     }
                     ?>
-                    <img src="../<?php echo $previewPath; ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php if ($isVideo): ?>
+                        <video src="../<?php echo $previewPath; ?>" style="width: 100%; height: 100%; object-fit: cover;" controls preload="metadata"></video>
+                    <?php else: ?>
+                        <img src="../<?php echo $previewPath; ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php endif; ?>
                     <div style="position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <small style="font-weight: 700; font-size: 0.7rem; color: var(--primary);"><?php echo $row['is_active'] ? 'VISIBLE' : 'OCULTO'; ?></small>
                         <label class="switch">

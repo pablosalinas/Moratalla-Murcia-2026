@@ -34,9 +34,10 @@ if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
                 $filename = uniqid('newsg_') . '_' . basename($files['name'][$i]);
                 $targetFile = $uploadDir . $filename;
                 $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
                 
                 $success = false;
-                if ($fileExt === 'pdf') {
+                if ($fileExt === 'pdf' || $isVid) {
                     $success = move_uploaded_file($files['tmp_name'][$i], $targetFile);
                 } else {
                     $success = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
@@ -44,14 +45,15 @@ if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
                 
                 if ($success) {
                     $dbPath = 'uploads/news/' . $filename;
-                    $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order) VALUES (?, ?, ?)");
-                    $stmtImg->execute([$news_id, $dbPath, 0]);
+                    $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order, is_video) VALUES (?, ?, ?, ?)");
+                    $stmtImg->execute([$news_id, $dbPath, 0, $isVid]);
                     $newId = $pdo->lastInsertId();
                     
                     $response['files'][] = [
                         'id' => $newId,
                         'path' => $dbPath,
-                        'is_pdf' => ($fileExt === 'pdf')
+                        'is_pdf' => ($fileExt === 'pdf'),
+                        'is_video' => $isVid
                     ];
                 }
             }
@@ -100,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $image_path = $stmt->fetchColumn();
             }
             
-            // Subida de imagen principal
+            // Subida de imagen principal (o video)
             if (isset($_FILES['news_image']) && $_FILES['news_image']['error'] == UPLOAD_ERR_OK) {
                 $uploadDir = '../uploads/news/';
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -114,8 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $targetFile = $uploadDir . $filename;
                 
                 $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
                 
-                if ($fileExt === 'pdf') {
+                if ($fileExt === 'pdf' || $isVid) {
                     if (move_uploaded_file($_FILES['news_image']['tmp_name'], $targetFile)) {
                         $image_path = 'uploads/news/' . $filename;
                     }
@@ -160,9 +163,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $targetFile = $uploadDir . $filename;
                         
                         $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                        $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
                         
                         $success = false;
-                        if ($fileExt === 'pdf') {
+                        if ($fileExt === 'pdf' || $isVid) {
                             $success = move_uploaded_file($files['tmp_name'][$i], $targetFile);
                         } else {
                             $success = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
@@ -171,8 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($success) {
                             $dbPath = 'uploads/news/' . $filename;
                             
-                            $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order) VALUES (?, ?, ?)");
-                            $stmtImg->execute([$news_id, $dbPath, 0]);
+                            $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order, is_video) VALUES (?, ?, ?, ?)");
+                            $stmtImg->execute([$news_id, $dbPath, 0, $isVid]);
                         }
                     }
                 }
@@ -482,9 +486,9 @@ adminHeader("Noticias y Eventos");
                 <h4 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-images"></i> Galería de Imágenes Adicionales</h4>
                 
                 <div style="margin-bottom: 1.5rem;">
-                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Subir Imágenes o PDFs de Galería</label>
-                    <input type="file" id="ajaxGalleryUpload" name="gallery_images[]" multiple accept="image/*,application/pdf" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                    <small style="color: #666; display: block; margin-top: 0.4rem;">Puedes seleccionar múltiples archivos para la galería de esta noticia (las imágenes serán procesadas con marca de agua, los PDFs se adjuntarán tal cual).</small>
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Subir Imágenes, PDFs o Vídeos de Galería</label>
+                    <input type="file" id="ajaxGalleryUpload" name="gallery_images[]" multiple accept="image/*,application/pdf,video/*" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Puedes seleccionar múltiples archivos para la galería de esta noticia (las imágenes serán procesadas con marca de agua, los PDFs y vídeos se subirán tal cual).</small>
                     <div id="ajaxUploadProgress" style="display:none; margin-top:10px; color:var(--primary); font-size:0.95rem; font-weight:bold;"><i class="fas fa-spinner fa-spin"></i> Subiendo y procesando archivos, por favor espere...</div>
                 </div>
                 
@@ -499,6 +503,8 @@ adminHeader("Noticias y Eventos");
                             <div style="border: 1px solid var(--gray-200); border-radius: 8px; padding: 0.5rem; background: var(--gray-100); text-align: center; position: relative;">
                                 <?php if(strtolower(pathinfo($gimg['image_path'], PATHINFO_EXTENSION)) == 'pdf'): ?>
                                     <div style="width: 100%; height: 80px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px; margin-bottom: 0.2rem;"><i class="fas fa-file-pdf fa-2x"></i></div>
+                                <?php elseif ($gimg['is_video']): ?>
+                                    <video src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.2rem; background: #000;" controls preload="metadata"></video>
                                 <?php else: ?>
                                     <img src="../<?php echo htmlspecialchars($gimg['image_path']); ?>" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.2rem;">
                                 <?php endif; ?>
@@ -564,6 +570,8 @@ adminHeader("Noticias y Eventos");
                         let content = '';
                         if (file.is_pdf) {
                             content = '<div style="width: 100%; height: 80px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px; margin-bottom: 0.5rem;"><i class="fas fa-file-pdf fa-2x"></i></div>';
+                        } else if (file.is_video) {
+                            content = '<video src="../' + file.path + '" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem; background: #000;" controls preload="metadata"></video>';
                         } else {
                             content = '<img src="../' + file.path + '" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem;">';
                         }

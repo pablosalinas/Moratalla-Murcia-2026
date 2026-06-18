@@ -90,9 +90,13 @@ adminHeader("Galería General");
         <?php foreach ($images as $row): ?>
             <div class="image-item" style="background: var(--bg-alt); border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; position: relative; display: flex; flex-direction: column;">
                 
-                <!-- Imagen -->
+                <!-- Imagen / Vídeo -->
                 <div style="position: relative; height: 180px; background: #eee;">
-                    <img src="../<?php echo htmlspecialchars($row['image_path']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php if (isset($row['is_video']) && $row['is_video']): ?>
+                        <video src="../<?php echo htmlspecialchars($row['image_path']); ?>" style="width: 100%; height: 100%; object-fit: cover; background: #000;" controls preload="metadata"></video>
+                    <?php else: ?>
+                        <img src="../<?php echo htmlspecialchars($row['image_path']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php endif; ?>
                     <?php if ($row['is_cover']) : ?>
                         <span style="position: absolute; top: 10px; right: 10px; background: var(--accent); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-star"></i> Portada</span>
                     <?php endif; ?>

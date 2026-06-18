@@ -10,10 +10,10 @@ if (isset($_GET['api']) && $_GET['api'] === 'galeria' && isset($_GET['id'])) {
     $nombre->execute([$aid]);
     $alojamientoNombre = $nombre->fetchColumn();
 
-    $imgs = $pdo->prepare("SELECT image_path, caption FROM alojamiento_images WHERE alojamiento_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
+    $imgs = $pdo->prepare("SELECT image_path, caption, is_video FROM alojamiento_images WHERE alojamiento_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
     $imgs->execute([$aid]);
     $result = $imgs->fetchAll();
-    $out = array_map(fn($i) => ['src' => $i['image_path'], 'caption' => $i['caption'], 'nombre' => $alojamientoNombre], $result);
+    $out = array_map(fn($i) => ['src' => $i['image_path'], 'caption' => $i['caption'], 'nombre' => $alojamientoNombre, 'is_video' => (int)$i['is_video']], $result);
     header('Content-Type: application/json');
     echo json_encode($out);
     exit;
@@ -292,9 +292,10 @@ require_once 'inc/header.php';
     <!-- Navegación -->
     <button id="galeria-prev" onclick="galeriaNav(-1)" style="position:absolute; left:1.5rem; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); color:white; border:none; width:55px; height:55px; border-radius:50%; font-size:1.4rem; cursor:pointer; z-index:10001; display:flex; align-items:center; justify-content:center; transition:background 0.3s;">❮</button>
     <button id="galeria-next" onclick="galeriaNav(1)"  style="position:absolute; right:1.5rem; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); color:white; border:none; width:55px; height:55px; border-radius:50%; font-size:1.4rem; cursor:pointer; z-index:10001; display:flex; align-items:center; justify-content:center; transition:background 0.3s;">❯</button>
-    <!-- Imagen -->
-    <div style="max-width:95%; max-height:90vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+    <!-- Imagen / Vídeo -->
+    <div style="max-width:95%; max-height:90vh; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; width: 100%;">
         <img id="galeria-img" src="" style="max-width:100%; max-height:78vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.7); transition:opacity 0.3s ease;">
+        <video id="galeria-video" src="" style="display:none; max-width:100%; max-height:78vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.7); transition:opacity 0.3s ease; background:#000;" controls preload="metadata"></video>
         <div id="galeria-caption" style="color:white; margin-top:1rem; font-size:1rem; text-align:center; max-width:700px; text-shadow:0 2px 4px rgba(0,0,0,0.8); min-height:1.5rem;"></div>
         <div id="galeria-counter" style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin-top:0.5rem;"></div>
     </div>
@@ -359,20 +360,62 @@ async function abrirGaleria(id) {
 function cerrarGaleria() {
     document.getElementById('galeria-modal').style.display = 'none';
     document.body.style.overflow = 'auto';
-    galeriaActual = null;
     clearInterval(galeriaTimer);
+    const vid = document.getElementById('galeria-video');
+    if (vid) {
+        vid.pause();
+        vid.style.display = 'none';
+    }
+    galeriaActual = null;
 }
 
 function mostrarImagen() {
     const items = galerias[galeriaActual];
     if (!items || items.length === 0) return;
     const item = items[galeriaIdx];
-    
     const img = document.getElementById('galeria-img');
-    img.src = item.src;
-    document.getElementById('galeria-titulo').innerText = item.nombre;
-    document.getElementById('galeria-caption').innerText = item.caption || '';
-    document.getElementById('galeria-counter').innerText = (galeriaIdx + 1) + ' de ' + items.length;
+    const vid = document.getElementById('galeria-video');
+    
+    const isVideo = parseInt(item.is_video) === 1 || ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(item.src.split('.').pop().toLowerCase());
+
+    if (isVideo) {
+        clearInterval(galeriaTimer); // Detener autoplay si es un vídeo
+    }
+
+    if (isVideo) {
+        if (img) img.style.display = 'none';
+        if (vid) {
+            vid.src = item.src;
+            vid.style.display = 'block';
+            vid.style.opacity = 0;
+            vid.autoplay = true;
+            vid.load();
+        }
+        setTimeout(() => {
+            if (vid) vid.style.opacity = 1;
+            document.getElementById('galeria-caption').textContent = item.caption || '';
+            document.getElementById('galeria-counter').textContent = (galeriaIdx + 1) + ' / ' + items.length;
+            document.getElementById('galeria-titulo').textContent = item.nombre || '';
+        }, 150);
+    } else {
+        if (vid) {
+            vid.pause();
+            vid.style.display = 'none';
+        }
+        if (img) {
+            img.style.display = 'block';
+            img.style.opacity = 0;
+        }
+        setTimeout(() => {
+            if (img) {
+                img.src = item.src;
+                img.style.opacity = 1;
+            }
+            document.getElementById('galeria-caption').textContent = item.caption || '';
+            document.getElementById('galeria-counter').textContent = (galeriaIdx + 1) + ' / ' + items.length;
+            document.getElementById('galeria-titulo').textContent = item.nombre || '';
+        }, 150);
+    }
 }
 
 function galeriaNav(dir) {
@@ -380,7 +423,10 @@ function galeriaNav(dir) {
     if (!items) return;
     galeriaIdx = (galeriaIdx + dir + items.length) % items.length;
     mostrarImagen();
-    reiniciarAutoplay();
+    const isVideo = parseInt(items[galeriaIdx].is_video) === 1 || ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(items[galeriaIdx].src.split('.').pop().toLowerCase());
+    if (!isVideo) {
+        reiniciarAutoplay();
+    }
 }
 
 function iniciarAutoplay() {

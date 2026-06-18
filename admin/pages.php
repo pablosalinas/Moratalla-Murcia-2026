@@ -54,7 +54,7 @@ if ($action == 'save') {
         $msg = "Página creada.";
     }
     
-    // Subida de imagen para galería (si hay)
+    // Subida de foto o vídeo para galería (si hay)
     if (isset($_FILES['gallery_image']) && $_FILES['gallery_image']['error'] == UPLOAD_ERR_OK) {
         $uploadDir = '../uploads/galerias/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -62,10 +62,19 @@ if ($action == 'save') {
         $filename = uniqid() . '_' . basename($_FILES['gallery_image']['name']);
         $targetFile = $uploadDir . $filename;
         
-        if (processUploadedImage($_FILES['gallery_image']['tmp_name'], $targetFile, true, 1200, 85)) {
+        $ext = strtolower(pathinfo($_FILES['gallery_image']['name'], PATHINFO_EXTENSION));
+        $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
+        
+        if ($isVid) {
+            $uploaded = move_uploaded_file($_FILES['gallery_image']['tmp_name'], $targetFile);
+        } else {
+            $uploaded = processUploadedImage($_FILES['gallery_image']['tmp_name'], $targetFile, true, 1200, 85);
+        }
+
+        if ($uploaded) {
             $dbPath = 'uploads/galerias/' . $filename;
-            $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover) VALUES (?, ?, 0)");
-            $stmtImg->execute([$id, $dbPath]);
+            $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover, is_video) VALUES (?, ?, 0, ?)");
+            $stmtImg->execute([$id, $dbPath, $isVid]);
         }
     }
     
@@ -253,10 +262,10 @@ if ($action == 'list') {
                 
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 2rem 0;">
                 
-                <h4><i class="fas fa-images"></i> Añadir Foto a la Galería</h4>
-                <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Si seleccionas una imagen aquí, se subirá y se adjuntará automáticamente a la galería de esta página al guardar.</p>
+                <h4><i class="fas fa-images"></i> Añadir Foto o Vídeo a la Galería</h4>
+                <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Si seleccionas un archivo aquí, se subirá y se adjuntará automáticamente a la galería de esta página al guardar.</p>
                 <div style="margin-bottom: 1.5rem;">
-                    <input type="file" name="gallery_image" accept="image/*" style="padding: 0.5rem;">
+                    <input type="file" name="gallery_image" accept="image/*,video/*" style="padding: 0.5rem;">
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;"><i class="fas fa-save"></i> Guardar Todo</button>
@@ -267,8 +276,8 @@ if ($action == 'list') {
         <!-- Galería Existente -->
         <?php if ($action == 'edit'): ?>
             <div class="card" style="flex: 1; min-width: 400px; background: #f9f9f9;">
-                <h3><i class="fas fa-camera"></i> Galería Actual</h3>
-                <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Obras, cuadros o fotos adjudicadas a esta página.</p>
+                <h3><i class="fas fa-camera"></i> Galería Multimedia Actual</h3>
+                <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Obras, cuadros, fotos o vídeos adjudicados a esta página.</p>
                 
                 <form method="POST" action="?action=save_gallery">
                     <input type="hidden" name="page_id" value="<?php echo $id; ?>">
@@ -279,7 +288,7 @@ if ($action == 'list') {
                         $images = $iStmt->fetchAll();
                         
                         if (count($images) == 0) {
-                            echo "<p style='color: #888; font-style: italic;'>No hay fotos en la galería.</p>";
+                            echo "<p style='color: #888; font-style: italic;'>No hay archivos en la galería.</p>";
                         }
                         
                         foreach ($images as $img) {
@@ -287,8 +296,12 @@ if ($action == 'list') {
                             ?>
                             <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
                                 <div style="display: flex; gap: 1rem;">
-                                    <div style="display: flex; flex-direction: column; align-items: center; max-width: 120px;">
-                                        <img src="../<?php echo $img['image_path']; ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; max-width: 120px; flex-shrink: 0;">
+                                        <?php if ($img['is_video']): ?>
+                                            <video src="../<?php echo htmlspecialchars($img['image_path']); ?>" style="width: 120px; height: 80px; object-fit: cover; border-radius: 4px; background: #000;" controls preload="metadata"></video>
+                                        <?php else: ?>
+                                            <img src="../<?php echo htmlspecialchars($img['image_path']); ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+                                        <?php endif; ?>
                                         <div style="font-family: monospace; font-size: 0.65rem; color: #666; margin-top: 0.3rem; word-break: break-all; text-align: center; line-height: 1.1;">
                                             /<?php echo htmlspecialchars($img['image_path']); ?>
                                         </div>
@@ -307,12 +320,12 @@ if ($action == 'list') {
                                     </div>
                                 </div>
                                 <div>
-                                    <label style="font-size: 0.8rem; font-weight: 600; display: block;">Descripción / Título de la obra</label>
+                                    <label style="font-size: 0.8rem; font-weight: 600; display: block;">Descripción / Pie de foto</label>
                                     <textarea name="images[<?php echo $img['id']; ?>][caption]" style="width: 100%; height: 60px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem;"><?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?></textarea>
                                 </div>
                                 <div style="text-align: right; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; margin-top: 0.5rem;">
-                                    <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto?');" style="color: #d32f2f; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
-                                        <i class="fas fa-trash"></i> Eliminar Foto
+                                    <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar este archivo?');" style="color: #d32f2f; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+                                        <i class="fas fa-trash"></i> Eliminar Archivo
                                     </a>
                                 </div>
                             </div>

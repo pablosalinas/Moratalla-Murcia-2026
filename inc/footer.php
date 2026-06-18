@@ -161,9 +161,45 @@
         });
 
         // Banner Lightbox
-        function openBannerModal(src) {
-            document.getElementById('bannerModalImg').src = src;
-            document.getElementById('bannerModal').style.display = 'flex';
+        function openBannerModal(src, isVideo = false) {
+            const modal = document.getElementById('bannerModal');
+            const img = document.getElementById('bannerModalImg');
+            const vid = document.getElementById('bannerModalVid');
+            
+            if (!isVideo && src) {
+                const ext = src.split('?')[0].split('.').pop().toLowerCase();
+                isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
+            }
+            
+            if (isVideo) {
+                if (img) img.style.display = 'none';
+                if (vid) {
+                    vid.src = src;
+                    vid.style.display = 'block';
+                    vid.load();
+                    vid.play().catch(err => console.log('Autoplay blocked:', err));
+                }
+            } else {
+                if (vid) {
+                    vid.pause();
+                    vid.style.display = 'none';
+                }
+                if (img) {
+                    img.src = src;
+                    img.style.display = 'block';
+                }
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeBannerModal() {
+            const modal = document.getElementById('bannerModal');
+            const vid = document.getElementById('bannerModalVid');
+            if (vid) {
+                vid.pause();
+                vid.src = '';
+            }
+            modal.style.display = 'none';
         }
 
         // Animación interactiva y aleatoria de logos
@@ -254,8 +290,16 @@
         const galleryContainer = document.getElementById('modalGalleryContainer');
         
         if (data.image) {
+            const ext = data.image.split('?')[0].split('.').pop().toLowerCase();
+            const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
+            
             if (data.image.toLowerCase().endsWith('.pdf')) {
                 modalImageContainer.innerHTML = '<iframe src="' + data.image + '" style="width:100%; height:60vh; border:none; border-radius: 8px 8px 0 0;"></iframe>';
+            } else if (isVideo) {
+                modalImageContainer.innerHTML = '<div style="position:relative; width:100%;"><video id="modalNewsVideo" class="news-modal-img" src="' + data.image + '" style="width:100%; max-height:60vh; object-fit:contain; background:#000; display:block;" controls autoplay loop muted></video>' +
+                    '<div class="video-mute-btn" style="position:absolute; bottom:15px; right:15px; z-index:10; background:rgba(0,0,0,0.6); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:white;" onclick="event.stopPropagation(); toggleVideoMute(this, document.getElementById(\'modalNewsVideo\'))">' +
+                    '<i class="fas fa-volume-mute"></i>' +
+                    '</div></div>';
             } else {
                 modalImageContainer.innerHTML = '<img id="modalImage" class="news-modal-img" src="' + data.image + '" alt="' + data.title + '">';
             }
@@ -278,19 +322,25 @@
         
         // Cargar galería
         galleryContainer.innerHTML = '';
-        currentCarouselImages = []; // Solo para imágenes
+        currentCarouselImages = []; // Para carrusel
         
         let hasGalleryFiles = false;
         
-        if (data.image && !data.image.toLowerCase().endsWith('.pdf')) {
-            currentCarouselImages.push({src: data.image, caption: data.image_caption || ''});
+        if (data.image) {
+            const ext = data.image.split('.').pop().toLowerCase();
+            const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
+            if (!data.image.toLowerCase().endsWith('.pdf')) {
+                currentCarouselImages.push({src: data.image, caption: data.image_caption || '', is_video: isVideo});
+            }
         }
         
         if (data.gallery && data.gallery.length > 0) {
             hasGalleryFiles = true;
             data.gallery.forEach(imgObj => {
+                const ext = imgObj.image_path.split('.').pop().toLowerCase();
+                const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext) || imgObj.is_video == 1;
                 if (!imgObj.image_path.toLowerCase().endsWith('.pdf')) {
-                    currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || ''});
+                    currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || '', is_video: isVideo});
                 }
             });
         }
@@ -304,7 +354,7 @@
             
             galleryHtml += '<div class="news-gallery-grid">';
             
-            // Recorrer todos los archivos para mostrarlos (imágenes + PDFs)
+            // Recorrer todos los archivos para mostrarlos (imágenes + PDFs + vídeos)
             let allFiles = [];
             if (data.image) allFiles.push({path: data.image, caption: data.image_caption || ''});
             if (data.gallery) {
@@ -312,8 +362,17 @@
             }
             
             allFiles.forEach(file => {
+                const ext = file.path.split('.').pop().toLowerCase();
+                const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
                 if (file.path.toLowerCase().endsWith('.pdf')) {
                     galleryHtml += '<a href="' + file.path + '" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; text-decoration:none; border-radius:8px; border: 1px solid #f87171;"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">' + (file.caption ? file.caption : 'Abrir PDF') + '</span></a>';
+                } else if (isVideo) {
+                    let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
+                    galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px; position:relative;">' +
+                        '<video class="news-gallery-thumb" src="' + file.path + '" style="background:#000; width:100%; height:80px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="openNewsCarousel(' + cIndex + ')" preload="metadata"></video>' +
+                        '<div style="position:absolute; top:30px; left:50%; transform:translateX(-50%); color:white; font-size:1.5rem; pointer-events:none; opacity:0.8; text-shadow:0 1px 4px rgba(0,0,0,0.6);"><i class="fas fa-play-circle"></i></div>' +
+                        (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') +
+                        '</div>';
                 } else {
                     let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
                     galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px;"><img class="news-gallery-thumb" src="' + file.path + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">' + (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') + '</div>';
@@ -342,6 +401,11 @@
         const modal = document.getElementById('newsDetailModal');
         modal.classList.remove('active');
         document.body.style.overflow = '';
+        const modalNewsVid = document.getElementById('modalNewsVideo');
+        if (modalNewsVid) {
+            modalNewsVid.pause();
+            modalNewsVid.src = '';
+        }
     }
 
     // Funciones del Lightbox Carousel
@@ -361,31 +425,74 @@
     }
 
     function updateCarouselState() {
+        const container = document.querySelector('.news-carousel-container');
         const imgElement = document.getElementById('newsCarouselImg');
         const counterElement = document.getElementById('newsCarouselCounter');
         const captionElement = document.getElementById('newsCarouselCaption');
         
-        imgElement.style.opacity = 0;
-        setTimeout(() => {
-            imgElement.src = currentCarouselImages[currentCarouselIndex].src;
-            captionElement.textContent = currentCarouselImages[currentCarouselIndex].caption;
-            imgElement.style.opacity = 1;
-            counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
-        }, 150);
+        let videoElement = document.getElementById('newsCarouselVid');
+        
+        const currentItem = currentCarouselImages[currentCarouselIndex];
+        const ext = currentItem.src.split('.').pop().toLowerCase();
+        const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext) || currentItem.is_video;
+        
+        if (isVideo) {
+            clearInterval(newsCarouselInterval); // Pausar autoplay para vídeos
+        }
+        
+        if (isVideo) {
+            if (imgElement) imgElement.style.display = 'none';
+            if (!videoElement) {
+                videoElement = document.createElement('video');
+                videoElement.id = 'newsCarouselVid';
+                videoElement.className = 'news-carousel-img';
+                videoElement.style.cssText = 'max-width: 90vw; max-height: 70vh; object-fit: contain; display: block; margin: 0 auto; border-radius: 8px; background: #000; outline: none;';
+                videoElement.controls = true;
+                videoElement.autoplay = true;
+                container.insertBefore(videoElement, captionElement);
+            }
+            videoElement.src = currentItem.src;
+            videoElement.style.display = 'block';
+            videoElement.style.opacity = 0;
+            setTimeout(() => {
+                videoElement.style.opacity = 1;
+                captionElement.textContent = currentItem.caption;
+                counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
+            }, 150);
+        } else {
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.style.display = 'none';
+            }
+            if (imgElement) {
+                imgElement.style.display = 'block';
+                imgElement.style.opacity = 0;
+                setTimeout(() => {
+                    imgElement.src = currentItem.src;
+                    captionElement.textContent = currentItem.caption;
+                    imgElement.style.opacity = 1;
+                    counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
+                }, 150);
+            }
+        }
     }
 
     function prevNewsCarousel() {
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = (currentCarouselIndex - 1 + currentCarouselImages.length) % currentCarouselImages.length;
         updateCarouselState();
-        startNewsCarouselAutoplay(); // Reset timer on manual interaction
+        if (!currentCarouselImages[currentCarouselIndex].is_video) {
+            startNewsCarouselAutoplay(); // Reiniciar timer
+        }
     }
 
     function nextNewsCarousel() {
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = (currentCarouselIndex + 1) % currentCarouselImages.length;
         updateCarouselState();
-        startNewsCarouselAutoplay(); // Reset timer on manual interaction
+        if (!currentCarouselImages[currentCarouselIndex].is_video) {
+            startNewsCarouselAutoplay(); // Reiniciar timer
+        }
     }
 
     function closeNewsCarousel(event) {
@@ -398,6 +505,11 @@
     function closeNewsCarouselDirect() {
         document.getElementById('newsCarouselOverlay').classList.remove('active');
         clearInterval(newsCarouselInterval);
+        const videoElement = document.getElementById('newsCarouselVid');
+        if (videoElement) {
+            videoElement.pause();
+            videoElement.style.display = 'none';
+        }
     }
     
     // Navegación con teclado para carrusel de noticias
@@ -412,9 +524,10 @@
     </script>
 
     <!-- Modal para maximizar banners -->
-    <div id="bannerModal" style="display:none; position:fixed; z-index:99999; left:0; top:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.9); align-items:center; justify-content:center; cursor:zoom-out;" onclick="this.style.display='none'">
-        <span style="position:absolute; top:20px; right:40px; color:white; font-size:40px; font-weight:bold; cursor:pointer;">&times;</span>
-        <img id="bannerModalImg" src="" style="width: 80vw; height: 80vh; max-width: 900px; object-fit: contain; image-rendering: high-quality; border-radius: 12px; box-shadow: 0 10px 50px rgba(0,0,0,0.8); background: rgba(0,0,0,0.3);">
+    <div id="bannerModal" style="display:none; position:fixed; z-index:99999; left:0; top:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.9); align-items:center; justify-content:center;" onclick="closeBannerModal()">
+        <span style="position:absolute; top:20px; right:40px; color:white; font-size:40px; font-weight:bold; cursor:pointer;" onclick="closeBannerModal()">&times;</span>
+        <img id="bannerModalImg" src="" style="display:none; width: 80vw; height: 80vh; max-width: 900px; object-fit: contain; image-rendering: high-quality; border-radius: 12px; box-shadow: 0 10px 50px rgba(0,0,0,0.8); background: rgba(0,0,0,0.3);">
+        <video id="bannerModalVid" src="" style="display:none; width: 80vw; height: 80vh; max-width: 900px; object-fit: contain; border-radius: 12px; box-shadow: 0 10px 50px rgba(0,0,0,0.8); background: rgba(0,0,0,0.3);" controls autoplay onclick="event.stopPropagation()"></video>
     </div>
 
     <!-- PROTECCION ANTI-COPIA DE IMAGENES -->

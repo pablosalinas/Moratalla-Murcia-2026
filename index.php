@@ -44,8 +44,18 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
                         <span class="news-badge <?php echo $isEvent ? 'event' : ''; ?>">
                             <?php echo $isEvent ? '<i class="fas fa-calendar-alt"></i> Evento' : '<i class="fas fa-newspaper"></i> Noticia'; ?>
                         </span>
-                        <?php if ($news['image_path']): ?>
-                            <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                        <?php if ($news['image_path']): 
+                            $newsExt = strtolower(pathinfo($news['image_path'], PATHINFO_EXTENSION));
+                            $newsIsVideo = in_array($newsExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                        ?>
+                            <?php if ($newsIsVideo): ?>
+                                <div style="position:relative; width:100%; height:100%; overflow:hidden;">
+                                    <video src="<?php echo htmlspecialchars($news['image_path']); ?>" class="news-card-img" style="object-fit: cover; width: 100%; height: 100%; background: #000;" autoplay loop muted playsinline></video>
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2rem; opacity: 0.8; text-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
+                                </div>
+                            <?php else: ?>
+                                <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                            <?php endif; ?>
                         <?php else: ?>
                             <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.2);">
                                 <i class="<?php echo $isEvent ? 'fas fa-calendar-alt' : 'fas fa-newspaper'; ?>" style="font-size: 4rem;"></i>

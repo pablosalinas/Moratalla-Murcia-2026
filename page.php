@@ -112,14 +112,22 @@ if ($isSinglePageCategory) {
                                 $imageData = base64_encode(file_get_contents($fullPath));
                                 $displaySrc = 'data:image/jpeg;base64,' . $imageData;
                             }
+                            
+                            $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+                            $isVideo = (isset($img['is_video']) && $img['is_video'] == 1) || in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
                         ?>
-                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-caption="<?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
-                                <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
+                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-is-video="<?php echo $isVideo ? '1' : '0'; ?>" data-caption="<?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
+                                <?php if ($isVideo): ?>
+                                    <video src="<?php echo $fullPath; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block; background: #000;" preload="metadata"></video>
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
+                                <?php else: ?>
+                                    <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
+                                <?php endif; ?>
                                 <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
                                     <?php if (!empty($img['caption'])): ?>
                                         <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><?php echo htmlspecialchars($img['caption']); ?></strong>
                                     <?php endif; ?>
-                                    <i class="fas fa-search-plus"></i> Ampliar obra
+                                    <i class="fas fa-search-plus"></i> <?php echo $isVideo ? 'Reproducir vídeo' : 'Ampliar obra'; ?>
                                 </div>
                             </a>
                         <?php endforeach; ?>
@@ -165,9 +173,10 @@ if ($isSinglePageCategory) {
     <button id="prev-img" class="nav-btn" style="left: 2rem;"><i class="fas fa-chevron-left"></i></button>
     <button id="next-img" class="nav-btn" style="right: 2rem;"><i class="fas fa-chevron-right"></i></button>
 
-    <!-- Imagen Principal -->
-    <div style="max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative;">
+    <!-- Imagen / Vídeo Principal -->
+    <div style="max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; width: 100%;">
         <img id="lightbox-img" src="" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); transition: opacity 0.3s ease;">
+        <video id="lightbox-video" src="" style="display: none; max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7); transition: opacity 0.3s ease; background: #000;" controls preload="metadata"></video>
         <div id="lightbox-caption" style="color: white; margin-top: 1.5rem; font-size: 1.2rem; text-align: center; max-width: 800px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); min-height: 2rem;"></div>
     </div>
     
@@ -245,7 +254,8 @@ if ($isSinglePageCategory) {
     // Extraer todas las rutas de imágenes y descripciones
     const galleryItems = Array.from(links).map(link => ({
         src: link.getAttribute('href'),
-        caption: link.getAttribute('data-caption')
+        caption: link.getAttribute('data-caption'),
+        isVideo: link.getAttribute('data-is-video') === '1'
     }));
     let currentIndex = 0;
     let autoPlayInterval;
@@ -255,23 +265,58 @@ if ($isSinglePageCategory) {
         if (index >= galleryItems.length) index = 0;
         
         currentIndex = index;
-        lightboxImg.style.opacity = 0; // Efecto de parpadeo suave
+        const item = galleryItems[currentIndex];
+        const img = document.getElementById('lightbox-img');
+        const vid = document.getElementById('lightbox-video');
         
-        setTimeout(() => {
-            lightboxImg.src = galleryItems[currentIndex].src;
-            document.getElementById('lightbox-caption').textContent = galleryItems[currentIndex].caption;
-            lightboxImg.style.opacity = 1;
-        }, 150);
+        if (item.isVideo) {
+            clearInterval(autoPlayInterval); // Detener autoplay si es un vídeo
+        }
+        
+        if (item.isVideo) {
+            if (img) img.style.display = 'none';
+            if (vid) {
+                vid.src = item.src;
+                vid.style.display = 'block';
+                vid.style.opacity = 0;
+                vid.autoplay = true;
+                vid.load();
+            }
+            setTimeout(() => {
+                if (vid) vid.style.opacity = 1;
+                document.getElementById('lightbox-caption').textContent = item.caption;
+            }, 150);
+        } else {
+            if (vid) {
+                vid.pause();
+                vid.style.display = 'none';
+            }
+            if (img) {
+                img.style.display = 'block';
+                img.style.opacity = 0;
+            }
+            setTimeout(() => {
+                if (img) {
+                    img.src = item.src;
+                    img.style.opacity = 1;
+                }
+                document.getElementById('lightbox-caption').textContent = item.caption;
+            }, 150);
+        }
     }
 
     function nextImage() {
         showImage(currentIndex + 1);
-        resetAutoPlay();
+        if (!galleryItems[currentIndex].isVideo) {
+            resetAutoPlay();
+        }
     }
 
     function prevImage() {
         showImage(currentIndex - 1);
-        resetAutoPlay();
+        if (!galleryItems[currentIndex].isVideo) {
+            resetAutoPlay();
+        }
     }
 
     function startAutoPlay() {
@@ -293,7 +338,9 @@ if ($isSinglePageCategory) {
             lightbox.style.display = 'flex';
             document.body.style.overflow = 'hidden'; 
             showImage(idx);
-            startAutoPlay();
+            if (!galleryItems[idx].isVideo) {
+                startAutoPlay();
+            }
         });
     });
 
@@ -313,7 +360,6 @@ if ($isSinglePageCategory) {
     // Cerrar el lightbox
     closeBtn.addEventListener('click', closeLightbox);
     lightbox.addEventListener('click', function(e) {
-        // Cerrar si hace clic fuera de la imagen y de los botones
         if(e.target === lightbox) {
             closeLightbox();
         }
@@ -323,6 +369,11 @@ if ($isSinglePageCategory) {
         lightbox.style.display = 'none';
         document.body.style.overflow = '';
         clearInterval(autoPlayInterval);
+        const vid = document.getElementById('lightbox-video');
+        if (vid) {
+            vid.pause();
+            vid.style.display = 'none';
+        }
     }
 </script>
 
