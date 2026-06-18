@@ -216,3 +216,49 @@ REPLACE INTO `quotes` (`id`, `phrase`, `author`) VALU...' at line 1
 [2026-06-18 23:28:43] [✓] 084_add_email_restaurantes.sql — OK.
 [2026-06-18 23:28:43] --------------------------------------------------
 [2026-06-18 23:28:43] Finalizado. Éxitos: 9 | Errores: 2
+[2026-06-18 23:34:49] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:34:49] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:34:49] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:34:49] [>>] Ejecutando: 085_create_alojamientos.sql ...
+[2026-06-18 23:34:49] [✓] 085_create_alojamientos.sql — OK.
+[2026-06-18 23:34:49] [>>] Ejecutando: 086_data_alojamientos.sql ...
+[2026-06-18 23:34:49] [✗] ERROR en 086_data_alojamientos.sql: SQLSTATE[42000]: Syntax error or access violation: 1701 Cannot truncate a table referenced in a foreign key constraint (`moratalla_web_2026`.`alojamiento_images`, CONSTRAINT `alojamiento_images_ibfk_1` FOREIGN KEY (`alojamiento_id`) REFERENCES `moratalla_web_2026`.`alojamientos` (`id`))
+[2026-06-18 23:34:49] --------------------------------------------------
+[2026-06-18 23:34:49] Finalizado. Éxitos: 1 | Errores: 1
+[2026-06-18 23:35:18] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:35:18] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:35:18] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:35:18] [>>] Ejecutando: 086_data_alojamientos.sql ...
+[2026-06-18 23:35:18] [✓] 086_data_alojamientos.sql — OK.
+[2026-06-18 23:35:18] --------------------------------------------------
+[2026-06-18 23:35:18] Finalizado. Éxitos: 1 | Errores: 0
+[2026-06-18 23:35:59] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:35:59] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:35:59] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:35:59] [>>] Ejecutando: 087_add_email_restaurantes.sql ...
+[2026-06-18 23:35:59] [✗] ERROR en 087_add_email_restaurantes.sql: SQLSTATE[42S21]: Column already exists: 1060 Duplicate column name 'email'
+[2026-06-18 23:35:59] --------------------------------------------------
+[2026-06-18 23:35:59] Finalizado. Éxitos: 0 | Errores: 1
+[2026-06-18 23:36:16] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:36:16] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:36:16] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:36:16] [>>] Ejecutando: 087_add_email_restaurantes.sql ...
+[2026-06-18 23:36:16] [✗] ERROR en 087_add_email_restaurantes.sql: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'DELIMITER //
+CREATE PROCEDURE add_email_col()
+BEGIN
+    IF NOT EXISTS (
+     ...' at line 1
+[2026-06-18 23:36:16] --------------------------------------------------
+[2026-06-18 23:36:16] Finalizado. Éxitos: 0 | Errores: 1
+[2026-06-18 23:36:34] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:36:34] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:36:34] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:36:34] --------------------------------------------------
+[2026-06-18 23:36:34] Sin cambios pendientes.
+[2026-06-18 23:45:12] === INICIANDO RUNNER DE MIGRACIONES ===
+[2026-06-18 23:45:12] [!] Omitiendo 074_restore_quotes_data.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:45:12] [!] Omitiendo 076_add_news_captions.sql porque falló anteriormente. Corrígelo o bórralo de _migrations.
+[2026-06-18 23:45:12] [>>] Ejecutando: 088_setup_tourism_categories.sql ...
+[2026-06-18 23:45:12] [✓] 088_setup_tourism_categories.sql — OK.
+[2026-06-18 23:45:12] --------------------------------------------------
+[2026-06-18 23:45:12] Finalizado. Éxitos: 1 | Errores: 0

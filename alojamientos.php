@@ -1,31 +1,30 @@
 <?php
-// restaurantes.php - Página pública de Bares y Restaurantes de Moratalla
+// alojamientos.php - Página pública de Alojamientos de Moratalla
 require_once 'config.php';
 $pdo = getDB();
 
 // --- API interna para AJAX de galerías ---
 if (isset($_GET['api']) && $_GET['api'] === 'galeria' && isset($_GET['id'])) {
-    $rid = (int)$_GET['id'];
-    $nombre = $pdo->prepare("SELECT nombre FROM restaurantes WHERE id = ? AND is_visible = 1");
-    $nombre->execute([$rid]);
-    $restauranteNombre = $nombre->fetchColumn();
+    $aid = (int)$_GET['id'];
+    $nombre = $pdo->prepare("SELECT nombre FROM alojamientos WHERE id = ? AND is_visible = 1");
+    $nombre->execute([$aid]);
+    $alojamientoNombre = $nombre->fetchColumn();
 
-    $imgs = $pdo->prepare("SELECT image_path, caption FROM restaurante_images WHERE restaurante_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
-    $imgs->execute([$rid]);
+    $imgs = $pdo->prepare("SELECT image_path, caption FROM alojamiento_images WHERE alojamiento_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
+    $imgs->execute([$aid]);
     $result = $imgs->fetchAll();
-    $out = array_map(fn($i) => ['src' => $i['image_path'], 'caption' => $i['caption'], 'nombre' => $restauranteNombre], $result);
+    $out = array_map(fn($i) => ['src' => $i['image_path'], 'caption' => $i['caption'], 'nombre' => $alojamientoNombre], $result);
     header('Content-Type: application/json');
     echo json_encode($out);
     exit;
 }
 
 // Conteo de visitas global (sesión)
-if (!isset($_SESSION['visited_restaurantes'])) {
-    $_SESSION['visited_restaurantes'] = false;
+if (!isset($_SESSION['visited_alojamientos'])) {
+    $_SESSION['visited_alojamientos'] = false;
 }
-if (!$_SESSION['visited_restaurantes']) {
-    // Podría integrarse con una tabla de stats si procede
-    $_SESSION['visited_restaurantes'] = true;
+if (!$_SESSION['visited_alojamientos']) {
+    $_SESSION['visited_alojamientos'] = true;
 }
 
 // Filtros opcionales
@@ -33,15 +32,15 @@ $filtro_poblacion = isset($_GET['poblacion']) ? trim($_GET['poblacion']) : '';
 $filtro_buscar    = isset($_GET['buscar'])    ? trim($_GET['buscar'])    : '';
 
 // Obtener listado
-$where = ['r.is_visible = 1'];
+$where = ['a.is_visible = 1'];
 $params = [];
 
 if ($filtro_poblacion) {
-    $where[] = 'r.poblacion = ?';
+    $where[] = 'a.poblacion = ?';
     $params[] = $filtro_poblacion;
 }
 if ($filtro_buscar) {
-    $where[] = '(r.nombre LIKE ? OR r.calle LIKE ? OR r.poblacion LIKE ?)';
+    $where[] = '(a.nombre LIKE ? OR a.calle LIKE ? OR a.poblacion LIKE ?)';
     $params[] = '%' . $filtro_buscar . '%';
     $params[] = '%' . $filtro_buscar . '%';
     $params[] = '%' . $filtro_buscar . '%';
@@ -50,34 +49,34 @@ if ($filtro_buscar) {
 $whereSQL = count($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $stmt = $pdo->prepare("
-    SELECT r.*,
-           (SELECT image_path FROM restaurante_images ri WHERE ri.restaurante_id = r.id AND ri.is_cover = 1 AND ri.is_visible = 1 LIMIT 1) as cover_image,
-           (SELECT COUNT(*) FROM restaurante_images ri2 WHERE ri2.restaurante_id = r.id AND ri2.is_visible = 1) as total_images
-    FROM restaurantes r
+    SELECT a.*,
+           (SELECT image_path FROM alojamiento_images ai WHERE ai.alojamiento_id = a.id AND ai.is_cover = 1 AND ai.is_visible = 1 LIMIT 1) as cover_image,
+           (SELECT COUNT(*) FROM alojamiento_images ai2 WHERE ai2.alojamiento_id = a.id AND ai2.is_visible = 1) as total_images
+    FROM alojamientos a
     $whereSQL
-    ORDER BY r.sort_order ASC, r.nombre ASC
+    ORDER BY a.sort_order ASC, a.nombre ASC
 ");
 $stmt->execute($params);
-$restaurantes = $stmt->fetchAll();
+$alojamientos = $stmt->fetchAll();
 
 // Obtener poblaciones únicas para el filtro
-$poblaciones = $pdo->query("SELECT DISTINCT poblacion FROM restaurantes WHERE is_visible = 1 ORDER BY poblacion ASC")->fetchAll(PDO::FETCH_COLUMN);
+$poblaciones = $pdo->query("SELECT DISTINCT poblacion FROM alojamientos WHERE is_visible = 1 ORDER BY poblacion ASC")->fetchAll(PDO::FETCH_COLUMN);
 
 // SEO
-$pageTitle = 'Bares y Restaurantes de Moratalla';
-$pageDescription = 'Directorio completo de bares, restaurantes, tabernas y mesones del municipio de Moratalla y sus pedanías. Encuentra dónde comer en Moratalla, Murcia.';
+$pageTitle = 'Dónde Dormir - Alojamientos en Moratalla';
+$pageDescription = 'Encuentra casas rurales, hostales, hoteles y campings en Moratalla y sus pedanías. Disfruta de una estancia inolvidable en el corazón de la naturaleza.';
 
 require_once 'inc/header.php';
 ?>
 
 <!-- HERO -->
-<section class="hero-page" style="background: linear-gradient(135deg, rgba(27,67,50,0.85) 0%, rgba(8,28,21,0.95) 100%), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding: 3rem 0; text-align: center; color: white; border-bottom: 4px solid var(--accent);">
+<section class="hero-page" style="background: linear-gradient(135deg, rgba(27,67,50,0.85) 0%, rgba(8,28,21,0.95) 100%), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding: 3rem 0; text-align: center; color: white; border-bottom: 4px solid var(--accent); margin-bottom: 0;">
     <div class="container">
         <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 1.5rem 3rem; border-radius: 15px; display: inline-block; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-            <p style="opacity: 0.9; margin-bottom: 0.3rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-utensils" style="color: var(--accent);"></i> Buen Apetito</p>
-            <h1 style="color: white; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;">Bares y Restaurantes</h1>
+            <p style="opacity: 0.9; margin-bottom: 0.3rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-bed" style="color: var(--accent);"></i> Dónde Dormir</p>
+            <h1 style="color: white; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;">Alojamientos</h1>
             <p style="color: rgba(255,255,255,0.8); margin-top: 0.5rem; font-size: 1rem;">
-                <?php echo count($restaurantes); ?> establecimientos en Moratalla y sus pedanías
+                <?php echo count($alojamientos); ?> opciones de alojamiento en Moratalla y sus pedanías
             </p>
         </div>
     </div>
@@ -107,12 +106,12 @@ require_once 'inc/header.php';
 <!-- FILTROS -->
 <div class="container" style="margin-top: 1.5rem;">
     <div style="background: white; border-radius: 14px; padding: 1.5rem 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
-        <form method="GET" action="restaurantes.php" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%; align-items: flex-end;">
+        <form method="GET" action="alojamientos.php" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%; align-items: flex-end;">
             <div style="flex: 1; min-width: 200px;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #555; display: block; margin-bottom: 0.4rem;">
                     <i class="fas fa-search"></i> Buscar
                 </label>
-                <input type="text" name="buscar" value="<?php echo htmlspecialchars($filtro_buscar); ?>" placeholder="Nombre, dirección..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                <input type="text" name="buscar" value="<?php echo htmlspecialchars($filtro_buscar); ?>" placeholder="Nombre, pedanía, dirección..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
             </div>
             <div style="min-width: 180px;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #555; display: block; margin-bottom: 0.4rem;">
@@ -132,7 +131,7 @@ require_once 'inc/header.php';
                     <i class="fas fa-filter"></i> Filtrar
                 </button>
                 <?php if ($filtro_poblacion || $filtro_buscar): ?>
-                    <a href="restaurantes.php" style="padding: 0.75rem 1.2rem; background: #f3f4f6; color: #555; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                    <a href="alojamientos.php" style="padding: 0.75rem 1.2rem; background: #f3f4f6; color: #555; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
                         <i class="fas fa-times"></i> Limpiar
                     </a>
                 <?php endif; ?>
@@ -144,48 +143,48 @@ require_once 'inc/header.php';
 <!-- LISTADO -->
 <div class="container" style="margin-top: 2rem; padding-bottom: 4rem;">
 
-    <?php if (count($restaurantes) === 0): ?>
+    <?php if (count($alojamientos) === 0): ?>
         <div style="text-align: center; padding: 4rem 2rem; color: #888;">
             <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 1rem; display: block; color: #ccc;"></i>
-            <h3 style="margin-bottom: 0.5rem;">No se encontraron establecimientos</h3>
+            <h3 style="margin-bottom: 0.5rem;">No se encontraron alojamientos</h3>
             <p>Prueba a cambiar los filtros de búsqueda.</p>
-            <a href="restaurantes.php" class="btn-nav btn-nav-back" style="margin-top: 1rem;">Ver todos</a>
+            <a href="alojamientos.php" class="btn-nav btn-nav-back" style="margin-top: 1rem;">Ver todos</a>
         </div>
     <?php else: ?>
 
     <!-- Grid de tarjetas -->
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem;">
 
-        <?php foreach ($restaurantes as $r):
-            $cover = $r['cover_image'] ?? null;
-            $tel1  = $r['telefono1'] ?? null;
-            $tel2  = $r['telefono2'] ?? null;
+        <?php foreach ($alojamientos as $a):
+            $cover = $a['cover_image'] ?? null;
+            $tel1  = $a['telefono1'] ?? null;
+            $tel2  = $a['telefono2'] ?? null;
         ?>
 
-        <div class="rest-card" id="rest-<?php echo $r['id']; ?>" style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 3px 16px rgba(0,0,0,0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column;">
+        <div class="rest-card" id="aloj-<?php echo $a['id']; ?>" style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 3px 16px rgba(0,0,0,0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column;">
 
             <!-- Portada / Cabecera -->
-            <div style="position: relative; height: 180px; background: linear-gradient(135deg, #1b4332, #081c15); overflow: hidden; cursor: <?php echo ($r['total_images'] > 0 ? 'pointer' : 'default'); ?>;"
-                 <?php if ($r['total_images'] > 0): ?>onclick="abrirGaleria(<?php echo $r['id']; ?>)" title="Ver galería de fotos"<?php endif; ?>>
+            <div style="position: relative; height: 180px; background: linear-gradient(135deg, #1b4332, #081c15); overflow: hidden; cursor: <?php echo ($a['total_images'] > 0 ? 'pointer' : 'default'); ?>;"
+                 <?php if ($a['total_images'] > 0): ?>onclick="abrirGaleria(<?php echo $a['id']; ?>)" title="Ver galería de fotos"<?php endif; ?>>
                 <?php if ($cover): ?>
-                    <img src="<?php echo htmlspecialchars($cover); ?>" alt="<?php echo htmlspecialchars($r['nombre']); ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" class="rest-cover-img">
+                    <img src="<?php echo htmlspecialchars($cover); ?>" alt="<?php echo htmlspecialchars($a['nombre']); ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" class="rest-cover-img">
                 <?php else: ?>
                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-utensils" style="font-size: 3.5rem; color: rgba(255,255,255,0.2);"></i>
+                        <i class="fas fa-hotel" style="font-size: 3.5rem; color: rgba(255,255,255,0.2);"></i>
                     </div>
                 <?php endif; ?>
 
                 <!-- Badge pedanía -->
-                <?php if ($r['es_pedania']): ?>
+                <?php if ($a['es_pedania']): ?>
                 <span style="position: absolute; top: 12px; left: 12px; background: var(--accent); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
                     <i class="fas fa-map-marker-alt"></i> Pedanía
                 </span>
                 <?php endif; ?>
 
                 <!-- Badge fotos -->
-                <?php if ($r['total_images'] > 0): ?>
+                <?php if ($a['total_images'] > 0): ?>
                 <span style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(4px);">
-                    <i class="fas fa-camera"></i> <?php echo $r['total_images']; ?> fotos
+                    <i class="fas fa-camera"></i> <?php echo $a['total_images']; ?> fotos
                 </span>
                 <?php endif; ?>
             </div>
@@ -193,21 +192,21 @@ require_once 'inc/header.php';
             <!-- Cuerpo -->
             <div style="padding: 1.25rem 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 0.7rem;">
                 <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin: 0; line-height: 1.3;">
-                    <?php echo htmlspecialchars($r['nombre']); ?>
+                    <?php echo htmlspecialchars($a['nombre']); ?>
                 </h2>
 
                 <!-- Localización -->
                 <div style="display: flex; align-items: flex-start; gap: 0.5rem; color: #555; font-size: 0.9rem;">
                     <i class="fas fa-map-marker-alt" style="color: var(--accent); margin-top: 2px; flex-shrink: 0;"></i>
                     <span>
-                        <?php if ($r['calle']): ?><?php echo htmlspecialchars($r['calle']); ?><br><?php endif; ?>
-                        <strong><?php echo htmlspecialchars($r['poblacion']); ?></strong>
-                        <?php if ($r['codigo_postal']): ?> · CP <?php echo htmlspecialchars($r['codigo_postal']); ?><?php endif; ?>
+                        <?php if ($a['calle']): ?><?php echo htmlspecialchars($a['calle']); ?><br><?php endif; ?>
+                        <strong><?php echo htmlspecialchars($a['poblacion']); ?></strong>
+                        <?php if ($a['codigo_postal']): ?> · CP <?php echo htmlspecialchars($a['codigo_postal']); ?><?php endif; ?>
                     </span>
                 </div>
 
                 <!-- Teléfonos y Email -->
-                <?php if ($tel1 || !empty($r['email'])): ?>
+                <?php if ($tel1 || !empty($a['email'])): ?>
                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem; align-items: center;">
                     <?php if ($tel1): ?>
                     <a href="tel:<?php echo preg_replace('/\s/', '', $tel1); ?>" style="color: #1b4332; text-decoration: none; font-weight: 600;">
@@ -220,20 +219,20 @@ require_once 'inc/header.php';
                     <?php endif; ?>
                     <?php endif; ?>
 
-                    <?php if (!empty($r['email'])): ?>
+                    <?php if (!empty($a['email'])): ?>
                         <?php if ($tel1): ?><span style="color: #ccc;">|</span><?php endif; ?>
-                        <a href="mailto:<?php echo htmlspecialchars($r['email']); ?>" style="color: #1b4332; text-decoration: none; font-weight: 600;" title="Enviar correo electrónico">
-                            <i class="fas fa-envelope" style="color: var(--accent);"></i> <?php echo htmlspecialchars($r['email']); ?>
+                        <a href="mailto:<?php echo htmlspecialchars($a['email']); ?>" style="color: #1b4332; text-decoration: none; font-weight: 600;" title="Enviar correo electrónico">
+                            <i class="fas fa-envelope" style="color: var(--accent);"></i> <?php echo htmlspecialchars($a['email']); ?>
                         </a>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
 
                 <!-- Descripción (si tiene) -->
-                <?php if (!empty($r['descripcion'])): ?>
+                <?php if (!empty($a['descripcion'])): ?>
                 <p style="font-size: 0.88rem; color: #666; line-height: 1.5; margin: 0; flex: 1;">
-                    <?php echo nl2br(htmlspecialchars(mb_substr($r['descripcion'], 0, 180))); ?>
-                    <?php echo mb_strlen($r['descripcion']) > 180 ? '...' : ''; ?>
+                    <?php echo nl2br(htmlspecialchars(mb_substr($a['descripcion'], 0, 180))); ?>
+                    <?php echo mb_strlen($a['descripcion']) > 180 ? '...' : ''; ?>
                 </p>
                 <?php endif; ?>
 
@@ -243,32 +242,32 @@ require_once 'inc/header.php';
                 <!-- Botones de acción -->
                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #f0f0f0;">
 
-                    <?php if ($r['gmap_url']): ?>
-                    <a href="<?php echo htmlspecialchars($r['gmap_url']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-map" title="Ver en Google Maps">
+                    <?php if ($a['gmap_url']): ?>
+                    <a href="<?php echo htmlspecialchars($a['gmap_url']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-map" title="Ver en Google Maps">
                         <i class="fas fa-map-marked-alt"></i> Mapa
                     </a>
                     <?php endif; ?>
 
-                    <?php if ($r['web']): ?>
-                    <a href="<?php echo htmlspecialchars($r['web']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-web" title="Visitar web oficial">
+                    <?php if ($a['web']): ?>
+                    <a href="<?php echo htmlspecialchars($a['web']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-web" title="Visitar web oficial">
                         <i class="fas fa-globe"></i> Web
                     </a>
                     <?php endif; ?>
 
-                    <?php if ($r['facebook']): ?>
-                    <a href="<?php echo htmlspecialchars($r['facebook']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-fb" title="Ver en Facebook">
+                    <?php if ($a['facebook']): ?>
+                    <a href="<?php echo htmlspecialchars($a['facebook']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-fb" title="Ver en Facebook">
                         <i class="fab fa-facebook"></i> Facebook
                     </a>
                     <?php endif; ?>
 
-                    <?php if ($r['tripadvisor']): ?>
-                    <a href="<?php echo htmlspecialchars($r['tripadvisor']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-ta" title="Ver en TripAdvisor">
+                    <?php if ($a['tripadvisor']): ?>
+                    <a href="<?php echo htmlspecialchars($a['tripadvisor']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-ta" title="Ver en TripAdvisor">
                         <i class="fas fa-star"></i> TripAdvisor
                     </a>
                     <?php endif; ?>
 
-                    <?php if ($r['total_images'] > 0): ?>
-                    <button onclick="abrirGaleria(<?php echo $r['id']; ?>)" class="rest-btn rest-btn-gallery" title="Ver galería de fotos">
+                    <?php if ($a['total_images'] > 0): ?>
+                    <button onclick="abrirGaleria(<?php echo $a['id']; ?>)" class="rest-btn rest-btn-gallery" title="Ver galería de fotos">
                         <i class="fas fa-images"></i> Fotos
                     </button>
                     <?php endif; ?>
@@ -345,7 +344,7 @@ let galeriaTimer = null;
 async function abrirGaleria(id) {
     if (!galerias[id]) {
         // Cargar imágenes por AJAX
-        const resp = await fetch('restaurantes.php?api=galeria&id=' + id);
+        const resp = await fetch('alojamientos.php?api=galeria&id=' + id);
         const data = await resp.json();
         galerias[id] = data;
     }
@@ -359,24 +358,21 @@ async function abrirGaleria(id) {
 
 function cerrarGaleria() {
     document.getElementById('galeria-modal').style.display = 'none';
-    document.body.style.overflow = '';
-    clearInterval(galeriaTimer);
+    document.body.style.overflow = 'auto';
     galeriaActual = null;
+    clearInterval(galeriaTimer);
 }
 
 function mostrarImagen() {
     const items = galerias[galeriaActual];
     if (!items || items.length === 0) return;
     const item = items[galeriaIdx];
+    
     const img = document.getElementById('galeria-img');
-    img.style.opacity = 0;
-    setTimeout(() => {
-        img.src = item.src;
-        document.getElementById('galeria-caption').textContent = item.caption || '';
-        document.getElementById('galeria-counter').textContent = (galeriaIdx + 1) + ' / ' + items.length;
-        document.getElementById('galeria-titulo').textContent = item.nombre || '';
-        img.style.opacity = 1;
-    }, 150);
+    img.src = item.src;
+    document.getElementById('galeria-titulo').innerText = item.nombre;
+    document.getElementById('galeria-caption').innerText = item.caption || '';
+    document.getElementById('galeria-counter').innerText = (galeriaIdx + 1) + ' de ' + items.length;
 }
 
 function galeriaNav(dir) {

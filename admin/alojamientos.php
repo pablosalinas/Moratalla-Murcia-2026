@@ -1,5 +1,5 @@
 <?php
-// admin/restaurantes.php - Panel de administración de Bares y Restaurantes
+// admin/alojamientos.php - Panel de administración de Alojamientos
 require_once 'inc/auth.php';
 checkAuth();
 require_once '../config.php';
@@ -12,18 +12,15 @@ $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 // ─── TOGGLE VISIBILIDAD RÁPIDA (AJAX) ─────────────────────────────────────
 if ($action === 'toggle_visible' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
-    $pdo->prepare("UPDATE restaurantes SET is_visible = 1 - is_visible WHERE id = ?")->execute([$id]);
-    $row = $pdo->prepare("SELECT is_visible FROM restaurantes WHERE id = ?")->execute([$id]);
-    $vis = $pdo->prepare("SELECT is_visible FROM restaurantes WHERE id = ?")->execute([$id]);
-    $pdo->prepare("SELECT is_visible FROM restaurantes WHERE id = ?")->execute([$id]);
-    $stmt2 = $pdo->prepare("SELECT is_visible FROM restaurantes WHERE id = ?"); $stmt2->execute([$id]);
+    $pdo->prepare("UPDATE alojamientos SET is_visible = 1 - is_visible WHERE id = ?")->execute([$id]);
+    $stmt2 = $pdo->prepare("SELECT is_visible FROM alojamientos WHERE id = ?"); $stmt2->execute([$id]);
     $v = $stmt2->fetchColumn();
     header('Content-Type: application/json');
     echo json_encode(['visible' => (int)$v]);
     exit;
 }
 
-// ─── GUARDAR / ACTUALIZAR RESTAURANTE ─────────────────────────────────────
+// ─── GUARDAR / ACTUALIZAR ALOJAMIENTO ─────────────────────────────────────
 if ($action === 'save') {
     $id          = isset($_POST['id'])          ? (int)$_POST['id']                     : 0;
     $nombre      = trim($_POST['nombre']     ?? '');
@@ -46,16 +43,16 @@ if ($action === 'save') {
 
     if ($id) {
         $pdo->prepare("
-            UPDATE restaurantes SET nombre=?, calle=?, poblacion=?, es_pedania=?, municipio=?, provincia=?,
+            UPDATE alojamientos SET nombre=?, calle=?, poblacion=?, es_pedania=?, municipio=?, provincia=?,
             codigo_postal=?, telefono1=?, telefono2=?, email=?, web=?, facebook=?, tripadvisor=?, gmap_url=?,
             descripcion=?, sort_order=?, is_visible=? WHERE id=?
         ")->execute([$nombre, $calle, $poblacion, $es_pedania, $municipio, $provincia, $cp,
                      $tel1, $tel2, $email ?: null, $web ?: null, $facebook ?: null, $tripadvisor ?: null, $gmap_url ?: null,
                      $descripcion ?: null, $sort_order, $is_visible, $id]);
-        $msg = "Restaurante actualizado correctamente.";
+        $msg = "Alojamiento actualizado correctamente.";
     } else {
         $pdo->prepare("
-            INSERT INTO restaurantes (nombre, calle, poblacion, es_pedania, municipio, provincia,
+            INSERT INTO alojamientos (nombre, calle, poblacion, es_pedania, municipio, provincia,
             codigo_postal, telefono1, telefono2, email, web, facebook, tripadvisor, gmap_url,
             descripcion, sort_order, is_visible)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -63,35 +60,35 @@ if ($action === 'save') {
                      $tel1, $tel2, $email ?: null, $web ?: null, $facebook ?: null, $tripadvisor ?: null, $gmap_url ?: null,
                      $descripcion ?: null, $sort_order, $is_visible]);
         $id = $pdo->lastInsertId();
-        $msg = "Restaurante creado correctamente.";
+        $msg = "Alojamiento creado correctamente.";
     }
 
     // Subir foto a galería (si se seleccionó)
     if (isset($_FILES['foto_nueva']) && $_FILES['foto_nueva']['error'] == UPLOAD_ERR_OK) {
-        $uploadDir = '../uploads/restaurantes/';
+        $uploadDir = '../uploads/alojamientos/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-        $filename   = uniqid('rest_') . '_' . basename($_FILES['foto_nueva']['name']);
+        $filename   = uniqid('aloj_') . '_' . basename($_FILES['foto_nueva']['name']);
         $targetFile = $uploadDir . $filename;
         if (processUploadedImage($_FILES['foto_nueva']['tmp_name'], $targetFile, true, 1200, 85)) {
-            $dbPath = 'uploads/restaurantes/' . $filename;
+            $dbPath = 'uploads/alojamientos/' . $filename;
             // ¿Es la primera imagen? Si sí, poner como portada
-            $countImg = $pdo->prepare("SELECT COUNT(*) FROM restaurante_images WHERE restaurante_id=?"); $countImg->execute([$id]);
+            $countImg = $pdo->prepare("SELECT COUNT(*) FROM alojamiento_images WHERE alojamiento_id=?"); $countImg->execute([$id]);
             $esCover  = ($countImg->fetchColumn() == 0) ? 1 : 0;
-            $pdo->prepare("INSERT INTO restaurante_images (restaurante_id, image_path, is_cover, is_visible, sort_order) VALUES (?,?,?,1,0)")
+            $pdo->prepare("INSERT INTO alojamiento_images (alojamiento_id, image_path, is_cover, is_visible, sort_order) VALUES (?,?,?,1,0)")
                 ->execute([$id, $dbPath, $esCover]);
         }
     }
 
-    header("Location: restaurantes.php?action=edit&id=$id&msg=" . urlencode($msg));
+    header("Location: alojamientos.php?action=edit&id=$id&msg=" . urlencode($msg));
     exit;
 }
 
 // ─── GUARDAR GALERÍA ──────────────────────────────────────────────────────
 if ($action === 'save_gallery') {
-    $rid = (int)($_POST['restaurante_id'] ?? 0);
+    $aid = (int)($_POST['alojamiento_id'] ?? 0);
     $imgs_data = $_POST['images'] ?? [];
-    if ($rid) {
-        $stmt = $pdo->prepare("UPDATE restaurante_images SET caption=?, sort_order=?, is_visible=?, is_cover=? WHERE id=? AND restaurante_id=?");
+    if ($aid) {
+        $stmt = $pdo->prepare("UPDATE alojamiento_images SET caption=?, sort_order=?, is_visible=?, is_cover=? WHERE id=? AND alojamiento_id=?");
         foreach ($imgs_data as $img_id => $data) {
             $caption    = $data['caption']    ?? '';
             $sort_order = (int)($data['sort_order'] ?? 0);
@@ -99,46 +96,46 @@ if ($action === 'save_gallery') {
             $is_cover   = isset($data['is_cover'])   ? 1 : 0;
             // Si se marca como portada, desmarcar las demás
             if ($is_cover) {
-                $pdo->prepare("UPDATE restaurante_images SET is_cover=0 WHERE restaurante_id=?")->execute([$rid]);
+                $pdo->prepare("UPDATE alojamiento_images SET is_cover=0 WHERE alojamiento_id=?")->execute([$aid]);
             }
-            $stmt->execute([$caption, $sort_order, $is_visible, $is_cover, (int)$img_id, $rid]);
+            $stmt->execute([$caption, $sort_order, $is_visible, $is_cover, (int)$img_id, $aid]);
         }
     }
-    header("Location: restaurantes.php?action=edit&id=$rid&msg=" . urlencode("Galería actualizada."));
+    header("Location: alojamientos.php?action=edit&id=$aid&msg=" . urlencode("Galería actualizada."));
     exit;
 }
 
 // ─── ELIMINAR IMAGEN ──────────────────────────────────────────────────────
 if ($action === 'delete_img') {
     $img_id = (int)($_GET['img_id'] ?? 0);
-    $rid    = (int)($_GET['rid']    ?? 0);
-    if ($img_id && $rid) {
-        $stmt = $pdo->prepare("SELECT image_path FROM restaurante_images WHERE id=?"); $stmt->execute([$img_id]);
+    $aid    = (int)($_GET['aid']    ?? 0);
+    if ($img_id && $aid) {
+        $stmt = $pdo->prepare("SELECT image_path FROM alojamiento_images WHERE id=?"); $stmt->execute([$img_id]);
         $img  = $stmt->fetch();
         if ($img && !empty($img['image_path']) && is_file('../' . $img['image_path'])) {
             @unlink('../' . $img['image_path']);
         }
-        $pdo->prepare("DELETE FROM restaurante_images WHERE id=?")->execute([$img_id]);
+        $pdo->prepare("DELETE FROM alojamiento_images WHERE id=?")->execute([$img_id]);
     }
-    header("Location: restaurantes.php?action=edit&id=$rid");
+    header("Location: alojamientos.php?action=edit&id=$aid");
     exit;
 }
 
-// ─── ELIMINAR RESTAURANTE ─────────────────────────────────────────────────
+// ─── ELIMINAR ALOJAMIENTO ─────────────────────────────────────────────────
 if ($action === 'delete') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id) {
-        $stmt = $pdo->prepare("SELECT image_path FROM restaurante_images WHERE restaurante_id=?"); $stmt->execute([$id]);
+        $stmt = $pdo->prepare("SELECT image_path FROM alojamiento_images WHERE alojamiento_id=?"); $stmt->execute([$id]);
         foreach ($stmt->fetchAll() as $img) {
             if (!empty($img['image_path']) && is_file('../' . $img['image_path'])) @unlink('../' . $img['image_path']);
         }
-        $pdo->prepare("DELETE FROM restaurantes WHERE id=?")->execute([$id]);
+        $pdo->prepare("DELETE FROM alojamientos WHERE id=?")->execute([$id]);
     }
-    header("Location: restaurantes.php?msg=" . urlencode("Establecimiento eliminado."));
+    header("Location: alojamientos.php?msg=" . urlencode("Alojamiento eliminado."));
     exit;
 }
 
-adminHeader("Bares y Restaurantes");
+adminHeader("Alojamientos");
 ?>
 
 <?php if ($action === 'list'): ?>
@@ -147,9 +144,9 @@ adminHeader("Bares y Restaurantes");
      ════════════════════════════════════════════ -->
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
-        <h3><i class="fas fa-utensils"></i> Bares y Restaurantes</h3>
+        <h3><i class="fas fa-hotel"></i> Alojamientos</h3>
         <div style="display:flex; gap:0.75rem;">
-            <a href="../restaurantes.php" target="_blank" class="btn btn-sm" style="background:#eee;"><i class="fas fa-eye"></i> Ver en web</a>
+            <a href="../alojamientos.php" target="_blank" class="btn btn-sm" style="background:#eee;"><i class="fas fa-eye"></i> Ver en web</a>
             <a href="?action=add" class="btn btn-primary"><i class="fas fa-plus"></i> Añadir Nuevo</a>
         </div>
     </div>
@@ -164,7 +161,7 @@ adminHeader("Bares y Restaurantes");
         <input type="text" id="searchInput" placeholder="Buscar por nombre, población..." style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:6px; font-size:1rem;">
     </div>
 
-    <table id="restTable" style="width:100%; border-collapse:collapse;">
+    <table id="alojTable" style="width:100%; border-collapse:collapse;">
         <thead>
             <tr style="border-bottom:2px solid var(--gray-200); text-align:left;">
                 <th style="padding:0.75rem 1rem;">Nombre</th>
@@ -177,7 +174,7 @@ adminHeader("Bares y Restaurantes");
         </thead>
         <tbody id="tableBody">
         <?php
-        $rows = $pdo->query("SELECT * FROM restaurantes ORDER BY sort_order ASC, nombre ASC")->fetchAll();
+        $rows = $pdo->query("SELECT * FROM alojamientos ORDER BY sort_order ASC, nombre ASC")->fetchAll();
         foreach ($rows as $r):
             $visBadge = $r['is_visible']
                 ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32;font-size:0.75rem;"><i class="fas fa-eye"></i> Visible</span>'
@@ -198,7 +195,7 @@ adminHeader("Bares y Restaurantes");
             </td>
             <td style="white-space:nowrap;">
                 <a href="?action=edit&id=<?php echo $r['id']; ?>" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Editar</a>
-                <a href="?action=delete&id=<?php echo $r['id']; ?>" onclick="return confirm('¿Eliminar este establecimiento y todas sus fotos?');" class="btn btn-sm" style="background:#ef4444;color:white;"><i class="fas fa-trash"></i></a>
+                <a href="?action=delete&id=<?php echo $r['id']; ?>" onclick="return confirm('¿Eliminar este alojamiento y todas sus fotos?');" class="btn btn-sm" style="background:#ef4444;color:white;"><i class="fas fa-trash"></i></a>
             </td>
         </tr>
         <?php endforeach; ?>
@@ -215,7 +212,7 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
 });
 
 async function toggleVisible(id) {
-    const resp = await fetch('restaurantes.php?action=toggle_visible&id=' + id);
+    const resp = await fetch('alojamientos.php?action=toggle_visible&id=' + id);
     const data = await resp.json();
     const btn = document.getElementById('vis-btn-' + id);
     if (data.visible) {
@@ -232,7 +229,7 @@ async function toggleVisible(id) {
           'descripcion'=>'','sort_order'=>0,'is_visible'=>1];
     if ($action === 'edit') {
         $id = (int)$_GET['id'];
-        $stmt = $pdo->prepare("SELECT * FROM restaurantes WHERE id=?"); $stmt->execute([$id]);
+        $stmt = $pdo->prepare("SELECT * FROM alojamientos WHERE id=?"); $stmt->execute([$id]);
         $r = $stmt->fetch();
     }
 ?>
@@ -249,13 +246,13 @@ async function toggleVisible(id) {
 
     <!-- ── Formulario principal ── -->
     <div class="card" style="flex:2; min-width:400px;">
-        <h3><?php echo $action === 'add' ? 'Añadir Establecimiento' : 'Editar: ' . htmlspecialchars($r['nombre']); ?></h3>
+        <h3><?php echo $action === 'add' ? 'Añadir Alojamiento' : 'Editar: ' . htmlspecialchars($r['nombre']); ?></h3>
         <form method="POST" action="?action=save" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                 <div style="grid-column:1/-1;">
-                    <label class="flabel">Nombre del Establecimiento *</label>
+                    <label class="flabel">Nombre del Alojamiento *</label>
                     <input type="text" name="nombre" required value="<?php echo htmlspecialchars($r['nombre']); ?>" class="finput">
                 </div>
                 <div style="grid-column:1/-1;">
@@ -333,9 +330,9 @@ async function toggleVisible(id) {
 
             <div style="display:flex; gap:1rem; flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary" style="font-size:1.05rem; padding:0.9rem 2rem;"><i class="fas fa-save"></i> Guardar</button>
-                <a href="restaurantes.php" class="btn" style="background:var(--gray-200);">Volver al listado</a>
+                <a href="alojamientos.php" class="btn" style="background:var(--gray-200);">Volver al listado</a>
                 <?php if ($action === 'edit'): ?>
-                    <a href="../restaurantes.php" target="_blank" class="btn" style="background:#e8f5e9; color:#2e7d32;"><i class="fas fa-eye"></i> Ver en web</a>
+                    <a href="../alojamientos.php" target="_blank" class="btn" style="background:#e8f5e9; color:#2e7d32;"><i class="fas fa-eye"></i> Ver en web</a>
                 <?php endif; ?>
             </div>
         </form>
@@ -346,10 +343,10 @@ async function toggleVisible(id) {
     <div class="card" style="flex:1; min-width:360px; background:#f9f9f9;">
         <h3><i class="fas fa-images"></i> Galería de Fotos</h3>
         <form method="POST" action="?action=save_gallery">
-            <input type="hidden" name="restaurante_id" value="<?php echo $id; ?>">
+            <input type="hidden" name="alojamiento_id" value="<?php echo $id; ?>">
             <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem;">
                 <?php
-                $iStmt = $pdo->prepare("SELECT * FROM restaurante_images WHERE restaurante_id=? ORDER BY sort_order ASC, id ASC");
+                $iStmt = $pdo->prepare("SELECT * FROM alojamiento_images WHERE alojamiento_id=? ORDER BY sort_order ASC, id ASC");
                 $iStmt->execute([$id]);
                 $images = $iStmt->fetchAll();
                 if (count($images) === 0) {
@@ -387,7 +384,7 @@ async function toggleVisible(id) {
                         <input type="text" name="images[<?php echo $img['id']; ?>][caption]" value="<?php echo htmlspecialchars($img['caption'] ?? ''); ?>" style="width:100%; padding:0.35rem; border:1px solid #ccc; border-radius:4px; font-size:0.88rem;" placeholder="Descripción...">
                     </div>
                     <div style="text-align:right; padding-top:0.4rem; border-top:1px solid #f0f0f0;">
-                        <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&rid=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto definitivamente?');" style="color:#d32f2f; font-size:0.82rem; font-weight:600; text-decoration:none;">
+                        <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&aid=<?php echo $id; ?>" onclick="return confirm('¿Eliminar esta foto definitivamente?');" style="color:#d32f2f; font-size:0.82rem; font-weight:600; text-decoration:none;">
                             <i class="fas fa-trash"></i> Eliminar foto
                         </a>
                     </div>

@@ -18,6 +18,12 @@ if (mb_stripos($category['name'], 'bares') !== false || mb_stripos($category['na
     exit;
 }
 
+// Redirección especial: Alojamientos → página dedicada
+if (mb_stripos($category['name'], 'alojamiento') !== false || mb_stripos($category['name'], 'dormir') !== false) {
+    header("Location: alojamientos.php");
+    exit;
+}
+
 
 // Buscamos subcategorías
 $stmtSub = $pdo->prepare("SELECT * FROM categories WHERE parent_id = ? AND is_visible = 1 ORDER BY sort_order ASC, name ASC");

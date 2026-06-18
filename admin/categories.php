@@ -134,6 +134,9 @@ function renderCategoryTree($parentId = null, $depth = 0) {
                 <?php if (mb_stripos($cat['name'], 'bares') !== false || mb_stripos($cat['name'], 'restaurante') !== false): ?>
                     <a href="restaurantes.php" class="btn btn-sm btn-info" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #2980b9; color: white;"><i class="fas fa-utensils"></i> Gestionar Bares</a>
                 <?php endif; ?>
+                <?php if (mb_stripos($cat['name'], 'alojamiento') !== false || mb_stripos($cat['name'], 'dormir') !== false): ?>
+                    <a href="alojamientos.php" class="btn btn-sm btn-info" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #2980b9; color: white;"><i class="fas fa-hotel"></i> Gestionar Alojamientos</a>
+                <?php endif; ?>
                 <a href="?action=edit&id=<?php echo $cat['id']; ?>" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;"><i class="fas fa-edit"></i> Modificar</a>
                 <a href="?action=delete&id=<?php echo $cat['id']; ?>" class="btn btn-sm" style="color: white; background: #e74c3c; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="return confirm('¿Seguro que deseas eliminar esta categoría? Si tiene subcategorías, se eliminarán en cascada de acuerdo a las directrices de la base de datos.')"><i class="fas fa-trash"></i> Borrar</a>
             </div>
