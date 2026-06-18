@@ -467,6 +467,7 @@ function getSuitNameSpanish(suit) {
 }
 
 function getCardNameSpanish(number, suit) {
+    if (number === null || number === undefined) return "Carta Oculta";
     let name = number.toString();
     if (number === 1) name = 'As';
     else if (number === 10) name = 'Sota';
@@ -762,7 +763,7 @@ function createCardElement(card, isOpponent = false, onClickHandler = null) {
     cardDiv.className = 'card';
     cardDiv.id = card.id;
 
-    if (isOpponent) {
+    if (isOpponent || card.number === null || card.number === undefined) {
         cardDiv.classList.add('back');
         return cardDiv;
     }
@@ -1222,6 +1223,37 @@ function switchPvPTurn(nextPlayer, actionType = 'play') {
 function handleAction(action) {
     if (pvpScreenActive) return;
     
+    if (gameMode === 'pvc') {
+        let apiActionIdx = -1;
+        if (action === 'quiero') apiActionIdx = 1;
+        else if (action === 'no-quiero') apiActionIdx = 2;
+        else if (action === 'envido') apiActionIdx = 3;
+        else if (action === 'envido-mas') apiActionIdx = 4;
+        else if (action === 'quique') apiActionIdx = 5;
+        else if (action === 'falta') apiActionIdx = 6;
+        else if (action === 'truco') apiActionIdx = 7;
+        else if (action === 'retruco') apiActionIdx = 8;
+        else if (action === 'renueve') apiActionIdx = 9;
+        else if (action === 'redoce') apiActionIdx = 10;
+        else if (action === 'requince') apiActionIdx = 11;
+        else if (action === 'rejuego') apiActionIdx = 12;
+        else if (action === 'retirarse') apiActionIdx = 2;
+        else if (action === 'bailar') apiActionIdx = 19;
+        else if (action === 'no-bailar') apiActionIdx = 0;
+
+        if (apiActionIdx !== -1) {
+            const actionLabels = {
+                'quiero': 'QUIERO', 'no-quiero': 'NO QUIERO', 'envido': 'ENVIDO', 'envido-mas': 'ENVIDO MÁS',
+                'quique': 'QUINQUÉ', 'falta': 'LA FALTA', 'truco': 'TRUCO', 'retruco': 'RETRUCO', 'renueve': 'RENUEVE',
+                'redoce': 'REDOCE', 'requince': 'REQUINCE', 'rejuego': 'REJUEGO', 'retirarse': 'AL MAZO',
+                'bailar': 'BAILAR', 'no-bailar': 'NO BAILAR'
+            };
+            addLog(`Jugador 1 dice: ${actionLabels[action] || action}`, 'p1');
+            apiSendAction(apiActionIdx);
+        }
+        return;
+    }
+
     const inEnvite = isEnviteActive();
     
     // If player sings Truco before Envido was called, they skip the Envite phase
@@ -1594,6 +1626,31 @@ function playerPlayCard(card) {
         return;
     }
     selectedCardId = null; // Segundo clic confirma la jugada
+
+    if (gameMode === 'pvc') {
+        if (!apiState) return;
+        // Enviar jugada de carta a la API
+        // Determinar índice en apiState.hands[0]
+        let idx = -1;
+        if (card.id && card.id.startsWith('api-p1-card-')) {
+            idx = parseInt(card.id.split('-').pop(), 10);
+        } else {
+            const cardNameEsp = getCardNameSpanish(card.number, card.suit);
+            idx = apiState.hands[0].findIndex(c => c && c.name && c.name.toLowerCase() === cardNameEsp.toLowerCase());
+        }
+
+        if (idx !== -1) {
+            const actionIdx = selectTaped ? (16 + idx) : (13 + idx);
+            const cardName = selectTaped ? "una carta tapada" : getCardNameSpanish(card.number, card.suit);
+            addLog(`Jugador 1 juega ${cardName}`, 'p1');
+            apiSendAction(actionIdx);
+            
+            // Reset Tapar state for next round
+            selectTaped = false;
+            updateTaparButtonUI();
+        }
+        return;
+    }
 
     const inEnvite = isEnviteActive();
     const player = activePlayer;
@@ -2207,7 +2264,13 @@ function resetGame(fullReset = false) {
     document.getElementById('modal-game-over').classList.remove('active');
     
     updateScoreboardUI();
-    startNewHand();
+    
+    if (gameMode === 'pvc') {
+        updateStatusBar("Conectando con la IA...");
+        apiStartGame();
+    } else {
+        startNewHand();
+    }
 }
 
 // --- Modals Controls ---
@@ -2316,8 +2379,13 @@ function confirmCustomEnvido() {
     document.getElementById('envido-selector').style.display = 'none';
     document.querySelector('.action-buttons').style.display = 'flex';
     
-    // Call the original action handler with the custom value!
-    executeEnviteAction(activePlayer, 'envido', customEnvidoValue);
+    if (gameMode === 'pvc') {
+        const actionIdx = (apiState && apiState.valid_actions && apiState.valid_actions.includes(4)) ? 4 : 3;
+        apiSendAction(actionIdx, customEnvidoValue);
+    } else {
+        // Call the original action handler with the custom value!
+        executeEnviteAction(activePlayer, 'envido', customEnvidoValue);
+    }
 }
 
 function cancelCustomEnvido() {
@@ -2626,3 +2694,374 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// --- API INTEGRATION ---
+const API_BASE = "https://autofactu-dev-truque.db8a5t.easypanel.host/api";
+let apiState = null;
+
+async function apiStartGame() {
+    try {
+        const response = await fetch(`${API_BASE}/start`, { method: "POST" });
+        const data = await response.json();
+        if (data.status === "ok") {
+            apiState = data.state;
+            previousApiState = null;
+            syncApiStateToUI(apiState);
+        }
+    } catch (e) {
+        console.error("API Error start:", e);
+        updateStatusBar("Error de conexión con la API");
+    }
+}
+
+async function apiNextHand() {
+    try {
+        const response = await fetch(`${API_BASE}/next_hand`, { method: "POST" });
+        const data = await response.json();
+        if (data.status === "ok") {
+            apiState = data.state;
+            
+            // Clear bazas indicators
+            document.getElementById('val-p1-bazas').innerText = '0';
+            document.getElementById('val-p2-bazas').innerText = '0';
+
+            previousApiState = null;
+            syncApiStateToUI(apiState);
+        }
+    } catch (e) {
+        console.error("API Error next_hand:", e);
+    }
+}
+
+async function apiSendAction(actionIdx, chinas = null) {
+    try {
+        const body = { action_idx: actionIdx };
+        if (chinas !== null) body.chinas = chinas;
+        
+        previousApiState = apiState ? JSON.parse(JSON.stringify(apiState)) : null;
+        
+        const response = await fetch(`${API_BASE}/action`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        
+        if (!response.ok) {
+            console.error("Acción inválida", await response.text());
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.status === "ok") {
+            apiState = data.state;
+            
+            // Procesar logs de IA
+            if (apiState.ai_actions && apiState.ai_actions.length > 0) {
+                apiState.ai_actions.forEach(action => {
+                    let msg = `La Computadora ejecuta: ${action.action_name}`;
+                    if (action.card) msg += ` (${action.card})`;
+                    addLog(msg, 'cpu');
+                    
+                    // Voz
+                    const mapVoice = {
+                        3: 'envido', 4: 'envido-mas', 5: 'quique', 6: 'falta',
+                        7: 'truco', 8: 'retruco', 9: 'renueve', 10: 'redoce', 11: 'requince', 12: 'rejuego',
+                        1: 'quiero', 2: 'no-quiero'
+                    };
+                    if (mapVoice[action.action_idx]) {
+                        speakAction(mapVoice[action.action_idx]);
+                    }
+                });
+            }
+
+            syncApiStateToUI(apiState);
+            
+            if (data.done) {
+                if (apiState.phase === "GAME_DONE") {
+                    // Check if game is over
+                    if (apiState.scores[0] >= metaChinas) {
+                        showGameOverModal('¡Victoria de Jugador 1!', '🏆', `Has logrado vencer a la IA alcanzando las ${metaChinas} chinas.`);
+                        speakAnnouncement(`¡Fin del juego! ¡Has ganado la partida!`);
+                    } else if (apiState.scores[1] >= metaChinas) {
+                        showGameOverModal('¡Victoria de La Computadora!', '💀', `La IA ha ganado la partida con ${metaChinas} chinas.`);
+                        speakAnnouncement(`¡Fin del juego! La Computadora ha ganado.`);
+                    }
+                } else if (apiState.phase === "HAND_DONE") {
+                    updateStatusBar(`Fin de la mano. Repartiendo siguiente mano...`);
+                    setTimeout(apiNextHand, 3000);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("API Error action:", e);
+    }
+}
+
+function normalizeApiCard(c) {
+    if (!c) return c;
+    let norm = { ...c };
+    if (norm.rank !== undefined && norm.number === undefined) norm.number = norm.rank;
+    if (norm.suit) {
+        let s = norm.suit.toLowerCase();
+        if (s.endsWith('s')) s = s.slice(0, -1);
+        norm.suit = s;
+    }
+    return norm;
+}
+
+let previousApiState = null;
+
+function syncApiStateToUI(state) {
+    if (gameMode !== 'pvc') return;
+    
+    // Normalize state cards
+    if (state.guide_card) state.guide_card = normalizeApiCard(state.guide_card);
+    if (state.hands) {
+        state.hands[0] = state.hands[0].map(normalizeApiCard);
+        state.hands[1] = state.hands[1].map(normalizeApiCard);
+    }
+    if (state.played_cards) {
+        state.played_cards = state.played_cards.map(baza => baza ? baza.map(normalizeApiCard) : baza);
+    }
+
+    // Guia Card (Need to set this early so getCardPower works)
+    guiaCard = state.guide_card;
+
+    // ----- INFER AI ACTIONS (DELTA ENGINE) -----
+    if (previousApiState && state.current_player === 0) {
+        // Envite inference
+        if (state.envite_level > previousApiState.envite_level) {
+            let diff = state.envite_level - previousApiState.envite_level;
+            let act = 'envido';
+            if (diff === 5) act = 'quique';
+            else if (state.envite_level >= 25) act = 'falta';
+            else if (diff === 2 && previousApiState.envite_level > 0) act = 'envido-mas';
+            addLog(`La Computadora canta ${act.toUpperCase()}`, 'p2');
+            speakAction(act);
+        }
+        
+        // Truque inference
+        if (state.truque_level > previousApiState.truque_level) {
+            let acts = {1: 'truco', 2: 'retruco', 3: 'renueve', 4: 'redoce', 5: 'requince', 6: 'rejuego'};
+            let act = acts[state.truque_level] || 'truco';
+            addLog(`La Computadora canta ${act.toUpperCase()}`, 'p2');
+            speakAction(act);
+        }
+        
+        // Card play inference
+        for (let i = 0; i < 3; i++) {
+            let oldBaza = previousApiState.played_cards[i];
+            let newBaza = state.played_cards[i];
+            if (newBaza && newBaza[1] !== null && (!oldBaza || oldBaza[1] === null)) {
+                let cardName = newBaza[1].hidden ? "una carta tapada" : getCardNameSpanish(newBaza[1].number, newBaza[1].suit);
+                addLog(`La Computadora juega ${cardName}`, 'p2');
+            }
+        }
+    }
+    // -------------------------------------------
+
+    // Update Score
+    p1Score = state.scores[0];
+    p2Score = state.scores[1];
+    updateScoreboardUI();
+    
+    // Sync Mano/Dealer tags
+    const p1Label = document.getElementById('lbl-p1-score');
+    const p2Label = document.getElementById('lbl-p2-score');
+    
+    document.querySelectorAll('.role-badge').forEach(e => e.remove());
+    if (state.mano_idx === 0 && p1Label) p1Label.insertAdjacentHTML('beforeend', '<span class="role-badge role-mano">Mano</span>');
+    if (state.mano_idx === 1 && p2Label) p2Label.insertAdjacentHTML('beforeend', '<span class="role-badge role-mano">Mano</span>');
+    if (state.dealer_idx === 0 && p1Label) p1Label.insertAdjacentHTML('beforeend', '<span class="role-badge role-dealer">Dador</span>');
+    if (state.dealer_idx === 1 && p2Label) p2Label.insertAdjacentHTML('beforeend', '<span class="role-badge role-dealer">Dador</span>');
+    
+    // Evaluate Bazas (Tricks) Won locally
+    let bazasP1 = 0;
+    let bazasP2 = 0;
+    state.played_cards.forEach(baza => {
+        if (baza && baza[0] !== null && baza[1] !== null) {
+            let p1Pow = getCardPower(baza[0]);
+            let p2Pow = getCardPower(baza[1]);
+            if (p1Pow > p2Pow) bazasP1++;
+            else if (p2Pow > p1Pow) bazasP2++;
+            else {
+                if (state.mano_idx === 0) bazasP1++;
+                else bazasP2++;
+            }
+        }
+    });
+
+    document.getElementById('val-p1-bazas').innerText = bazasP1;
+    document.getElementById('val-p2-bazas').innerText = bazasP2;
+    document.getElementById('val-p1-envite-pts').innerText = state.envite_level > 0 ? state.envite_level : '-';
+    document.getElementById('val-p2-envite-pts').innerText = '-'; 
+    
+    // Status Bar
+    if (state.phase === "ENVITE") {
+        updateStatusBar(`Fase de Envite. Turno de ${state.current_player === 0 ? 'Jugador 1' : 'Computadora'}.`);
+    } else if (state.phase.startsWith("TRUQUE")) {
+        updateStatusBar(`Fase de Truque. Juega una carta ${state.current_player === 0 ? 'Jugador 1' : 'Computadora'}.`);
+    }
+
+    // Guia Card
+    guiaCard = state.guide_card;
+    const guiaContainer = document.getElementById('guia-card-container');
+    guiaContainer.innerHTML = '';
+    if (guiaCard) {
+        const isGuideHidden = guiaCard.hidden === true || guiaCard.number == null;
+        guiaContainer.appendChild(createCardElement(guiaCard, isGuideHidden));
+    }
+    
+    // Player Hands Rendering
+    const p1Container = document.getElementById('player-hand');
+    const p2Container = document.getElementById('opponent-hand');
+    p1Container.innerHTML = '';
+    p2Container.innerHTML = '';
+
+    state.hands[0].forEach((c, idx) => {
+        if (c) {
+            c.id = `api-p1-card-${idx}`;
+            const cardEl = createCardElement(c, false, playerPlayCard);
+            
+            const actionPlayUp = 13 + idx;
+            const actionPlayDown = 16 + idx;
+            const canPlay = state.valid_actions.includes(actionPlayUp) || state.valid_actions.includes(actionPlayDown);
+            
+            if (!canPlay || state.current_player !== 0) {
+                cardEl.classList.add('disabled');
+            } else if (c.id === selectedCardId) {
+                cardEl.classList.add('selected-for-play');
+            }
+            p1Container.appendChild(cardEl);
+        }
+    });
+
+    state.hands[1].forEach((c, idx) => {
+        if (c) {
+            const isFacedown = c.hidden !== false && (c.number == null || c.number === undefined);
+            const cardEl = createCardElement(c, isFacedown);
+            if (!isFacedown) {
+                cardEl.classList.add('bailada-card');
+                cardEl.classList.add('guia-card'); // Highlight it as special
+            }
+            p2Container.appendChild(cardEl);
+        }
+    });
+
+    for (let i = 0; i < 3; i++) {
+        const slotP1 = document.getElementById(`played-card-p1-${i}`);
+        const slotP2 = document.getElementById(`played-card-p2-${i}`);
+        if (!slotP1 || !slotP2) continue;
+        
+        slotP1.innerHTML = '';
+        slotP2.innerHTML = '';
+        
+        const baza = state.played_cards && state.played_cards.length > i ? state.played_cards[i] : null;
+        if (!baza) continue;
+
+        if (baza[0]) {
+            const c1 = createCardElement(baza[0], false);
+            if (baza[0].hidden) c1.classList.add('taped');
+            slotP1.appendChild(c1);
+        }
+        if (baza[1]) {
+            const c2 = createCardElement(baza[1], false);
+            if (baza[1].hidden) c2.classList.add('taped');
+            slotP2.appendChild(c2);
+        }
+    }
+    
+    // Action Buttons Sync
+    const btnBailar = document.getElementById('btn-bailar');
+    const btnNoBailar = document.getElementById('btn-no-bailar');
+    const btnEnvido = document.getElementById('btn-envido');
+    const btnQuique = document.getElementById('btn-quique');
+    const btnFalta = document.getElementById('btn-falta');
+    const btnTruco = document.getElementById('btn-truco');
+    const btnQuiero = document.getElementById('btn-quiero');
+    const btnNoQuiero = document.getElementById('btn-no-quiero');
+    const btnTapar = document.getElementById('btn-tapar');
+    const btnMazo = document.getElementById('btn-ir-al-mazo');
+
+    // 1. Bailar buttons
+    const showBailar = state.valid_actions.includes(19);
+    
+    if (btnBailar) btnBailar.style.display = showBailar ? 'inline-block' : 'none';
+    if (btnNoBailar) btnNoBailar.style.display = showBailar ? 'inline-block' : 'none';
+
+    // 2. Envite
+    const showEnvido = state.valid_actions.includes(3) || state.valid_actions.includes(4);
+    if (btnEnvido) {
+        btnEnvido.style.display = showEnvido ? 'inline-block' : 'none';
+        btnEnvido.disabled = false;
+        btnEnvido.innerText = state.valid_actions.includes(4) ? "Envido Más" : "Envido (2)";
+    }
+    
+    const showQuique = state.valid_actions.includes(5);
+    if (btnQuique) {
+        btnQuique.style.display = showQuique ? 'inline-block' : 'none';
+        btnQuique.disabled = false;
+    }
+
+    const showFalta = state.valid_actions.includes(6);
+    if (btnFalta) {
+        btnFalta.style.display = showFalta ? 'inline-block' : 'none';
+        btnFalta.disabled = false;
+    }
+
+    // 3. Truco
+    const trucoIndices = [7, 8, 9, 10, 11, 12];
+    const availableTruco = trucoIndices.find(idx => state.valid_actions.includes(idx));
+    if (btnTruco) {
+        btnTruco.style.display = availableTruco ? 'inline-block' : 'none';
+        btnTruco.disabled = false;
+        if (availableTruco) {
+            const labels = {
+                7: "Truco (3)", 8: "Retruco (4)", 9: "Renueve (5)", 
+                10: "Redoce (6)", 11: "Requince (7)", 12: "Rejuego (8)"
+            };
+            btnTruco.innerText = labels[availableTruco];
+            const acts = {7: 'truco', 8: 'retruco', 9: 'renueve', 10: 'redoce', 11: 'requince', 12: 'rejuego'};
+            btnTruco.onclick = () => handleAction(acts[availableTruco]);
+        }
+    }
+
+    // 4. Quiero / No Quiero / Mazo / Pasar
+    const showQuiero = state.valid_actions.includes(1);
+    if (btnQuiero) {
+        btnQuiero.style.display = showQuiero ? 'inline-block' : 'none';
+        btnQuiero.disabled = false;
+    }
+
+    const showMazo = state.valid_actions.includes(2);
+    if (btnMazo) {
+        btnMazo.style.display = showMazo ? 'inline-block' : 'none';
+        btnMazo.disabled = false;
+    }
+
+    const hasCardActions = state.valid_actions.some(v => v >= 13 && v <= 18);
+    const showNoQuiero = state.valid_actions.includes(2);
+    const showPasar = state.valid_actions.includes(0) && !hasCardActions && !showNoQuiero && !showBailar;
+    
+    if (btnNoQuiero) {
+        if (showNoQuiero) {
+            btnNoQuiero.style.display = 'inline-block';
+            btnNoQuiero.innerText = "No Quiero";
+            btnNoQuiero.disabled = false;
+            btnNoQuiero.onclick = () => handleAction('no-quiero');
+        } else if (showPasar) {
+            btnNoQuiero.style.display = 'inline-block';
+            btnNoQuiero.innerText = "Pasar";
+            btnNoQuiero.disabled = false;
+            btnNoQuiero.onclick = () => { if (gameMode === 'pvc') apiSendAction(0); else handleAction('no-quiero'); };
+        } else {
+            btnNoQuiero.style.display = 'none';
+        }
+    }
+
+    // 5. Tapar
+    const canHide = state.valid_actions.some(v => v >= 16 && v <= 18);
+    if (btnTapar) {
+        btnTapar.style.display = canHide ? 'inline-block' : 'none';
+        btnTapar.disabled = false;
+    }
+}

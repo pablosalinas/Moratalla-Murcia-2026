@@ -190,13 +190,35 @@
                 <!-- Played cards in the current trick -->
                 <div class="baza-area">
                     <div class="played-cards-slots">
-                        <div class="played-slot">
-                            <span class="played-slot-label" id="lbl-played-p2">CPU</span>
-                            <div class="slot-card-container" id="played-card-p2"></div>
+                        <div class="baza-column">
+                            <div class="played-slot">
+                                <span class="played-slot-label">CPU (1ª)</span>
+                                <div class="slot-card-container" id="played-card-p2-0"></div>
+                            </div>
+                            <div class="played-slot">
+                                <span class="played-slot-label">J1 (1ª)</span>
+                                <div class="slot-card-container" id="played-card-p1-0"></div>
+                            </div>
                         </div>
-                        <div class="played-slot">
-                            <span class="played-slot-label">Jugador 1</span>
-                            <div class="slot-card-container" id="played-card-p1"></div>
+                        <div class="baza-column">
+                            <div class="played-slot">
+                                <span class="played-slot-label">CPU (2ª)</span>
+                                <div class="slot-card-container" id="played-card-p2-1"></div>
+                            </div>
+                            <div class="played-slot">
+                                <span class="played-slot-label">J1 (2ª)</span>
+                                <div class="slot-card-container" id="played-card-p1-1"></div>
+                            </div>
+                        </div>
+                        <div class="baza-column">
+                            <div class="played-slot">
+                                <span class="played-slot-label">CPU (3ª)</span>
+                                <div class="slot-card-container" id="played-card-p2-2"></div>
+                            </div>
+                            <div class="played-slot">
+                                <span class="played-slot-label">J1 (3ª)</span>
+                                <div class="slot-card-container" id="played-card-p1-2"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -242,6 +264,10 @@
                 </div>
 
                 <div class="action-buttons">
+                    <!-- Bailar Buttons -->
+                    <button id="btn-bailar" class="btn-action bid-bailar" onclick="handleAction('bailar')" style="display: none;">¡Bailar!</button>
+                    <button id="btn-no-bailar" class="btn-action bid-bailar-decline" onclick="handleAction('no-bailar')" style="display: none;">Jugar Mano</button>
+
                     <button id="btn-envido" class="btn-action bid-envite" onclick="openEnvidoSelector()">Envido (2)</button>
                     <button id="btn-quique" class="btn-action bid-envite" onclick="handleAction('quique')">Quinqué (5)</button>
                     <button id="btn-falta" class="btn-action bid-envite" onclick="handleAction('falta')">La Falta</button>

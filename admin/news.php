@@ -11,6 +11,14 @@ $action = $_GET['action'] ?? 'list';
 $msg = "";
 $error = "";
 
+$hasSortOrderColumn = false;
+try {
+    $pdo->query("SELECT sort_order FROM news_events LIMIT 1");
+    $hasSortOrderColumn = true;
+} catch (PDOException $e) {
+    $hasSortOrderColumn = false;
+}
+
 // PROCESAR AJAX UPLOAD
 if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
     $news_id = (int)$_POST['news_id'];
@@ -119,13 +127,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news]);
+                if ($hasSortOrderColumn) {
+                    $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news]);
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category]);
+                }
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ?, sort_order = ? WHERE id = ?");
-                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news, $id]);
+                if ($hasSortOrderColumn) {
+                    $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ?, sort_order = ? WHERE id = ?");
+                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news, $id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ? WHERE id = ?");
+                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $id]);
+                }
                 $news_id = $id;
                 $msg = "Noticia/Evento actualizado con éxito.";
             }
@@ -257,7 +275,9 @@ adminHeader("Noticias y Eventos");
             <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="border-bottom: 2px solid var(--gray-200); text-align: left;">
-                        <th style="padding: 1rem;">Orden</th>
+                        <?php if ($hasSortOrderColumn): ?>
+                            <th style="padding: 1rem;">Orden</th>
+                        <?php endif; ?>
                         <th style="padding: 1rem;">Imagen</th>
                         <th style="padding: 1rem;">Título</th>
                         <th style="padding: 1rem;">Fecha Evento</th>
@@ -269,12 +289,16 @@ adminHeader("Noticias y Eventos");
                 </thead>
                 <tbody>
                     <?php
-                    $stmt = $pdo->query("SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.sort_order ASC, ne.id DESC");
+                    $queryStr = $hasSortOrderColumn
+                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.sort_order ASC, ne.id DESC"
+                        : "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.id DESC";
+                    $stmt = $pdo->query($queryStr);
                     $hasItems = false;
                     while ($row = $stmt->fetch()) {
                         $hasItems = true;
                         ?>
                         <tr style="border-bottom: 1px solid var(--gray-200); transition: background-color 0.2s;">
+                            <?php if ($hasSortOrderColumn): ?>
                             <td style="padding: 0.5rem 1rem; text-align:center;">
                                 <form method="POST" action="?action=edit" style="display:inline;">
                                     <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
@@ -290,6 +314,7 @@ adminHeader("Noticias y Eventos");
                                            onchange="this.form.submit()" title="Cambiar orden (se aplica al perder el foco)">
                                 </form>
                             </td>
+                            <?php endif; ?>
                             <td style="padding: 1rem;">
                                 <?php if ($row['image_path']): ?>
                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
@@ -334,7 +359,7 @@ adminHeader("Noticias y Eventos");
                         <?php
                     }
                     if (!$hasItems) {
-                        echo "<tr><td colspan='8' style='text-align: center; padding: 3rem; color: var(--text-light); font-style: italic;'>No hay noticias o eventos creados todavía.</td></tr>";
+                        echo "<tr><td colspan='" . ($hasSortOrderColumn ? 8 : 7) . "' style='text-align: center; padding: 3rem; color: var(--text-light); font-style: italic;'>No hay noticias o eventos creados todavía.</td></tr>";
                     }
                     ?>
                 </tbody>
