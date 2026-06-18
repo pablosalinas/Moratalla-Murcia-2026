@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $is_active_home = isset($_POST['is_active_home']) ? 1 : 0;
         $category_id = $_POST['category_id'] ?? null;
         $is_active_category = isset($_POST['is_active_category']) ? 1 : 0;
+        $sort_order_news = (int)($_POST['sort_order_news'] ?? 0);
         
         if (empty($event_date)) {
             $event_date = null;
@@ -118,13 +119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category]);
+                $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news]);
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ? WHERE id = ?");
-                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $id]);
+                $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ?, sort_order = ? WHERE id = ?");
+                $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news, $id]);
                 $news_id = $id;
                 $msg = "Noticia/Evento actualizado con éxito.";
             }
@@ -256,6 +257,7 @@ adminHeader("Noticias y Eventos");
             <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="border-bottom: 2px solid var(--gray-200); text-align: left;">
+                        <th style="padding: 1rem;">Orden</th>
                         <th style="padding: 1rem;">Imagen</th>
                         <th style="padding: 1rem;">Título</th>
                         <th style="padding: 1rem;">Fecha Evento</th>
@@ -267,12 +269,27 @@ adminHeader("Noticias y Eventos");
                 </thead>
                 <tbody>
                     <?php
-                    $stmt = $pdo->query("SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.id DESC");
+                    $stmt = $pdo->query("SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.sort_order ASC, ne.id DESC");
                     $hasItems = false;
                     while ($row = $stmt->fetch()) {
                         $hasItems = true;
                         ?>
                         <tr style="border-bottom: 1px solid var(--gray-200); transition: background-color 0.2s;">
+                            <td style="padding: 0.5rem 1rem; text-align:center;">
+                                <form method="POST" action="?action=edit" style="display:inline;">
+                                    <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+                                    <input type="hidden" name="title" value="<?php echo htmlspecialchars($row['title']); ?>">
+                                    <input type="hidden" name="content" value="<?php echo htmlspecialchars($row['content']); ?>">
+                                    <input type="hidden" name="event_date" value="<?php echo htmlspecialchars($row['event_date'] ?? ''); ?>">
+                                    <input type="hidden" name="image_caption" value="<?php echo htmlspecialchars($row['image_caption'] ?? ''); ?>">
+                                    <?php if($row['is_active_home']) echo '<input type="hidden" name="is_active_home" value="1">'; ?>
+                                    <?php if($row['is_active_category']) echo '<input type="hidden" name="is_active_category" value="1">'; ?>
+                                    <input type="hidden" name="category_id" value="<?php echo htmlspecialchars($row['category_id'] ?? ''); ?>">
+                                    <input type="number" name="sort_order_news" value="<?php echo (int)($row['sort_order'] ?? 0); ?>"
+                                           style="width:55px; padding:4px 6px; border:1px solid #ddd; border-radius:5px; text-align:center; font-size:0.85rem;"
+                                           onchange="this.form.submit()" title="Cambiar orden (se aplica al perder el foco)">
+                                </form>
+                            </td>
                             <td style="padding: 1rem;">
                                 <?php if ($row['image_path']): ?>
                                     <div style="display: flex; flex-direction: column; gap: 0.3rem;">
@@ -312,11 +329,12 @@ adminHeader("Noticias y Eventos");
                                 <a href="?action=edit&id=<?php echo $row['id']; ?>" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;"><i class="fas fa-edit"></i> Modificar</a>
                                 <a href="?action=delete&id=<?php echo $row['id']; ?>" class="btn btn-sm" style="color: white; background: #e74c3c; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="return confirm('¿Seguro que deseas eliminar esta noticia/evento?')"><i class="fas fa-trash"></i> Borrar</a>
                             </td>
+                        <!-- cierra la td de acciones; la de orden ya está arriba -->
                         </tr>
                         <?php
                     }
                     if (!$hasItems) {
-                        echo "<tr><td colspan='7' style='text-align: center; padding: 3rem; color: var(--text-light); font-style: italic;'>No hay noticias o eventos creados todavía.</td></tr>";
+                        echo "<tr><td colspan='8' style='text-align: center; padding: 3rem; color: var(--text-light); font-style: italic;'>No hay noticias o eventos creados todavía.</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -367,9 +385,17 @@ adminHeader("Noticias y Eventos");
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($news_data['id']); ?>">
             
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Título</label>
-                <input type="text" name="title" required value="<?php echo htmlspecialchars($news_data['title']); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem;">
+            <div style="margin-bottom: 1.5rem; display:flex; gap:1rem; align-items:flex-end;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Título</label>
+                    <input type="text" name="title" required value="<?php echo htmlspecialchars($news_data['title']); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem;">
+                </div>
+                <div style="min-width:110px;">
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);"><i class="fas fa-sort"></i> Orden</label>
+                    <input type="number" name="sort_order_news" value="<?php echo (int)($news_data['sort_order'] ?? 0); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size:1rem; text-align:center;">
+                    <small style="color:#888; display:block; margin-top:0.3rem; font-size:0.75rem;">Menor = primero</small>
+                </div>
+            </div>
             </div>
             
             <div style="margin-bottom: 1.5rem;">

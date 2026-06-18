@@ -12,6 +12,13 @@ $category = $stmt->fetch();
 
 if (!$category) { header("Location: index.php"); exit; }
 
+// Redirección especial: Bares y Restaurantes → página dedicada
+if (mb_stripos($category['name'], 'bares') !== false || mb_stripos($category['name'], 'restaurante') !== false) {
+    header("Location: restaurantes.php");
+    exit;
+}
+
+
 // Buscamos subcategorías
 $stmtSub = $pdo->prepare("SELECT * FROM categories WHERE parent_id = ? AND is_visible = 1 ORDER BY sort_order ASC, name ASC");
 $stmtSub->execute([$id]);

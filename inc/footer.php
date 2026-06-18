@@ -55,6 +55,11 @@
                 </div>
             </div>
 
+            <!-- Aviso discreto hover escudos -->
+            <p style="font-size: 0.85rem; font-weight: 600; opacity: 0.75; letter-spacing: 0.5px; margin: -1rem 0 0; text-align: center;">
+                <i class="fas fa-mouse-pointer" style="font-size: 0.8rem;"></i>&nbsp; Pasa el cursor sobre los escudos&hellip;
+            </p>
+
             <!-- Redes Sociales debajo de los escudos -->
             <div style="display: flex; gap: 2.5rem; justify-content: center; font-size: 1.5rem;">
                 <a href="#" style="color: white; opacity: 0.8;"><i class="fab fa-facebook"></i></a>
