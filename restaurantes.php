@@ -1,0 +1,387 @@
+<?php
+// restaurantes.php - Página pública de Bares y Restaurantes de Moratalla
+require_once 'config.php';
+$pdo = getDB();
+
+// Conteo de visitas global (sesión)
+if (!isset($_SESSION['visited_restaurantes'])) {
+    $_SESSION['visited_restaurantes'] = false;
+}
+if (!$_SESSION['visited_restaurantes']) {
+    // Podría integrarse con una tabla de stats si procede
+    $_SESSION['visited_restaurantes'] = true;
+}
+
+// Filtros opcionales
+$filtro_poblacion = isset($_GET['poblacion']) ? trim($_GET['poblacion']) : '';
+$filtro_buscar    = isset($_GET['buscar'])    ? trim($_GET['buscar'])    : '';
+
+// Obtener listado
+$where = ['r.is_visible = 1'];
+$params = [];
+
+if ($filtro_poblacion) {
+    $where[] = 'r.poblacion = ?';
+    $params[] = $filtro_poblacion;
+}
+if ($filtro_buscar) {
+    $where[] = '(r.nombre LIKE ? OR r.calle LIKE ? OR r.poblacion LIKE ?)';
+    $params[] = '%' . $filtro_buscar . '%';
+    $params[] = '%' . $filtro_buscar . '%';
+    $params[] = '%' . $filtro_buscar . '%';
+}
+
+$whereSQL = count($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+$stmt = $pdo->prepare("
+    SELECT r.*,
+           (SELECT image_path FROM restaurante_images ri WHERE ri.restaurante_id = r.id AND ri.is_cover = 1 AND ri.is_visible = 1 LIMIT 1) as cover_image,
+           (SELECT COUNT(*) FROM restaurante_images ri2 WHERE ri2.restaurante_id = r.id AND ri2.is_visible = 1) as total_images
+    FROM restaurantes r
+    $whereSQL
+    ORDER BY r.sort_order ASC, r.nombre ASC
+");
+$stmt->execute($params);
+$restaurantes = $stmt->fetchAll();
+
+// Obtener poblaciones únicas para el filtro
+$poblaciones = $pdo->query("SELECT DISTINCT poblacion FROM restaurantes WHERE is_visible = 1 ORDER BY poblacion ASC")->fetchAll(PDO::FETCH_COLUMN);
+
+// SEO
+$pageTitle = 'Bares y Restaurantes de Moratalla';
+$pageDescription = 'Directorio completo de bares, restaurantes, tabernas y mesones del municipio de Moratalla y sus pedanías. Encuentra dónde comer en Moratalla, Murcia.';
+
+require_once 'inc/header.php';
+?>
+
+<!-- HERO -->
+<section class="hero-page" style="background: linear-gradient(135deg, rgba(27,67,50,0.85) 0%, rgba(8,28,21,0.95) 100%), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding: 3rem 0; text-align: center; color: white; border-bottom: 4px solid var(--accent);">
+    <div class="container">
+        <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 1.5rem 3rem; border-radius: 15px; display: inline-block; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <p style="opacity: 0.9; margin-bottom: 0.3rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-utensils" style="color: var(--accent);"></i> Soy Turista</p>
+            <h1 style="color: white; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;">Bares y Restaurantes</h1>
+            <p style="color: rgba(255,255,255,0.8); margin-top: 0.5rem; font-size: 1rem;">
+                <?php echo count($restaurantes); ?> establecimientos en Moratalla y sus pedanías
+            </p>
+        </div>
+    </div>
+</section>
+
+<div class="container" style="margin-top: 2rem;">
+    <a href="index.php" class="btn-nav btn-nav-back btn-nav-sm" style="box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <i class="fas fa-arrow-left"></i> Inicio
+    </a>
+</div>
+
+<!-- FILTROS -->
+<div class="container" style="margin-top: 1.5rem;">
+    <div style="background: white; border-radius: 14px; padding: 1.5rem 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+        <form method="GET" action="restaurantes.php" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%; align-items: flex-end;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #555; display: block; margin-bottom: 0.4rem;">
+                    <i class="fas fa-search"></i> Buscar
+                </label>
+                <input type="text" name="buscar" value="<?php echo htmlspecialchars($filtro_buscar); ?>" placeholder="Nombre, dirección..." style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+            </div>
+            <div style="min-width: 180px;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #555; display: block; margin-bottom: 0.4rem;">
+                    <i class="fas fa-map-marker-alt"></i> Población
+                </label>
+                <select name="poblacion" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; background: white;">
+                    <option value="">Todas las localidades</option>
+                    <?php foreach ($poblaciones as $pob): ?>
+                        <option value="<?php echo htmlspecialchars($pob); ?>" <?php echo ($filtro_poblacion === $pob ? 'selected' : ''); ?>>
+                            <?php echo htmlspecialchars($pob); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" style="padding: 0.75rem 1.5rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+                <?php if ($filtro_poblacion || $filtro_buscar): ?>
+                    <a href="restaurantes.php" style="padding: 0.75rem 1.2rem; background: #f3f4f6; color: #555; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- LISTADO -->
+<div class="container" style="margin-top: 2rem; padding-bottom: 4rem;">
+
+    <?php if (count($restaurantes) === 0): ?>
+        <div style="text-align: center; padding: 4rem 2rem; color: #888;">
+            <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 1rem; display: block; color: #ccc;"></i>
+            <h3 style="margin-bottom: 0.5rem;">No se encontraron establecimientos</h3>
+            <p>Prueba a cambiar los filtros de búsqueda.</p>
+            <a href="restaurantes.php" class="btn-nav btn-nav-back" style="margin-top: 1rem;">Ver todos</a>
+        </div>
+    <?php else: ?>
+
+    <!-- Grid de tarjetas -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 2rem;">
+
+        <?php foreach ($restaurantes as $r):
+            $cover = $r['cover_image'] ?? null;
+            $tel1  = $r['telefono1'] ?? null;
+            $tel2  = $r['telefono2'] ?? null;
+        ?>
+
+        <div class="rest-card" id="rest-<?php echo $r['id']; ?>" style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 3px 16px rgba(0,0,0,0.08); transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column;">
+
+            <!-- Portada / Cabecera -->
+            <div style="position: relative; height: 180px; background: linear-gradient(135deg, #1b4332, #081c15); overflow: hidden; cursor: <?php echo ($r['total_images'] > 0 ? 'pointer' : 'default'); ?>;"
+                 <?php if ($r['total_images'] > 0): ?>onclick="abrirGaleria(<?php echo $r['id']; ?>)" title="Ver galería de fotos"<?php endif; ?>>
+                <?php if ($cover): ?>
+                    <img src="<?php echo htmlspecialchars($cover); ?>" alt="<?php echo htmlspecialchars($r['nombre']); ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" class="rest-cover-img">
+                <?php else: ?>
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-utensils" style="font-size: 3.5rem; color: rgba(255,255,255,0.2);"></i>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Badge pedanía -->
+                <?php if ($r['es_pedania']): ?>
+                <span style="position: absolute; top: 12px; left: 12px; background: var(--accent); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+                    <i class="fas fa-map-marker-alt"></i> Pedanía
+                </span>
+                <?php endif; ?>
+
+                <!-- Badge fotos -->
+                <?php if ($r['total_images'] > 0): ?>
+                <span style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(4px);">
+                    <i class="fas fa-camera"></i> <?php echo $r['total_images']; ?> fotos
+                </span>
+                <?php endif; ?>
+            </div>
+
+            <!-- Cuerpo -->
+            <div style="padding: 1.25rem 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 0.7rem;">
+                <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin: 0; line-height: 1.3;">
+                    <?php echo htmlspecialchars($r['nombre']); ?>
+                </h2>
+
+                <!-- Localización -->
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem; color: #555; font-size: 0.9rem;">
+                    <i class="fas fa-map-marker-alt" style="color: var(--accent); margin-top: 2px; flex-shrink: 0;"></i>
+                    <span>
+                        <?php if ($r['calle']): ?><?php echo htmlspecialchars($r['calle']); ?><br><?php endif; ?>
+                        <strong><?php echo htmlspecialchars($r['poblacion']); ?></strong>
+                        <?php if ($r['codigo_postal']): ?> · CP <?php echo htmlspecialchars($r['codigo_postal']); ?><?php endif; ?>
+                    </span>
+                </div>
+
+                <!-- Teléfonos -->
+                <?php if ($tel1): ?>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem;">
+                    <a href="tel:<?php echo preg_replace('/\s/', '', $tel1); ?>" style="color: #1b4332; text-decoration: none; font-weight: 600;">
+                        <i class="fas fa-phone" style="color: var(--accent);"></i> <?php echo htmlspecialchars($tel1); ?>
+                    </a>
+                    <?php if ($tel2): ?>
+                    <a href="tel:<?php echo preg_replace('/\s/', '', $tel2); ?>" style="color: #1b4332; text-decoration: none; font-weight: 600;">
+                        · <?php echo htmlspecialchars($tel2); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Descripción (si tiene) -->
+                <?php if (!empty($r['descripcion'])): ?>
+                <p style="font-size: 0.88rem; color: #666; line-height: 1.5; margin: 0; flex: 1;">
+                    <?php echo nl2br(htmlspecialchars(mb_substr($r['descripcion'], 0, 180))); ?>
+                    <?php echo mb_strlen($r['descripcion']) > 180 ? '...' : ''; ?>
+                </p>
+                <?php endif; ?>
+
+                <!-- Espaciador -->
+                <div style="flex: 1;"></div>
+
+                <!-- Botones de acción -->
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #f0f0f0;">
+
+                    <?php if ($r['gmap_url']): ?>
+                    <a href="<?php echo htmlspecialchars($r['gmap_url']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-map" title="Ver en Google Maps">
+                        <i class="fas fa-map-marked-alt"></i> Mapa
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if ($r['web']): ?>
+                    <a href="<?php echo htmlspecialchars($r['web']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-web" title="Visitar web oficial">
+                        <i class="fas fa-globe"></i> Web
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if ($r['facebook']): ?>
+                    <a href="<?php echo htmlspecialchars($r['facebook']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-fb" title="Ver en Facebook">
+                        <i class="fab fa-facebook"></i> Facebook
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if ($r['tripadvisor']): ?>
+                    <a href="<?php echo htmlspecialchars($r['tripadvisor']); ?>" target="_blank" rel="noopener" class="rest-btn rest-btn-ta" title="Ver en TripAdvisor">
+                        <i class="fas fa-star"></i> TripAdvisor
+                    </a>
+                    <?php endif; ?>
+
+                    <?php if ($r['total_images'] > 0): ?>
+                    <button onclick="abrirGaleria(<?php echo $r['id']; ?>)" class="rest-btn rest-btn-gallery" title="Ver galería de fotos">
+                        <i class="fas fa-images"></i> Fotos
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- MODAL GALERÍA -->
+<div id="galeria-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.95); flex-direction:column; align-items:center; justify-content:center;">
+    <!-- Cerrar -->
+    <div style="width:100%; padding:1.2rem 1.5rem; display:flex; justify-content:space-between; align-items:center; position:absolute; top:0; z-index:10000;">
+        <div id="galeria-titulo" style="color:white; font-size:1.1rem; font-weight:700;"></div>
+        <button onclick="cerrarGaleria()" style="background:#e53935; color:white; border-radius:50px; font-weight:bold; border:none; cursor:pointer; font-size:1rem; padding:0.7rem 1.4rem; box-shadow:0 4px 15px rgba(229,57,53,0.4);">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
+    </div>
+    <!-- Navegación -->
+    <button id="galeria-prev" onclick="galeriaNav(-1)" style="position:absolute; left:1.5rem; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); color:white; border:none; width:55px; height:55px; border-radius:50%; font-size:1.4rem; cursor:pointer; z-index:10001; display:flex; align-items:center; justify-content:center; transition:background 0.3s;">❮</button>
+    <button id="galeria-next" onclick="galeriaNav(1)"  style="position:absolute; right:1.5rem; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); color:white; border:none; width:55px; height:55px; border-radius:50%; font-size:1.4rem; cursor:pointer; z-index:10001; display:flex; align-items:center; justify-content:center; transition:background 0.3s;">❯</button>
+    <!-- Imagen -->
+    <div style="max-width:95%; max-height:90vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+        <img id="galeria-img" src="" style="max-width:100%; max-height:78vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.7); transition:opacity 0.3s ease;">
+        <div id="galeria-caption" style="color:white; margin-top:1rem; font-size:1rem; text-align:center; max-width:700px; text-shadow:0 2px 4px rgba(0,0,0,0.8); min-height:1.5rem;"></div>
+        <div id="galeria-counter" style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin-top:0.5rem;"></div>
+    </div>
+</div>
+
+<style>
+/* ---- Tarjetas ---- */
+.rest-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+}
+.rest-card:hover .rest-cover-img {
+    transform: scale(1.05);
+}
+
+/* ---- Botones inline ---- */
+.rest-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 13px; border-radius: 20px; font-size: 0.8rem;
+    font-weight: 600; text-decoration: none; border: none;
+    cursor: pointer; transition: all 0.25s ease; white-space: nowrap;
+}
+.rest-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+.rest-btn-map     { background:#e8f5e9; color:#2e7d32; }
+.rest-btn-web     { background:#e3f2fd; color:#1565c0; }
+.rest-btn-fb      { background:#e8eaf6; color:#283593; }
+.rest-btn-ta      { background:#fff3e0; color:#e65100; }
+.rest-btn-gallery { background:#f3e5f5; color:#6a1b9a; }
+
+/* ---- Modal galería ---- */
+#galeria-prev:hover, #galeria-next:hover { background: rgba(255,255,255,0.25); }
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+    .hero-page h1 { font-size: 1.6rem; }
+}
+</style>
+
+<script>
+// Datos de galerías (cargados por AJAX en demanda)
+const galerias = {};
+let galeriaActual = null;
+let galeriaIdx = 0;
+let galeriaTimer = null;
+
+async function abrirGaleria(id) {
+    if (!galerias[id]) {
+        // Cargar imágenes por AJAX
+        const resp = await fetch('restaurantes.php?api=galeria&id=' + id);
+        const data = await resp.json();
+        galerias[id] = data;
+    }
+    galeriaActual = id;
+    galeriaIdx = 0;
+    document.getElementById('galeria-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    mostrarImagen();
+    iniciarAutoplay();
+}
+
+function cerrarGaleria() {
+    document.getElementById('galeria-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    clearInterval(galeriaTimer);
+    galeriaActual = null;
+}
+
+function mostrarImagen() {
+    const items = galerias[galeriaActual];
+    if (!items || items.length === 0) return;
+    const item = items[galeriaIdx];
+    const img = document.getElementById('galeria-img');
+    img.style.opacity = 0;
+    setTimeout(() => {
+        img.src = item.src;
+        document.getElementById('galeria-caption').textContent = item.caption || '';
+        document.getElementById('galeria-counter').textContent = (galeriaIdx + 1) + ' / ' + items.length;
+        document.getElementById('galeria-titulo').textContent = item.nombre || '';
+        img.style.opacity = 1;
+    }, 150);
+}
+
+function galeriaNav(dir) {
+    const items = galerias[galeriaActual];
+    if (!items) return;
+    galeriaIdx = (galeriaIdx + dir + items.length) % items.length;
+    mostrarImagen();
+    reiniciarAutoplay();
+}
+
+function iniciarAutoplay() {
+    galeriaTimer = setInterval(() => galeriaNav(1), 5000);
+}
+function reiniciarAutoplay() {
+    clearInterval(galeriaTimer);
+    iniciarAutoplay();
+}
+
+document.addEventListener('keydown', e => {
+    if (!galeriaActual) return;
+    if (e.key === 'ArrowRight') galeriaNav(1);
+    if (e.key === 'ArrowLeft')  galeriaNav(-1);
+    if (e.key === 'Escape')     cerrarGaleria();
+});
+document.getElementById('galeria-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('galeria-modal')) cerrarGaleria();
+});
+</script>
+
+<?php
+// --- API interna para AJAX de galerías ---
+if (isset($_GET['api']) && $_GET['api'] === 'galeria' && isset($_GET['id'])) {
+    $rid = (int)$_GET['id'];
+    $nombre = $pdo->prepare("SELECT nombre FROM restaurantes WHERE id = ? AND is_visible = 1");
+    $nombre->execute([$rid]);
+    $restauranteNombre = $nombre->fetchColumn();
+
+    $imgs = $pdo->prepare("SELECT image_path, caption FROM restaurante_images WHERE restaurante_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
+    $imgs->execute([$rid]);
+    $result = $imgs->fetchAll();
+    $out = array_map(fn($i) => ['src' => $i['image_path'], 'caption' => $i['caption'], 'nombre' => $restauranteNombre], $result);
+    header('Content-Type: application/json');
+    echo json_encode($out);
+    exit;
+}
+
+require_once 'inc/footer.php';
+?>
