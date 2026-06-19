@@ -212,10 +212,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// PROCESAR ELIMINACIÓN DE IMAGEN DE GALERÍA (GET)
-if ($action == 'delete_img' && isset($_GET['img_id']) && isset($_GET['news_id'])) {
+// PROCESAR ELIMINACIÓN DE IMAGEN DE GALERÍA (GET/AJAX)
+if ($action == 'delete_img' && isset($_GET['img_id'])) {
     $img_id = $_GET['img_id'];
-    $news_id = $_GET['news_id'];
     
     // Obtener ruta de la imagen
     $stmt = $pdo->prepare("SELECT image_path FROM news_images WHERE id = ?");
@@ -229,9 +228,15 @@ if ($action == 'delete_img' && isset($_GET['img_id']) && isset($_GET['news_id'])
     $stmt = $pdo->prepare("DELETE FROM news_images WHERE id = ?");
     $stmt->execute([$img_id]);
     
-    $msg = "Imagen eliminada de la galería.";
-    header("Location: news.php?action=edit&id=" . $news_id);
-    exit;
+    if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
+        echo json_encode(['success' => true]);
+        exit;
+    } else {
+        $news_id = $_GET['news_id'] ?? '';
+        $msg = "Imagen eliminada de la galería.";
+        header("Location: news.php?action=edit&id=" . $news_id);
+        exit;
+    }
 }
 
 // PROCESAR ELIMINACIÓN (GET)
@@ -310,7 +315,7 @@ adminHeader("Noticias y Eventos");
                 <tbody>
                     <?php
                     $queryStr = $hasSortOrderColumn
-                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.sort_order ASC, ne.id DESC"
+                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY CASE WHEN ne.sort_order = 0 THEN 9999 ELSE ne.sort_order END ASC, ne.id DESC"
                         : "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.id DESC";
                     $stmt = $pdo->query($queryStr);
                     $hasItems = false;
@@ -541,9 +546,9 @@ adminHeader("Noticias y Eventos");
                                     <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
                                 </div>
                                 <input type="text" name="captions[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['caption'] ?? ''); ?>" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
-                                <a href="news.php?action=delete_img&img_id=<?php echo $gimg['id']; ?>&news_id=<?php echo $news_data['id']; ?>" 
+                                <a href="javascript:void(0);" 
                                    style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" 
-                                   onclick="return confirm('¿Eliminar esta imagen de la galería?')">
+                                   onclick="deleteGalleryImage(<?php echo $gimg['id']; ?>, this)">
                                     <i class="fas fa-times"></i>
                                 </a>
                             </div>
@@ -609,7 +614,7 @@ adminHeader("Noticias y Eventos");
                             '<input type="number" name="sort_order[' + file.id + ']" value="0" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
                             '</div>' +
                             '<input type="text" name="captions[' + file.id + ']" value="" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
-                            '<a href="news.php?action=delete_img&img_id=' + file.id + '&news_id=' + newsId + '" style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" onclick="return confirm(\'¿Eliminar esta imagen de la galería?\')"><i class="fas fa-times"></i></a>';
+                            '<a href="javascript:void(0);" style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" onclick="deleteGalleryImage(' + file.id + ', this)"><i class="fas fa-times"></i></a>';
                         
                         grid.appendChild(div);
                     });
@@ -630,6 +635,27 @@ adminHeader("Noticias y Eventos");
             alert('Error de conexión al intentar subir los archivos.');
         });
     });
+    
+    function deleteGalleryImage(imgId, btnElement) {
+        if (!confirm('¿Eliminar esta imagen de la galería de forma permanente?')) return;
+        
+        fetch('news.php?action=delete_img&ajax=1&img_id=' + imgId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const itemDiv = btnElement.closest('div');
+                itemDiv.style.transition = 'opacity 0.3s';
+                itemDiv.style.opacity = '0';
+                setTimeout(() => itemDiv.remove(), 300);
+            } else {
+                alert('Hubo un problema al borrar la imagen.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error de conexión al intentar borrar.');
+        });
+    }
     </script>
     <style>
     @keyframes highlight {
