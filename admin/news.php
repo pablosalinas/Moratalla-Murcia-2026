@@ -104,6 +104,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $image_path = $stmt->fetchColumn();
             }
             
+            // Si el usuario marcó la casilla para borrar la imagen/vídeo principal
+            if (isset($_POST['delete_main_image']) && $_POST['delete_main_image'] == '1') {
+                if (!empty($image_path) && is_file('../' . $image_path)) {
+                    @unlink('../' . $image_path);
+                }
+                $image_path = null;
+            }
+            
             // Subida de imagen principal (o video)
             if (isset($_FILES['news_image']) && $_FILES['news_image']['error'] == UPLOAD_ERR_OK) {
                 $uploadDir = '../uploads/news/';
@@ -460,7 +468,12 @@ adminHeader("Noticias y Eventos");
                             <?php else: ?>
                                 <img src="../<?php echo htmlspecialchars($news_data['image_path']); ?>" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;">
                             <?php endif; ?>
-                            <small style="color: #666;">Archivo actual. Si subes otro, se reemplazará.</small>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <small style="color: #666;">Archivo actual. Si subes otro, se reemplazará.</small>
+                                <label style="color: #e74c3c; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                    <input type="checkbox" name="delete_main_image" value="1"> <i class="fas fa-trash"></i> Eliminar este archivo
+                                </label>
+                            </div>
                         </div>
                     <?php endif; ?>
                     <input type="text" name="image_caption" value="<?php echo htmlspecialchars($news_data['image_caption'] ?? ''); ?>" placeholder="Descripción o pie de foto (opcional)" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 0.9rem; margin-top: 0.8rem; background: white;">
