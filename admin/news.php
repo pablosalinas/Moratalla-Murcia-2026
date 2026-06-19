@@ -197,13 +197,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
+            // Borrar imágenes de galería seleccionadas
+            if (isset($_POST['delete_gallery']) && is_array($_POST['delete_gallery'])) {
+                foreach ($_POST['delete_gallery'] as $delImgId) {
+                    $stmtDel = $pdo->prepare("SELECT image_path FROM news_images WHERE id = ?");
+                    $stmtDel->execute([(int)$delImgId]);
+                    $pathDel = $stmtDel->fetchColumn();
+                    if (!empty($pathDel) && is_file('../' . $pathDel)) {
+                        @unlink('../' . $pathDel);
+                    }
+                    $stmtDelDo = $pdo->prepare("DELETE FROM news_images WHERE id = ?");
+                    $stmtDelDo->execute([(int)$delImgId]);
+                }
+            }
 
             // Actualizar órdenes y descripciones de la galería existente
             if (isset($_POST['sort_order']) && is_array($_POST['sort_order'])) {
                 foreach ($_POST['sort_order'] as $imgId => $orderVal) {
-                    $captionVal = isset($_POST['captions'][$imgId]) ? trim($_POST['captions'][$imgId]) : null;
-                    $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ?, caption = ? WHERE id = ?");
-                    $stmtOrder->execute([(int)$orderVal, $captionVal, (int)$imgId]);
+                    // Solo actualizar si no lo acabamos de borrar
+                    if (!isset($_POST['delete_gallery']) || !in_array($imgId, $_POST['delete_gallery'])) {
+                        $captionVal = isset($_POST['captions'][$imgId]) ? trim($_POST['captions'][$imgId]) : null;
+                        $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ?, caption = ? WHERE id = ?");
+                        $stmtOrder->execute([(int)$orderVal, $captionVal, (int)$imgId]);
+                    }
                 }
             }
 
@@ -212,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// PROCESAR ELIMINACIÓN DE IMAGEN DE GALERÍA (GET/AJAX)
+// PROCESAR ELIMINACIÓN DE IMAGEN DE GALERÍA (AJAX) - Mantenido solo por si las subidas AJAX necesitan borrar
 if ($action == 'delete_img' && isset($_GET['img_id'])) {
     $img_id = $_GET['img_id'];
     
@@ -315,8 +331,8 @@ adminHeader("Noticias y Eventos");
                 <tbody>
                     <?php
                     $queryStr = $hasSortOrderColumn
-                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.sort_order ASC, ne.id DESC"
-                        : "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.id DESC";
+                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.is_active_home DESC, ne.is_active_category DESC, ne.sort_order ASC, ne.id DESC"
+                        : "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.is_active_home DESC, ne.is_active_category DESC, ne.id DESC";
                     $stmt = $pdo->query($queryStr);
                     $hasItems = false;
                     while ($row = $stmt->fetch()) {
@@ -545,12 +561,10 @@ adminHeader("Noticias y Eventos");
                                     <span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>
                                     <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
                                 </div>
-                                <input type="text" name="captions[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['caption'] ?? ''); ?>" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
-                                <a href="javascript:void(0);" 
-                                   style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" 
-                                   onclick="deleteGalleryImage(<?php echo $gimg['id']; ?>, this)">
-                                    <i class="fas fa-times"></i>
-                                </a>
+                                <input type="text" name="captions[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['caption'] ?? ''); ?>" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #e74c3c; cursor: pointer; justify-content: center; background: #fdf3f2; border: 1px solid #fbdad7; padding: 4px; border-radius: 4px;">
+                                    <input type="checkbox" name="delete_gallery[]" value="<?php echo $gimg['id']; ?>"> <b>Borrar archivo</b>
+                                </label>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -613,8 +627,10 @@ adminHeader("Noticias y Eventos");
                             '<span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>' +
                             '<input type="number" name="sort_order[' + file.id + ']" value="0" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
                             '</div>' +
-                            '<input type="text" name="captions[' + file.id + ']" value="" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
-                            '<a href="javascript:void(0);" style="position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-decoration: none;" onclick="deleteGalleryImage(' + file.id + ', this)"><i class="fas fa-times"></i></a>';
+                            '<input type="text" name="captions[' + file.id + ']" value="" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.5rem;">' +
+                            '<label style="display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #e74c3c; cursor: pointer; justify-content: center; background: #fdf3f2; border: 1px solid #fbdad7; padding: 4px; border-radius: 4px;">' +
+                            '<input type="checkbox" name="delete_gallery[]" value="' + file.id + '"> <b>Borrar archivo</b>' +
+                            '</label>';
                         
                         grid.appendChild(div);
                     });
@@ -635,27 +651,6 @@ adminHeader("Noticias y Eventos");
             alert('Error de conexión al intentar subir los archivos.');
         });
     });
-    
-    function deleteGalleryImage(imgId, btnElement) {
-        if (!confirm('¿Eliminar esta imagen de la galería de forma permanente?')) return;
-        
-        fetch('news.php?action=delete_img&ajax=1&img_id=' + imgId)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const itemDiv = btnElement.closest('div');
-                itemDiv.style.transition = 'opacity 0.3s';
-                itemDiv.style.opacity = '0';
-                setTimeout(() => itemDiv.remove(), 300);
-            } else {
-                alert('Hubo un problema al borrar la imagen.');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Error de conexión al intentar borrar.');
-        });
-    }
     </script>
     <style>
     @keyframes highlight {
