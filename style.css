@@ -502,6 +502,36 @@ body {
     border-color: var(--primary);
 }
 
+/* Destacado / Orden más bajo */
+.news-card-featured {
+    border: 3px solid var(--accent, #c8a85a);
+    box-shadow: 0 10px 25px rgba(200, 168, 90, 0.2);
+    z-index: 2;
+}
+
+.news-card-featured:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(200, 168, 90, 0.4);
+    border-color: var(--primary);
+}
+
+.news-card-featured::after {
+    content: "\f005   DESTACADO";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: var(--accent, #c8a85a);
+    color: var(--primary-dark, #1b4332);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    letter-spacing: 0.5px;
+}
+
 .news-card-img-wrapper {
     position: relative;
     height: 200px;

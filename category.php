@@ -120,7 +120,9 @@ require_once 'inc/header.php';
         ?>
             <h3 style="margin-bottom: 2rem; margin-top: 3rem; color: var(--primary); font-size: 1.5rem; border-left: 5px solid var(--accent); padding-left: 1.2rem;">Noticias y Eventos de la Sección</h3>
             <div class="news-grid" style="margin-bottom: 4rem;">
-                <?php foreach ($categoryNews as $news): 
+                <?php 
+                $isFirstNews = true;
+                foreach ($categoryNews as $news): 
                     $isEvent = !empty($news['event_date']);
                     $dateText = $isEvent ? date('d/m/Y', strtotime($news['event_date'])) : date('d/m/Y', strtotime($news['created_at']));
                     $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
@@ -129,8 +131,11 @@ require_once 'inc/header.php';
                     $stmtG = $pdo->prepare("SELECT image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
                     $stmtG->execute([$news['id']]);
                     $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    $featuredClass = $isFirstNews ? 'news-card-featured' : '';
+                    $isFirstNews = false;
                     ?>
-                    <div class="news-card" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
+                    <div class="news-card <?php echo $featuredClass; ?>" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
                         'title' => $news['title'],
                         'date' => $dateText,
                         'isEvent' => $isEvent,

@@ -20,6 +20,7 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
             <?php
             $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 ORDER BY sort_order ASC, event_date DESC, id DESC");
             $hasNews = false;
+            $isFirstNews = true;
             while ($news = $stmt->fetch()) {
                 $hasNews = true;
                 $isEvent = !empty($news['event_date']);
@@ -30,8 +31,11 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
                 $stmtG = $pdo->prepare("SELECT image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
                 $stmtG->execute([$news['id']]);
                 $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+                
+                $featuredClass = $isFirstNews ? 'news-card-featured' : '';
+                $isFirstNews = false;
                 ?>
-                <div class="news-card" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
+                <div class="news-card <?php echo $featuredClass; ?>" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
                     'title' => $news['title'],
                     'date' => $dateText,
                     'isEvent' => $isEvent,
