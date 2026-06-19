@@ -28,9 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $tmpName = $_FILES['banner_image']['tmp_name'];
                 
+                require_once 'inc/image_helper.php';
                 if ($isVideo) {
                     $targetFile = $targetDir . $baseFilename . '.' . $ext;
-                    if (move_uploaded_file($tmpName, $targetFile)) {
+                    if (processUploadedVideo($tmpName, $targetFile, true)) {
                         $dbPath = 'uploads/banners/' . $baseFilename . '.' . $ext;
                         $stmt = $pdo->prepare("INSERT INTO banners (image_path, title, sort_order, is_active) VALUES (?, ?, ?, 1)");
                         $stmt->execute([$dbPath, $_POST['title'] ?? '', (int)($_POST['sort_order'] ?? 0)]);
@@ -39,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message = '<div class="alert alert-danger">Error al subir el vídeo del banner.</div>';
                     }
                 } else {
-                    require_once 'inc/image_helper.php';
 
                     $desktopFilename = $baseFilename . '_desktop.' . $ext;
                     $mobileFilename = $baseFilename . '_mobile.' . $ext;

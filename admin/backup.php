@@ -141,26 +141,51 @@ adminHeader("Copia de Seguridad");
 </div>
 
 <script>
-document.getElementById('backupForm').addEventListener('submit', function(e) {
+document.getElementById('backupForm').addEventListener('submit', async function(e) {
     var btn = document.getElementById('backupBtn');
-    var token = Date.now().toString();
-    document.getElementById('downloadToken').value = token;
-    
-    // Cambiar estado visual
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando ZIP, por favor espere...';
-    btn.style.opacity = '0.8';
-    btn.style.pointerEvents = 'none';
-    
-    // Comprobar la cookie cada 1 segundo
-    var pollTimer = setInterval(function() {
-        if (document.cookie.indexOf('download_token=' + token) !== -1) {
-            clearInterval(pollTimer);
-            btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Copia descargada con éxito!';
-            btn.style.backgroundColor = '#10b981'; // Verde éxito
+
+    if (window.showSaveFilePicker) {
+        e.preventDefault(); // Usar la API moderna para elegir carpeta local
+        
+        try {
+            // Solicitar ubicación local antes de generar (para no hacer esperar si cancelan)
+            const handle = await window.showSaveFilePicker({
+                suggestedName: 'backup_completo_moratalla_' + new Date().toISOString().replace(/[-:T]/g, '_').split('.')[0] + '.zip',
+                types: [{
+                    description: 'Archivo ZIP',
+                    accept: {'application/zip': ['.zip']}
+                }]
+            });
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando ZIP, por favor espere...';
+            btn.style.opacity = '0.8';
+            btn.style.pointerEvents = 'none';
+            
+            const formData = new FormData(this);
+            formData.append('download_backup', '1');
+            
+            const response = await fetch('backup.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) throw new Error('Error al generar la copia en el servidor.');
+            
+            const writable = await handle.createWritable();
+            await writable.write(await response.blob());
+            await writable.close();
+            
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Copia guardada con éxito!';
+            btn.style.backgroundColor = '#10b981';
             btn.style.borderColor = '#10b981';
             btn.style.opacity = '1';
             
-            // Restaurar el botón original después de 5 segundos
+        } catch (error) {
+            console.error(error);
+            if (error.name !== 'AbortError') {
+                alert('Hubo un error al guardar: ' + error.message);
+            }
+        } finally {
             setTimeout(function() {
                 btn.innerHTML = '<i class="fas fa-file-archive"></i> Generar y Descargar Backup';
                 btn.style.backgroundColor = '';
@@ -168,7 +193,32 @@ document.getElementById('backupForm').addEventListener('submit', function(e) {
                 btn.style.pointerEvents = 'auto';
             }, 5000);
         }
-    }, 1000);
+    } else {
+        // Fallback para navegadores antiguos (descarga normal por formulario)
+        var token = Date.now().toString();
+        document.getElementById('downloadToken').value = token;
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando ZIP, por favor espere...';
+        btn.style.opacity = '0.8';
+        btn.style.pointerEvents = 'none';
+        
+        var pollTimer = setInterval(function() {
+            if (document.cookie.indexOf('download_token=' + token) !== -1) {
+                clearInterval(pollTimer);
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Copia descargada con éxito!';
+                btn.style.backgroundColor = '#10b981';
+                btn.style.borderColor = '#10b981';
+                btn.style.opacity = '1';
+                
+                setTimeout(function() {
+                    btn.innerHTML = '<i class="fas fa-file-archive"></i> Generar y Descargar Backup';
+                    btn.style.backgroundColor = '';
+                    btn.style.borderColor = '';
+                    btn.style.pointerEvents = 'auto';
+                }, 5000);
+            }
+        }, 1000);
+    }
 });
 </script>
 

@@ -77,7 +77,7 @@ if ($action === 'save') {
         $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
         
         if ($isVid) {
-            $uploaded = move_uploaded_file($_FILES['foto_nueva']['tmp_name'], $targetFile);
+            $uploaded = processUploadedVideo($_FILES['foto_nueva']['tmp_name'], $targetFile, true);
         } else {
             $uploaded = processUploadedImage($_FILES['foto_nueva']['tmp_name'], $targetFile, true, 1200, 85);
         }

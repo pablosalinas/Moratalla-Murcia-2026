@@ -133,4 +133,50 @@ function processUploadedImage($sourcePath, $targetPath, $addWatermark = true, $m
 
     return $success;
 }
+
+/**
+ * Helper para comprimir y añadir marca de agua a vídeos usando FFmpeg (si está disponible en el servidor).
+ * Si no está disponible, simplemente mueve el archivo.
+ */
+function processUploadedVideo($sourcePath, $targetPath, $addWatermark = true) {
+    // Comprobar si FFmpeg está en el PATH
+    $ffmpegPath = 'ffmpeg';
+    $checkFfmpeg = @shell_exec("$ffmpegPath -version 2>&1");
+    
+    if (!$checkFfmpeg || strpos(strtolower($checkFfmpeg), 'ffmpeg') === false) {
+        // No hay FFmpeg instalado en el servidor (muy común en hosting compartido).
+        // Hacemos el fallback de simplemente mover el archivo original.
+        return @move_uploaded_file($sourcePath, $targetPath);
+    }
+    
+    // Configuración para simular compresión tipo WhatsApp (720p max, crf alto)
+    $escapedSource = escapeshellarg($sourcePath);
+    $escapedTarget = escapeshellarg($targetPath);
+    
+    $watermarkText = "www.moratalla-murcia.com";
+    $fontFile = __DIR__ . '/fonts/Roboto-Regular.ttf';
+    
+    // FFmpeg drawtext requiere escapar caracteres especiales en las rutas
+    $fontFileEscaped = str_replace('\\', '/', $fontFile);
+    $fontFileEscaped = str_replace(':', '\\\\:', $fontFileEscaped);
+    
+    if ($addWatermark && file_exists($fontFile)) {
+        // Escalar a max 720 de ancho, manteniendo proporción. Luego dibujar texto con fondo semitransparente.
+        $vf = "scale='min(720,iw)':-2,drawtext=fontfile='{$fontFileEscaped}':text='{$watermarkText}':fontcolor=white:fontsize=18:box=1:boxcolor=black@0.4:boxborderw=5:x=w-tw-10:y=h-th-10";
+    } else {
+        $vf = "scale='min(720,iw)':-2";
+    }
+    
+    $cmd = "$ffmpegPath -y -i $escapedSource -vf " . escapeshellarg($vf) . " -vcodec libx264 -crf 28 -preset fast -acodec aac -b:a 128k $escapedTarget 2>&1";
+    
+    @shell_exec($cmd);
+    
+    if (file_exists($targetPath) && filesize($targetPath) > 0) {
+        @unlink($sourcePath);
+        return true;
+    }
+    
+    // Si FFmpeg falló por alguna razón, movemos el original
+    return @move_uploaded_file($sourcePath, $targetPath);
+}
 ?>

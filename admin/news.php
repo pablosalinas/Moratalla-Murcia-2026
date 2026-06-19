@@ -37,8 +37,10 @@ if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
                 $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
                 
                 $success = false;
-                if ($fileExt === 'pdf' || $isVid) {
+                if ($fileExt === 'pdf') {
                     $success = move_uploaded_file($files['tmp_name'][$i], $targetFile);
+                } elseif ($isVid) {
+                    $success = processUploadedVideo($files['tmp_name'][$i], $targetFile, true);
                 } else {
                     $success = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
                 }
@@ -118,8 +120,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
                 $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
                 
-                if ($fileExt === 'pdf' || $isVid) {
+                if ($fileExt === 'pdf') {
                     if (move_uploaded_file($_FILES['news_image']['tmp_name'], $targetFile)) {
+                        $image_path = 'uploads/news/' . $filename;
+                    }
+                } elseif ($isVid) {
+                    if (processUploadedVideo($_FILES['news_image']['tmp_name'], $targetFile, true)) {
                         $image_path = 'uploads/news/' . $filename;
                     }
                 } else {
@@ -166,8 +172,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
                         
                         $success = false;
-                        if ($fileExt === 'pdf' || $isVid) {
+                        if ($fileExt === 'pdf') {
                             $success = move_uploaded_file($files['tmp_name'][$i], $targetFile);
+                        } elseif ($isVid) {
+                            $success = processUploadedVideo($files['tmp_name'][$i], $targetFile, true);
                         } else {
                             $success = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
                         }
@@ -424,7 +432,6 @@ adminHeader("Noticias y Eventos");
                     <input type="number" name="sort_order_news" value="<?php echo (int)($news_data['sort_order'] ?? 0); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size:1rem; text-align:center;">
                     <small style="color:#888; display:block; margin-top:0.3rem; font-size:0.75rem;">Menor = primero</small>
                 </div>
-            </div>
             </div>
             
             <div style="margin-bottom: 1.5rem;">
