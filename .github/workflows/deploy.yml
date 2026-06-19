@@ -21,11 +21,11 @@ jobs:
         env:
           PASS: ${{ secrets.SFTP_PASS }}
 
-      - name: 📤 Subir archivos (Rsync - Súper Rápido)
+      - name: 📤 Subir archivos (LFTP Mirror - Rápido y compatible)
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass rsync
-          sshpass -p "${{ secrets.SFTP_PASS }}" rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p 22 -o StrictHostKeyChecking=no" ./ ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/
-          sshpass -p "${{ secrets.SFTP_PASS }}" rsync -avz -e "ssh -p 22 -o StrictHostKeyChecking=no" ./truque/ ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/../truque/
+          sudo apt-get update && sudo apt-get install -y lftp
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ ./ ${{ secrets.SFTP_REMOTE_PATH }}/"
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 ./truque/ ${{ secrets.SFTP_REMOTE_PATH }}/../truque/"
 
       - name: 🍲 Clonar y desplegar Recetario
         run: |
@@ -39,8 +39,8 @@ jobs:
           # IMPORTANTE: Eliminar las carpetas pesadas del servidor remoto de Ionos para liberar espacio
           sshpass -p "${{ secrets.SFTP_PASS }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }} "rm -rf \"${{ secrets.SFTP_REMOTE_PATH }}/recetario/COCINA TRADICIONAL DE MORATALLA\" \"${{ secrets.SFTP_REMOTE_PATH }}/recetario/GASTRONOMIA DE MORATALLA\"" || true
 
-          # Subir el recetario usando Rsync (solo sube cambios, extremadamente rápido)
-          sshpass -p "${{ secrets.SFTP_PASS }}" rsync -avz --exclude '.git' --exclude '.github' -e "ssh -p 22 -o StrictHostKeyChecking=no" /tmp/recetario/ ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_REMOTE_PATH }}/recetario/
+          # Subir el recetario usando LFTP (rápido y compatible con IONOS)
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ /tmp/recetario/ ${{ secrets.SFTP_REMOTE_PATH }}/recetario/"
 
           echo "✅ Recetario desplegado correctamente."
           echo "✅ Recetario desplegado correctamente."
