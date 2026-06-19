@@ -112,7 +112,7 @@ require_once 'inc/header.php';
 
         <!-- Noticias y Eventos de esta Categoría -->
         <?php
-        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE category_id = ? AND is_active_category = 1 ORDER BY CASE WHEN sort_order = 0 THEN 9999 ELSE sort_order END ASC, event_date DESC, id DESC");
+        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE category_id = ? AND is_active_category = 1 ORDER BY sort_order ASC, event_date DESC, id DESC");
         $stmtNews->execute([$id]);
         $categoryNews = $stmtNews->fetchAll();
         

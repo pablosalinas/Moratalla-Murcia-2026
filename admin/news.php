@@ -315,7 +315,7 @@ adminHeader("Noticias y Eventos");
                 <tbody>
                     <?php
                     $queryStr = $hasSortOrderColumn
-                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY CASE WHEN ne.sort_order = 0 THEN 9999 ELSE ne.sort_order END ASC, ne.id DESC"
+                        ? "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.sort_order ASC, ne.id DESC"
                         : "SELECT ne.*, c.name as category_name FROM news_events ne LEFT JOIN categories c ON ne.category_id = c.id ORDER BY ne.id DESC";
                     $stmt = $pdo->query($queryStr);
                     $hasItems = false;

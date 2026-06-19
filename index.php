@@ -18,7 +18,7 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
         
         <div class="news-grid">
             <?php
-            $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 ORDER BY CASE WHEN sort_order = 0 THEN 9999 ELSE sort_order END ASC, event_date DESC, id DESC");
+            $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 ORDER BY sort_order ASC, event_date DESC, id DESC");
             $hasNews = false;
             while ($news = $stmt->fetch()) {
                 $hasNews = true;
