@@ -446,12 +446,17 @@ adminHeader("Noticias y Eventos");
                     <small style="color: #666; display: block; margin-top: 0.4rem;">Indica la fecha si esta noticia corresponde a un evento futuro o pasado.</small>
                 </div>
                 <div>
-                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imagen Principal o Documento PDF</label>
-                    <input type="file" name="news_image" accept="image/*,application/pdf" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                    <?php if ($news_data['image_path']): ?>
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imagen Principal, Documento PDF o Vídeo</label>
+                    <input type="file" name="news_image" accept="image/*,video/*,application/pdf" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    <?php if ($news_data['image_path']): 
+                        $curExt = strtolower(pathinfo($news_data['image_path'], PATHINFO_EXTENSION));
+                        $curIsVid = in_array($curExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                    ?>
                         <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 10px;">
-                            <?php if(strtolower(pathinfo($news_data['image_path'], PATHINFO_EXTENSION)) == 'pdf'): ?>
+                            <?php if($curExt == 'pdf'): ?>
                                 <div style="width: 80px; height: 50px; background: #e74c3c; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px;"><i class="fas fa-file-pdf fa-2x"></i></div>
+                            <?php elseif($curIsVid): ?>
+                                <div style="width: 80px; height: 50px; background: #333; color: white; display:flex; align-items:center; justify-content:center; border-radius: 4px;"><i class="fas fa-video fa-2x"></i></div>
                             <?php else: ?>
                                 <img src="../<?php echo htmlspecialchars($news_data['image_path']); ?>" style="width: 80px; height: 50px; object-fit: cover; border-radius: 4px;">
                             <?php endif; ?>
