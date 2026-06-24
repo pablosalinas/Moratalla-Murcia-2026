@@ -74,12 +74,28 @@ if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
 // PROCESAR ACCIONES DE GUARDADO (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action == 'add' || $action == 'edit') {
+        if (empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && (int)$_SERVER['CONTENT_LENGTH'] > 0) {
+            $id = isset($_GET['id']) ? $_GET['id'] : '';
+            $msg = "Error: El archivo seleccionado es demasiado grande. Límite del servidor: " . ini_get('post_max_size');
+            if ($id) {
+                header("Location: news.php?action=edit&id=$id&error=" . urlencode($msg));
+            } else {
+                header("Location: news.php?action=add&error=" . urlencode($msg));
+            }
+            exit;
+        }
+
         $id = $_POST['id'] ?? '';
         $title = trim($_POST['title'] ?? '');
         $content = trim($_POST['content'] ?? '');
         $image_caption = trim($_POST['image_caption'] ?? '');
         $event_date = $_POST['event_date'] ?? null;
         $is_active_home = isset($_POST['is_active_home']) ? 1 : 0;
+    
+    if (empty($title)) {
+        header("Location: news.php?msg=" . urlencode("Error: El título es obligatorio."));
+        exit;
+    }
         $category_id = $_POST['category_id'] ?? null;
         $is_active_category = isset($_POST['is_active_category']) ? 1 : 0;
         $sort_order_news = (int)($_POST['sort_order_news'] ?? 0);

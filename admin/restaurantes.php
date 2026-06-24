@@ -25,6 +25,17 @@ if ($action === 'toggle_visible' && isset($_GET['id'])) {
 
 // ─── GUARDAR / ACTUALIZAR RESTAURANTE ─────────────────────────────────────
 if ($action === 'save') {
+    if (empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && (int)$_SERVER['CONTENT_LENGTH'] > 0) {
+        $id = isset($_GET['id']) ? $_GET['id'] : '';
+        $msg = "Error: El archivo seleccionado es demasiado grande. Límite del servidor: " . ini_get('post_max_size');
+        if ($id) {
+            header("Location: restaurantes.php?action=edit&id=$id&msg=" . urlencode($msg));
+        } else {
+            header("Location: restaurantes.php?msg=" . urlencode($msg));
+        }
+        exit;
+    }
+
     $id          = isset($_POST['id'])          ? (int)$_POST['id']                     : 0;
     $nombre      = trim($_POST['nombre']     ?? '');
     $calle       = trim($_POST['calle']      ?? '');
@@ -67,28 +78,34 @@ if ($action === 'save') {
     }
 
     // Subir foto o vídeo a galería (si se seleccionó)
-    if (isset($_FILES['foto_nueva']) && $_FILES['foto_nueva']['error'] == UPLOAD_ERR_OK) {
+    if (isset($_FILES['foto_nueva'])) {
+        $files = $_FILES['foto_nueva'];
         $uploadDir = '../uploads/restaurantes/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-        $filename   = uniqid('rest_') . '_' . basename($_FILES['foto_nueva']['name']);
-        $targetFile = $uploadDir . $filename;
         
-        $ext = strtolower(pathinfo($_FILES['foto_nueva']['name'], PATHINFO_EXTENSION));
-        $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
-        
-        if ($isVid) {
-            $uploaded = processUploadedVideo($_FILES['foto_nueva']['tmp_name'], $targetFile, true);
-        } else {
-            $uploaded = processUploadedImage($_FILES['foto_nueva']['tmp_name'], $targetFile, true, 1200, 85);
-        }
+        for ($i = 0; $i < count($files['name']); $i++) {
+            if ($files['error'][$i] == UPLOAD_ERR_OK) {
+                $filename   = uniqid('rest_') . '_' . basename($files['name'][$i]);
+                $targetFile = $uploadDir . $filename;
+                
+                $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+                $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
 
-        if ($uploaded) {
-            $dbPath = 'uploads/restaurantes/' . $filename;
-            // ¿Es la primera imagen? Si sí, y no es vídeo, poner como portada
-            $countImg = $pdo->prepare("SELECT COUNT(*) FROM restaurante_images WHERE restaurante_id=?"); $countImg->execute([$id]);
-            $esCover  = ($countImg->fetchColumn() == 0 && !$isVid) ? 1 : 0;
-            $pdo->prepare("INSERT INTO restaurante_images (restaurante_id, image_path, is_cover, is_visible, sort_order, is_video) VALUES (?,?,?,1,0,?)")
-                ->execute([$id, $dbPath, $esCover, $isVid]);
+                if ($isVid) {
+                    $uploaded = processUploadedVideo($files['tmp_name'][$i], $targetFile, true);
+                } else {
+                    $uploaded = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
+                }
+
+                if ($uploaded) {
+                    $dbPath = 'uploads/restaurantes/' . $filename;
+                    // ¿Es la primera imagen? Si sí, y no es vídeo, poner como portada
+                    $countImg = $pdo->prepare("SELECT COUNT(*) FROM restaurante_images WHERE restaurante_id=?"); $countImg->execute([$id]);
+                    $esCover  = ($countImg->fetchColumn() == 0 && !$isVid) ? 1 : 0;
+                    $pdo->prepare("INSERT INTO restaurante_images (restaurante_id, image_path, is_cover, is_visible, sort_order, is_video) VALUES (?,?,?,1,0,?)")
+                        ->execute([$id, $dbPath, $esCover, $isVid]);
+                }
+            }
         }
     }
 
@@ -260,7 +277,7 @@ async function toggleVisible(id) {
     <!-- ── Formulario principal ── -->
     <div class="card" style="flex:2; min-width:400px;">
         <h3><?php echo $action === 'add' ? 'Añadir Establecimiento' : 'Editar: ' . htmlspecialchars($r['nombre']); ?></h3>
-        <form method="POST" action="?action=save" enctype="multipart/form-data">
+        <form method="POST" action="?action=save&id=<?php echo $r['id']; ?>" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
@@ -339,7 +356,7 @@ async function toggleVisible(id) {
 
             <h4><i class="fas fa-camera"></i> Subir foto o vídeo a la galería</h4>
             <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">La primera foto (imagen) subida se asigna automáticamente como portada.</p>
-            <input type="file" name="foto_nueva" accept="image/*,video/*" style="padding:0.5rem; margin-bottom:1.5rem;">
+            <input type="file" name="foto_nueva[]" accept="image/*,video/*" multiple style="padding:0.5rem; margin-bottom:1.5rem;">
 
             <div style="display:flex; gap:1rem; flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary" style="font-size:1.05rem; padding:0.9rem 2rem;"><i class="fas fa-save"></i> Guardar</button>

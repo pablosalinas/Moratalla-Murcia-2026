@@ -26,6 +26,17 @@ function slugify($text) {
 
 // Procesado de guardado
 if ($action == 'save') {
+    if (empty($_POST) && isset($_SERVER['CONTENT_LENGTH']) && (int)$_SERVER['CONTENT_LENGTH'] > 0) {
+        $id = isset($_GET['id']) ? $_GET['id'] : '';
+        $msg = "Error: El archivo seleccionado es demasiado grande. Límite del servidor: " . ini_get('post_max_size');
+        if ($id) {
+            header("Location: pages.php?action=edit&id=$id&msg=" . urlencode($msg));
+        } else {
+            header("Location: pages.php?msg=" . urlencode($msg));
+        }
+        exit;
+    }
+
     $id = isset($_POST['id']) ? $_POST['id'] : '';
     $title = isset($_POST['title']) ? trim($_POST['title']) : '';
     $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
@@ -34,6 +45,11 @@ if ($action == 'save') {
     $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     
     if (empty($category_id)) $category_id = null;
+    
+    if (empty($title)) {
+        header("Location: pages.php?msg=" . urlencode("Error: El título es obligatorio."));
+        exit;
+    }
 
     if ($id) {
         $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, sort_order=?, is_visible=? WHERE id=?");
@@ -55,26 +71,31 @@ if ($action == 'save') {
     }
     
     // Subida de foto o vídeo para galería (si hay)
-    if (isset($_FILES['gallery_image']) && $_FILES['gallery_image']['error'] == UPLOAD_ERR_OK) {
+    if (isset($_FILES['gallery_images'])) {
+        $files = $_FILES['gallery_images'];
         $uploadDir = '../uploads/galerias/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
         
-        $filename = uniqid() . '_' . basename($_FILES['gallery_image']['name']);
-        $targetFile = $uploadDir . $filename;
-        
-        $ext = strtolower(pathinfo($_FILES['gallery_image']['name'], PATHINFO_EXTENSION));
-        $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
-        
-        if ($isVid) {
-            $uploaded = processUploadedVideo($_FILES['gallery_image']['tmp_name'], $targetFile, true);
-        } else {
-            $uploaded = processUploadedImage($_FILES['gallery_image']['tmp_name'], $targetFile, true, 1200, 85);
-        }
+        for ($i = 0; $i < count($files['name']); $i++) {
+            if ($files['error'][$i] == UPLOAD_ERR_OK) {
+                $filename = uniqid() . '_' . basename($files['name'][$i]);
+                $targetFile = $uploadDir . $filename;
+                
+                $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+                $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
+                
+                if ($isVid) {
+                    $uploaded = processUploadedVideo($files['tmp_name'][$i], $targetFile, true);
+                } else {
+                    $uploaded = processUploadedImage($files['tmp_name'][$i], $targetFile, true, 1200, 85);
+                }
 
-        if ($uploaded) {
-            $dbPath = 'uploads/galerias/' . $filename;
-            $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover, is_video) VALUES (?, ?, 0, ?)");
-            $stmtImg->execute([$id, $dbPath, $isVid]);
+                if ($uploaded) {
+                    $dbPath = 'uploads/galerias/' . $filename;
+                    $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover, is_video) VALUES (?, ?, 0, ?)");
+                    $stmtImg->execute([$id, $dbPath, $isVid]);
+                }
+            }
         }
     }
     
@@ -221,7 +242,7 @@ if ($action == 'list') {
             <h3><?php echo $action == 'add' ? 'Añadir Nueva Página' : 'Editar Página: ' . htmlspecialchars($page['title']); ?></h3>
             <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">Utiliza este formulario para crear páginas de contenido o registrar nuevos Artesanos.</p>
             
-            <form method="POST" action="?action=save" enctype="multipart/form-data">
+            <form method="POST" action="?action=save&id=<?php echo $page['id']; ?>" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?php echo $page['id']; ?>">
                 
                 <div style="margin-bottom: 1.5rem;">
@@ -265,7 +286,7 @@ if ($action == 'list') {
                 <h4><i class="fas fa-images"></i> Añadir Foto o Vídeo a la Galería</h4>
                 <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Si seleccionas un archivo aquí, se subirá y se adjuntará automáticamente a la galería de esta página al guardar.</p>
                 <div style="margin-bottom: 1.5rem;">
-                    <input type="file" name="gallery_image" accept="image/*,video/*" style="padding: 0.5rem;">
+                    <input type="file" name="gallery_images[]" accept="image/*,video/*" multiple style="padding: 0.5rem;">
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;"><i class="fas fa-save"></i> Guardar Todo</button>
