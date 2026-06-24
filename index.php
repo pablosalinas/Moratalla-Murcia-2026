@@ -41,7 +41,7 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
                     'isEvent' => $isEvent,
                     'image' => $news['image_path'] ? $news['image_path'] : '',
                     'image_caption' => $news['image_caption'] ?? '',
-                    'content' => nl2br($news['content']),
+                    'content' => $news['content'],
                     'gallery' => $gallery
                 ])); ?>)">
                     <div class="news-card-img-wrapper">
