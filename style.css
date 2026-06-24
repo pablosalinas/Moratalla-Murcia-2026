@@ -657,9 +657,12 @@ body {
 }
 
 .news-modal-close {
-    position: absolute;
+    position: sticky;
     top: 15px;
-    right: 15px;
+    float: right;
+    margin-right: 15px;
+    margin-top: 15px;
+    margin-bottom: -55px; /* Evita que desplace el contenido hacia abajo */
     background: white;
     border: none;
     width: 40px;
@@ -669,10 +672,10 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     color: var(--primary-dark);
     font-size: 1.2rem;
-    z-index: 10;
+    z-index: 100;
     transition: var(--transition);
 }
 
@@ -770,7 +773,8 @@ body {
     
     .news-modal-close {
         top: 10px;
-        right: 10px;
+        margin-top: 10px;
+        margin-right: 10px;
         background: rgba(255, 255, 255, 0.9);
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
