@@ -271,6 +271,8 @@ if ($isSinglePageCategory) {
         
         if (item.isVideo) {
             clearInterval(autoPlayInterval); // Detener autoplay si es un vídeo
+        } else {
+            resetAutoPlay(); // Autoplay para imágenes
         }
         
         if (item.isVideo) {
@@ -281,6 +283,9 @@ if ($isSinglePageCategory) {
                 vid.style.opacity = 0;
                 vid.autoplay = true;
                 vid.load();
+                vid.onended = function() {
+                    nextImage();
+                };
             }
             setTimeout(() => {
                 if (vid) vid.style.opacity = 1;
@@ -307,16 +312,10 @@ if ($isSinglePageCategory) {
 
     function nextImage() {
         showImage(currentIndex + 1);
-        if (!galleryItems[currentIndex].isVideo) {
-            resetAutoPlay();
-        }
     }
 
     function prevImage() {
         showImage(currentIndex - 1);
-        if (!galleryItems[currentIndex].isVideo) {
-            resetAutoPlay();
-        }
     }
 
     function startAutoPlay() {
@@ -399,8 +398,38 @@ if ($isSinglePageCategory) {
                     320: { slidesPerView: 1.1, spaceBetween: 15, centeredSlides: true },
                     768: { slidesPerView: 2.2, spaceBetween: 20, centeredSlides: false },
                     1024: { slidesPerView: 3, spaceBetween: 30, centeredSlides: false }
+                },
+                on: {
+                    init: function () {
+                        handlePageSwiperVideo(this);
+                    },
+                    slideChangeTransitionStart: function () {
+                        handlePageSwiperVideo(this);
+                    }
                 }
             });
+
+            function handlePageSwiperVideo(swiperInstance) {
+                const allVideos = swiperInstance.el.querySelectorAll('video');
+                allVideos.forEach(v => {
+                    v.pause();
+                    v.currentTime = 0;
+                });
+                const activeSlide = swiperInstance.slides[swiperInstance.activeIndex];
+                if (!activeSlide) return;
+                const video = activeSlide.querySelector('video');
+                if (video) {
+                    swiperInstance.autoplay.stop();
+                    video.muted = true;
+                    video.play().catch(e => console.log('Autoplay blocked:', e));
+                    video.onended = function() {
+                        swiperInstance.slideNext();
+                        swiperInstance.autoplay.start();
+                    };
+                } else {
+                    swiperInstance.autoplay.start();
+                }
+            }
         }
     });
 </script>

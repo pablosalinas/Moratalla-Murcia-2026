@@ -157,8 +157,40 @@
                     spaceBetween: 15,
                     centeredSlides: true
                 }
+            },
+            on: {
+                init: function () {
+                    handleSwiperVideo(this);
+                },
+                slideChangeTransitionStart: function () {
+                    handleSwiperVideo(this);
+                }
             }
         });
+
+        function handleSwiperVideo(swiperInstance) {
+            // Pausar todos los vídeos
+            const allVideos = swiperInstance.el.querySelectorAll('.banner-video-el');
+            allVideos.forEach(v => {
+                v.pause();
+                v.currentTime = 0;
+            });
+
+            // Reproducir vídeo activo y pausar swiper
+            const activeSlide = swiperInstance.slides[swiperInstance.activeIndex];
+            if (!activeSlide) return;
+            const video = activeSlide.querySelector('.banner-video-el');
+            if (video) {
+                swiperInstance.autoplay.stop();
+                video.play().catch(e => console.log('Autoplay blocked:', e));
+                video.onended = function() {
+                    swiperInstance.slideNext();
+                    swiperInstance.autoplay.start();
+                };
+            } else {
+                swiperInstance.autoplay.start();
+            }
+        }
 
         // Banner Lightbox
         function openBannerModal(src, isVideo = false) {
@@ -412,9 +444,8 @@
     function openNewsCarousel(index) {
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = index;
-        updateCarouselState();
         document.getElementById('newsCarouselOverlay').classList.add('active');
-        startNewsCarouselAutoplay();
+        updateCarouselState();
     }
 
     function startNewsCarouselAutoplay() {
@@ -438,6 +469,8 @@
         
         if (isVideo) {
             clearInterval(newsCarouselInterval); // Pausar autoplay para vídeos
+        } else {
+            startNewsCarouselAutoplay(); // Autoplay para imágenes
         }
         
         if (isVideo) {
@@ -449,6 +482,9 @@
                 videoElement.style.cssText = 'max-width: 90vw; max-height: 70vh; object-fit: contain; display: block; margin: 0 auto; border-radius: 8px; background: #000; outline: none;';
                 videoElement.controls = true;
                 videoElement.autoplay = true;
+                videoElement.onended = function() {
+                    nextNewsCarousel();
+                };
                 container.insertBefore(videoElement, captionElement);
             }
             videoElement.src = currentItem.src;
@@ -481,18 +517,12 @@
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = (currentCarouselIndex - 1 + currentCarouselImages.length) % currentCarouselImages.length;
         updateCarouselState();
-        if (!currentCarouselImages[currentCarouselIndex].is_video) {
-            startNewsCarouselAutoplay(); // Reiniciar timer
-        }
     }
 
     function nextNewsCarousel() {
         if (currentCarouselImages.length === 0) return;
         currentCarouselIndex = (currentCarouselIndex + 1) % currentCarouselImages.length;
         updateCarouselState();
-        if (!currentCarouselImages[currentCarouselIndex].is_video) {
-            startNewsCarouselAutoplay(); // Reiniciar timer
-        }
     }
 
     function closeNewsCarousel(event) {

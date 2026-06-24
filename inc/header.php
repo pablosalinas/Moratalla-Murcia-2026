@@ -258,7 +258,7 @@ function renderHorizontalMenu($parentId = null) {
 
                         if ($isVideo) {
                             echo '<div class="swiper-slide" style="position: relative; width: 100%; height: 100%;">';
-                            echo '<video class="banner-video-el" src="' . htmlspecialchars($banner['image_path']) . '" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;" autoplay loop muted playsinline onclick="openBannerModal(this.src, true)"></video>';
+                            echo '<video class="banner-video-el" src="' . htmlspecialchars($banner['image_path']) . '" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;" muted playsinline onclick="openBannerModal(this.src, true)"></video>';
                             echo '<div class="video-mute-btn" style="position: absolute; bottom: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.6); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;" onclick="event.stopPropagation(); toggleVideoMute(this, this.previousElementSibling)">';
                             echo '<i class="fas fa-volume-mute"></i>';
                             echo '</div>';

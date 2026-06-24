@@ -354,7 +354,6 @@ async function abrirGaleria(id) {
     document.getElementById('galeria-modal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
     mostrarImagen();
-    iniciarAutoplay();
 }
 
 function cerrarGaleria() {
@@ -380,6 +379,8 @@ function mostrarImagen() {
 
     if (isVideo) {
         clearInterval(galeriaTimer); // Detener autoplay si es un vídeo
+    } else {
+        reiniciarAutoplay(); // Autoplay para imágenes
     }
 
     if (isVideo) {
@@ -390,6 +391,9 @@ function mostrarImagen() {
             vid.style.opacity = 0;
             vid.autoplay = true;
             vid.load();
+            vid.onended = function() {
+                galeriaNav(1);
+            };
         }
         setTimeout(() => {
             if (vid) vid.style.opacity = 1;
@@ -423,10 +427,6 @@ function galeriaNav(dir) {
     if (!items) return;
     galeriaIdx = (galeriaIdx + dir + items.length) % items.length;
     mostrarImagen();
-    const isVideo = parseInt(items[galeriaIdx].is_video) === 1 || ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(items[galeriaIdx].src.split('.').pop().toLowerCase());
-    if (!isVideo) {
-        reiniciarAutoplay();
-    }
 }
 
 function iniciarAutoplay() {
