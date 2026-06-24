@@ -280,9 +280,9 @@ if ($isSinglePageCategory) {
             if (vid) {
                 vid.src = item.src;
                 vid.style.display = 'block';
+                vid.style.display = 'block';
                 vid.style.opacity = 0;
-                vid.autoplay = true;
-                vid.load();
+                vid.play().catch(e => console.log('Reproducción automática bloqueada:', e));
                 vid.onended = function() {
                     nextImage();
                 };
@@ -337,9 +337,6 @@ if ($isSinglePageCategory) {
             lightbox.style.display = 'flex';
             document.body.style.overflow = 'hidden'; 
             showImage(idx);
-            if (!galleryItems[idx].isVideo) {
-                startAutoPlay();
-            }
         });
     });
 
