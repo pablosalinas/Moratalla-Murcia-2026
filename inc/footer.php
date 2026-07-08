@@ -237,11 +237,10 @@
         // Animación interactiva y aleatoria de logos
         const logos = document.querySelectorAll('img.main-site-logo, footer img[alt="Logo"]');
         const logoSources = ['uploads/theme/logo.jpg', 'uploads/theme/logo2.jpg'];
-        let currentLogoIndex = Math.floor(Math.random() * 2); // Aleatorio al cargar
+        let currentLogoIndex = 0; // Se empieza con el logo por defecto que está en HTML para evitar parpadeos al cargar
 
         logos.forEach(logo => {
             logo.style.transition = "opacity 0.4s ease-in-out";
-            logo.src = logoSources[currentLogoIndex];
             
             // Fallback: si logo2.jpg aún no existe, usar el original
             logo.onerror = function() {
@@ -392,11 +391,11 @@
             if (currentCarouselImages.length > 0) {
                 galleryHtml += '<button class="btn-news-carousel" style="margin-bottom: 1.5rem;" onclick="openNewsCarousel(0)"><i class="fas fa-play"></i> Ver en Carrusel</button>';
                 
-                // Add a button at the top (below title) for easy access without scrolling
-                const topCarouselBtnHtml = '<div id="modalTopCarouselBtn" style="margin-top: 1rem; margin-bottom: 1.5rem;"><button class="btn-news-carousel" style="padding: 0.6rem 1.2rem; font-size: 0.95rem; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 6px 15px rgba(0,0,0,0.2)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'0 4px 10px rgba(0,0,0,0.15)\'" onclick="openNewsCarousel(0)"><i class="fas fa-images"></i> Ver Carrusel de Fotos (' + currentCarouselImages.length + ')</button></div>';
+                // Add a floating button at the bottom center of the screen for easy access at all times
+                const topCarouselBtnHtml = '<div id="modalTopCarouselBtn" style="position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 999999; display: flex; align-items: center; justify-content: center; pointer-events: none;"><button class="btn-news-carousel" style="padding: 0.8rem 1.8rem; font-size: 1rem; font-weight: bold; background: var(--accent); color: white; border: none; border-radius: 30px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; pointer-events: auto;" onmouseover="this.style.transform=\'scale(1.05)\'; this.style.boxShadow=\'0 8px 25px rgba(0,0,0,0.4)\'" onmouseout="this.style.transform=\'scale(1)\'; this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.3)\'" onclick="openNewsCarousel(0)"><i class="fas fa-images"></i> Ver Carrusel (' + currentCarouselImages.length + ')</button></div>';
                 
-                // Insert it right before modalText
-                modalTitle.insertAdjacentHTML('afterend', topCarouselBtnHtml);
+                // Append it to the modal container
+                document.getElementById('newsDetailModal').insertAdjacentHTML('beforeend', topCarouselBtnHtml);
             }
             
             galleryHtml += '<div class="news-gallery-grid">';

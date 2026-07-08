@@ -197,6 +197,14 @@ function renderHorizontalMenu($parentId = null) {
         .ticker-content {
             animation: ticker-animation <?php echo (int)$tickerSpeed; ?>s linear infinite !important;
         }
+        /* Prevenir parpadeo del Swiper antes de inicializar */
+        .swiper:not(.swiper-initialized) {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .swiper {
+            transition: opacity 0.3s ease-in, visibility 0.3s ease-in;
+        }
     </style>
     <script>
     function toggleVideoMute(buttonEl, videoEl) {
