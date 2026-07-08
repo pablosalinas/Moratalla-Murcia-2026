@@ -28,9 +28,27 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
                 $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
                 
                 // Obtener imágenes adicionales de galería
-                $stmtG = $pdo->prepare("SELECT image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+                $stmtG = $pdo->prepare("SELECT id, image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
                 $stmtG->execute([$news['id']]);
                 $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+                
+                $mainImagePath = $news['image_path'];
+                $mainImageCaption = $news['image_caption'] ?? '';
+                
+                if (!empty($news['use_latest_gallery_image']) && !empty($gallery)) {
+                    $latestImage = null;
+                    $maxId = -1;
+                    foreach ($gallery as $gImg) {
+                        if ($gImg['id'] > $maxId) {
+                            $maxId = $gImg['id'];
+                            $latestImage = $gImg;
+                        }
+                    }
+                    if ($latestImage) {
+                        $mainImagePath = $latestImage['image_path'];
+                        $mainImageCaption = $latestImage['caption'];
+                    }
+                }
                 
                 $featuredClass = $isFirstNews ? 'news-card-featured' : '';
                 $isFirstNews = false;
@@ -39,8 +57,8 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
                     'title' => $news['title'],
                     'date' => $dateText,
                     'isEvent' => $isEvent,
-                    'image' => $news['image_path'] ? $news['image_path'] : '',
-                    'image_caption' => $news['image_caption'] ?? '',
+                    'image' => $mainImagePath ? $mainImagePath : '',
+                    'image_caption' => $mainImageCaption,
                     'content' => $news['content'],
                     'gallery' => $gallery
                 ])); ?>)">
@@ -48,17 +66,22 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
                         <span class="news-badge <?php echo $isEvent ? 'event' : ''; ?>">
                             <?php echo $isEvent ? '<i class="fas fa-calendar-alt"></i> Evento' : '<i class="fas fa-newspaper"></i> Noticia'; ?>
                         </span>
-                        <?php if ($news['image_path']): 
-                            $newsExt = strtolower(pathinfo($news['image_path'], PATHINFO_EXTENSION));
+                        <?php if ($mainImagePath): 
+                            $newsExt = strtolower(pathinfo($mainImagePath, PATHINFO_EXTENSION));
                             $newsIsVideo = in_array($newsExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                            $newsIsPdf = ($newsExt === 'pdf');
                         ?>
-                            <?php if ($newsIsVideo): ?>
+                            <?php if ($newsIsPdf): ?>
+                                <div style="width:100%; height:100%; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display:flex; align-items:center; justify-content:center; color:white;">
+                                    <i class="fas fa-file-pdf" style="font-size: 4rem;"></i>
+                                </div>
+                            <?php elseif ($newsIsVideo): ?>
                                 <div style="position:relative; width:100%; height:100%; overflow:hidden;">
-                                    <video src="<?php echo htmlspecialchars($news['image_path']); ?>" class="news-card-img" style="object-fit: cover; width: 100%; height: 100%; background: #000;" autoplay loop muted playsinline></video>
+                                    <video src="<?php echo htmlspecialchars($mainImagePath); ?>" class="news-card-img" style="object-fit: cover; width: 100%; height: 100%; background: #000;" autoplay loop muted playsinline></video>
                                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2rem; opacity: 0.8; text-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
                                 </div>
                             <?php else: ?>
-                                <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                                <img src="<?php echo htmlspecialchars($mainImagePath); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
                             <?php endif; ?>
                         <?php else: ?>
                             <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.2);">

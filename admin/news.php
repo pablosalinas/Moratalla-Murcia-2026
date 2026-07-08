@@ -19,6 +19,14 @@ try {
     $hasSortOrderColumn = false;
 }
 
+$hasUseLatestCol = false;
+try {
+    $pdo->query("SELECT use_latest_gallery_image FROM news_events LIMIT 1");
+    $hasUseLatestCol = true;
+} catch (PDOException $e) {
+    $hasUseLatestCol = false;
+}
+
 // PROCESAR AJAX UPLOAD
 if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
     $news_id = (int)$_POST['news_id'];
@@ -91,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $image_caption = trim($_POST['image_caption'] ?? '');
         $event_date = $_POST['event_date'] ?? null;
         $is_active_home = isset($_POST['is_active_home']) ? 1 : 0;
+        $use_latest_gallery_image = isset($_POST['use_latest_gallery_image']) ? 1 : 0;
     
     if (empty($title)) {
         header("Location: news.php?msg=" . urlencode("Error: El título es obligatorio."));
@@ -160,23 +169,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
+                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'is_active_home', 'category_id', 'is_active_category'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category];
+                
                 if ($hasSortOrderColumn) {
-                    $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news]);
-                } else {
-                    $stmt = $pdo->prepare("INSERT INTO news_events (title, content, image_path, image_caption, event_date, is_active_home, category_id, is_active_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category]);
+                    $columns[] = 'sort_order';
+                    $placeholders[] = '?';
+                    $params[] = $sort_order_news;
                 }
+                
+                if ($hasUseLatestCol) {
+                    $columns[] = 'use_latest_gallery_image';
+                    $placeholders[] = '?';
+                    $params[] = $use_latest_gallery_image;
+                }
+                
+                $colStr = implode(', ', $columns);
+                $phStr = implode(', ', $placeholders);
+                
+                $stmt = $pdo->prepare("INSERT INTO news_events ($colStr) VALUES ($phStr)");
+                $stmt->execute($params);
+                
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
+                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'is_active_home = ?', 'category_id = ?', 'is_active_category = ?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category];
+                
                 if ($hasSortOrderColumn) {
-                    $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ?, sort_order = ? WHERE id = ?");
-                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $sort_order_news, $id]);
-                } else {
-                    $stmt = $pdo->prepare("UPDATE news_events SET title = ?, content = ?, image_path = ?, image_caption = ?, event_date = ?, is_active_home = ?, category_id = ?, is_active_category = ? WHERE id = ?");
-                    $stmt->execute([$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category, $id]);
+                    $setCols[] = 'sort_order = ?';
+                    $params[] = $sort_order_news;
                 }
+                
+                if ($hasUseLatestCol) {
+                    $setCols[] = 'use_latest_gallery_image = ?';
+                    $params[] = $use_latest_gallery_image;
+                }
+                
+                $params[] = $id; // Para el WHERE
+                $setStr = implode(', ', $setCols);
+                
+                $stmt = $pdo->prepare("UPDATE news_events SET $setStr WHERE id = ?");
+                $stmt->execute($params);
+                
                 $news_id = $id;
                 $msg = "Noticia/Evento actualizado con éxito.";
             }
@@ -444,12 +480,14 @@ adminHeader("Noticias y Eventos");
     </script>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'is_active_home' => 1, 'category_id' => '', 'is_active_category' => 0];
+    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'is_active_home' => 1, 'category_id' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM news_events WHERE id = ?");
         $stmt->execute([$_GET['id']]);
-        $news_data = $stmt->fetch();
-        if (!$news_data) {
+        $fetched = $stmt->fetch();
+        if ($fetched) {
+            $news_data = array_merge($news_data, $fetched);
+        } else {
             header("Location: news.php");
             exit;
         }
@@ -523,6 +561,11 @@ adminHeader("Noticias y Eventos");
                 <div style="margin-bottom: 1.2rem; display: flex; align-items: center; gap: 10px;">
                     <input type="checkbox" name="is_active_home" id="is_active_home" value="1" <?php echo ($news_data['is_active_home'] ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
                     <label for="is_active_home" style="font-weight: 600; color: var(--text); cursor: pointer; user-select: none;">Mostrar en la Página de Inicio</label>
+                </div>
+                
+                <div style="margin-bottom: 1.2rem; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" name="use_latest_gallery_image" id="use_latest_gallery_image" value="1" <?php echo (!empty($news_data['use_latest_gallery_image']) ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
+                    <label for="use_latest_gallery_image" style="font-weight: 600; color: var(--text); cursor: pointer; user-select: none;">Usar la última imagen de galería subida como imagen principal</label>
                 </div>
                 
                 <div style="border-top: 1px solid var(--gray-300); margin: 1rem 0; padding-top: 1rem;">

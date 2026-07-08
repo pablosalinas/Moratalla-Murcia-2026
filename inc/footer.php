@@ -350,6 +350,11 @@
         
         modalDate.innerHTML = (data.isEvent ? '<i class="fas fa-calendar-alt" style="color:var(--accent);"></i> Evento: ' : '<i class="fas fa-newspaper" style="color:var(--primary);"></i> Noticia: ') + data.date;
         modalTitle.textContent = data.title;
+        
+        // Remove old top carousel button if it exists
+        const oldTopBtn = document.getElementById('modalTopCarouselBtn');
+        if (oldTopBtn) oldTopBtn.remove();
+        
         modalText.innerHTML = data.content;
         
         // Cargar galería
@@ -357,22 +362,26 @@
         currentCarouselImages = []; // Para carrusel
         
         let hasGalleryFiles = false;
+        let seenPathsCarousel = new Set();
         
         if (data.image) {
             const ext = data.image.split('.').pop().toLowerCase();
             const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
             if (!data.image.toLowerCase().endsWith('.pdf')) {
                 currentCarouselImages.push({src: data.image, caption: data.image_caption || '', is_video: isVideo});
+                seenPathsCarousel.add(data.image);
             }
         }
         
         if (data.gallery && data.gallery.length > 0) {
             hasGalleryFiles = true;
             data.gallery.forEach(imgObj => {
+                if (seenPathsCarousel.has(imgObj.image_path)) return;
                 const ext = imgObj.image_path.split('.').pop().toLowerCase();
                 const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext) || imgObj.is_video == 1;
                 if (!imgObj.image_path.toLowerCase().endsWith('.pdf')) {
                     currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || '', is_video: isVideo});
+                    seenPathsCarousel.add(imgObj.image_path);
                 }
             });
         }
@@ -382,15 +391,30 @@
             
             if (currentCarouselImages.length > 0) {
                 galleryHtml += '<button class="btn-news-carousel" style="margin-bottom: 1.5rem;" onclick="openNewsCarousel(0)"><i class="fas fa-play"></i> Ver en Carrusel</button>';
+                
+                // Add a button at the top (below title) for easy access without scrolling
+                const topCarouselBtnHtml = '<div id="modalTopCarouselBtn" style="margin-top: 1rem; margin-bottom: 1.5rem;"><button class="btn-news-carousel" style="padding: 0.6rem 1.2rem; font-size: 0.95rem; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 6px 15px rgba(0,0,0,0.2)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'0 4px 10px rgba(0,0,0,0.15)\'" onclick="openNewsCarousel(0)"><i class="fas fa-images"></i> Ver Carrusel de Fotos (' + currentCarouselImages.length + ')</button></div>';
+                
+                // Insert it right before modalText
+                modalTitle.insertAdjacentHTML('afterend', topCarouselBtnHtml);
             }
             
             galleryHtml += '<div class="news-gallery-grid">';
             
             // Recorrer todos los archivos para mostrarlos (imágenes + PDFs + vídeos)
             let allFiles = [];
-            if (data.image) allFiles.push({path: data.image, caption: data.image_caption || ''});
+            let seenPathsThumbs = new Set();
+            if (data.image) {
+                allFiles.push({path: data.image, caption: data.image_caption || ''});
+                seenPathsThumbs.add(data.image);
+            }
             if (data.gallery) {
-                data.gallery.forEach(g => allFiles.push({path: g.image_path, caption: g.caption || ''}));
+                data.gallery.forEach(g => {
+                    if (!seenPathsThumbs.has(g.image_path)) {
+                        allFiles.push({path: g.image_path, caption: g.caption || ''});
+                        seenPathsThumbs.add(g.image_path);
+                    }
+                });
             }
             
             allFiles.forEach(file => {

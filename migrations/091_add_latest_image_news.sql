@@ -1,0 +1,2 @@
+ALTER TABLE news_events ADD COLUMN use_latest_gallery_image TINYINT(1) DEFAULT 0;
+ALTER TABLE news_images ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP;
