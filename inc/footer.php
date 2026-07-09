@@ -222,9 +222,10 @@
                 }
             }
             modal.style.display = 'flex';
+            if (typeof handleModalOpen === 'function') handleModalOpen();
         }
 
-        function closeBannerModal() {
+        function closeBannerModal(fromPopState = false) {
             const modal = document.getElementById('bannerModal');
             const vid = document.getElementById('bannerModalVid');
             if (vid) {
@@ -232,6 +233,7 @@
                 vid.src = '';
             }
             modal.style.display = 'none';
+            if (typeof handleModalClose === 'function') handleModalClose(fromPopState === true);
         }
 
         // Animación interactiva y aleatoria de logos
@@ -307,6 +309,48 @@
     </div>
 
     <script>
+    // --- LÓGICA DE CONTROL DE HISTORIAL (BACK BUTTON) PARA MODALES ---
+    let isModalOpen = false;
+    
+    // Limpiar estado sucio al recargar la página
+    if (history.state && history.state.modalOpen) {
+        history.replaceState(null, '', location.href);
+    }
+
+    function handleModalOpen() {
+        if (!isModalOpen) {
+            history.pushState({ modalOpen: true }, '', location.href);
+            isModalOpen = true;
+        }
+    }
+
+    function handleModalClose(fromPopState) {
+        const c1 = document.getElementById('newsCarouselOverlay');
+        const c2 = document.getElementById('newsDetailModal');
+        const c3 = document.getElementById('bannerModal');
+        
+        const anyOpen = (c1 && c1.classList.contains('active')) ||
+                        (c2 && c2.classList.contains('active')) ||
+                        (c3 && c3.style.display === 'flex');
+                        
+        if (!anyOpen && isModalOpen && !fromPopState) {
+            isModalOpen = false;
+            history.back();
+        }
+    }
+
+    window.addEventListener('popstate', function(event) {
+        if (isModalOpen) {
+            isModalOpen = false; // Evitar que las funciones de cierre llamen a history.back()
+            
+            // Cerrar todos los modales visualmente
+            if (typeof closeNewsCarouselDirect === 'function') closeNewsCarouselDirect(true);
+            if (typeof closeNewsModalDirect === 'function') closeNewsModalDirect(true);
+            if (typeof closeBannerModal === 'function') closeBannerModal(true);
+        }
+    });
+    // -----------------------------------------------------------------
+
     let currentCarouselImages = [];
     let currentCarouselIndex = 0;
     let newsCarouselInterval;
@@ -440,6 +484,7 @@
         
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        handleModalOpen();
     }
 
     function closeNewsModal(event) {
@@ -449,7 +494,7 @@
         }
     }
 
-    function closeNewsModalDirect() {
+    function closeNewsModalDirect(fromPopState = false) {
         const modal = document.getElementById('newsDetailModal');
         modal.classList.remove('active');
         document.body.style.overflow = '';
@@ -458,6 +503,7 @@
             modalNewsVid.pause();
             modalNewsVid.src = '';
         }
+        handleModalClose(fromPopState === true);
     }
 
     // Funciones del Lightbox Carousel
@@ -466,6 +512,7 @@
         currentCarouselIndex = index;
         document.getElementById('newsCarouselOverlay').classList.add('active');
         updateCarouselState();
+        handleModalOpen();
     }
 
     function startNewsCarouselAutoplay() {
@@ -577,7 +624,7 @@
         }
     }
 
-    function closeNewsCarouselDirect() {
+    function closeNewsCarouselDirect(fromPopState = false) {
         document.getElementById('newsCarouselOverlay').classList.remove('active');
         clearInterval(newsCarouselInterval);
         const videoElement = document.getElementById('newsCarouselVid');
@@ -590,6 +637,7 @@
             pdfElement.src = '';
             pdfElement.style.display = 'none';
         }
+        handleModalClose(fromPopState === true);
     }
     
     // Navegación con teclado para carrusel de noticias
