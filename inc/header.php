@@ -186,14 +186,45 @@ function renderHorizontalMenu($parentId = null) {
     }
     </script>
 
+    <!-- Preload critical assets -->
+    <link rel="preload" href="style.css?v=<?php echo filemtime(__DIR__ . '/../style.css'); ?>" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime(__DIR__ . '/../style.css'); ?>">
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font is preloaded above, fallback for non-JS -->
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap"></noscript>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Swiper.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    
     <style>
+        /* CRITICAL INLINE CSS TO PREVENT FOUC / PARPADEO ON MOBILE */
+        body { margin: 0; padding: 0; background-color: #f1f3f2; }
+        .ticker-wrapper { height: 40px; background: #2d6a4f; overflow: hidden; display: flex; align-items: center; }
+        .main-header { height: 90px; background: rgba(255, 255, 255, 0.95); border-bottom: 2px solid #2d6a4f; box-sizing: border-box; }
+        .header-top { height: 100%; display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; padding: 0 4rem; box-sizing: border-box; }
+        .logo img.main-site-logo { height: 70px; width: auto; display: block; box-sizing: border-box; border: 3px solid #2d6a4f; padding: 3px; border-radius: 8px; }
+        
+        .banner-slider { width: 100%; overflow: hidden; background: white; }
+        .main-banner-swiper { width: 100%; height: 280px; min-height: 200px; overflow: hidden; display: block; }
+        .main-banner-swiper .swiper-wrapper { display: flex; }
+        .main-banner-swiper .swiper-slide { flex-shrink: 0; width: 100%; height: 100%; overflow: hidden; }
+        .main-banner-swiper img, .main-banner-swiper video { width: 100%; height: 100%; object-fit: cover; }
+        
+        @media (max-width: 1024px) {
+            .nav-container { display: none; }
+        }
+        @media (max-width: 768px) {
+            .header-top { padding: 0 1.5rem; }
+            .main-banner-swiper { aspect-ratio: 16 / 9; height: auto; min-height: 200px; }
+        }
+        @media (max-width: 480px) {
+            .main-banner-swiper { aspect-ratio: 4 / 3; height: auto; min-height: 250px; }
+        }
+
         .ticker-content {
             animation: ticker-animation <?php echo (int)$tickerSpeed; ?>s linear infinite !important;
         }
