@@ -395,38 +395,8 @@ if ($isSinglePageCategory) {
                     320: { slidesPerView: 1.1, spaceBetween: 15, centeredSlides: true },
                     768: { slidesPerView: 2.2, spaceBetween: 20, centeredSlides: false },
                     1024: { slidesPerView: 3, spaceBetween: 30, centeredSlides: false }
-                },
-                on: {
-                    init: function () {
-                        handlePageSwiperVideo(this);
-                    },
-                    slideChangeTransitionStart: function () {
-                        handlePageSwiperVideo(this);
-                    }
                 }
             });
-
-            function handlePageSwiperVideo(swiperInstance) {
-                const allVideos = swiperInstance.el.querySelectorAll('video');
-                allVideos.forEach(v => {
-                    v.pause();
-                    v.currentTime = 0;
-                });
-                const activeSlide = swiperInstance.slides[swiperInstance.activeIndex];
-                if (!activeSlide) return;
-                const video = activeSlide.querySelector('video');
-                if (video) {
-                    swiperInstance.autoplay.stop();
-                    video.muted = true;
-                    video.play().catch(e => console.log('Autoplay blocked:', e));
-                    video.onended = function() {
-                        swiperInstance.slideNext();
-                        swiperInstance.autoplay.start();
-                    };
-                } else {
-                    swiperInstance.autoplay.start();
-                }
-            }
         }
     });
 </script>

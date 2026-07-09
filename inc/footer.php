@@ -366,10 +366,9 @@
         if (data.image) {
             const ext = data.image.split('.').pop().toLowerCase();
             const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
-            if (!data.image.toLowerCase().endsWith('.pdf')) {
-                currentCarouselImages.push({src: data.image, caption: data.image_caption || '', is_video: isVideo});
-                seenPathsCarousel.add(data.image);
-            }
+            const isPdf = data.image.toLowerCase().endsWith('.pdf');
+            currentCarouselImages.push({src: data.image, caption: data.image_caption || '', is_video: isVideo, is_pdf: isPdf});
+            seenPathsCarousel.add(data.image);
         }
         
         if (data.gallery && data.gallery.length > 0) {
@@ -378,10 +377,9 @@
                 if (seenPathsCarousel.has(imgObj.image_path)) return;
                 const ext = imgObj.image_path.split('.').pop().toLowerCase();
                 const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext) || imgObj.is_video == 1;
-                if (!imgObj.image_path.toLowerCase().endsWith('.pdf')) {
-                    currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || '', is_video: isVideo});
-                    seenPathsCarousel.add(imgObj.image_path);
-                }
+                const isPdf = imgObj.image_path.toLowerCase().endsWith('.pdf');
+                currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || '', is_video: isVideo, is_pdf: isPdf});
+                seenPathsCarousel.add(imgObj.image_path);
             });
         }
         
@@ -419,17 +417,16 @@
             allFiles.forEach(file => {
                 const ext = file.path.split('.').pop().toLowerCase();
                 const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
+                let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
                 if (file.path.toLowerCase().endsWith('.pdf')) {
-                    galleryHtml += '<a href="' + file.path + '" target="_blank" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; text-decoration:none; border-radius:8px; border: 1px solid #f87171;"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">' + (file.caption ? file.caption : 'Abrir PDF') + '</span></a>';
+                    galleryHtml += '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; border-radius:8px; border: 1px solid #f87171; cursor:pointer;" onclick="openNewsCarousel(' + cIndex + ')"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">' + (file.caption ? file.caption : 'Ver PDF') + '</span></div>';
                 } else if (isVideo) {
-                    let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
                     galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px; position:relative;">' +
                         '<video class="news-gallery-thumb" src="' + file.path + '" style="background:#000; width:100%; height:80px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="openNewsCarousel(' + cIndex + ')" preload="metadata"></video>' +
                         '<div style="position:absolute; top:30px; left:50%; transform:translateX(-50%); color:white; font-size:1.5rem; pointer-events:none; opacity:0.8; text-shadow:0 1px 4px rgba(0,0,0,0.6);"><i class="fas fa-play-circle"></i></div>' +
                         (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') +
                         '</div>';
                 } else {
-                    let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
                     galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px;"><img class="news-gallery-thumb" src="' + file.path + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">' + (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') + '</div>';
                 }
             });
@@ -485,19 +482,22 @@
         const captionElement = document.getElementById('newsCarouselCaption');
         
         let videoElement = document.getElementById('newsCarouselVid');
+        let pdfElement = document.getElementById('newsCarouselPdf');
         
         const currentItem = currentCarouselImages[currentCarouselIndex];
         const ext = currentItem.src.split('.').pop().toLowerCase();
         const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext) || currentItem.is_video;
+        const isPdf = ext === 'pdf' || currentItem.is_pdf;
         
-        if (isVideo) {
-            clearInterval(newsCarouselInterval); // Pausar autoplay para vídeos
+        if (isVideo || isPdf) {
+            clearInterval(newsCarouselInterval); // Pausar autoplay para vídeos y pdfs
         } else {
             startNewsCarouselAutoplay(); // Autoplay para imágenes
         }
         
         if (isVideo) {
             if (imgElement) imgElement.style.display = 'none';
+            if (pdfElement) pdfElement.style.display = 'none';
             if (!videoElement) {
                 videoElement = document.createElement('video');
                 videoElement.id = 'newsCarouselVid';
@@ -518,11 +518,33 @@
                 captionElement.textContent = currentItem.caption;
                 counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
             }, 150);
+        } else if (isPdf) {
+            if (imgElement) imgElement.style.display = 'none';
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.style.display = 'none';
+            }
+            if (!pdfElement) {
+                pdfElement = document.createElement('iframe');
+                pdfElement.id = 'newsCarouselPdf';
+                pdfElement.className = 'news-carousel-img';
+                pdfElement.style.cssText = 'width: 80vw; max-width: 900px; height: 70vh; display: block; margin: 0 auto; border-radius: 8px; border: none; background: #fff;';
+                container.insertBefore(pdfElement, captionElement);
+            }
+            pdfElement.src = currentItem.src;
+            pdfElement.style.display = 'block';
+            pdfElement.style.opacity = 0;
+            setTimeout(() => {
+                pdfElement.style.opacity = 1;
+                captionElement.textContent = currentItem.caption;
+                counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
+            }, 150);
         } else {
             if (videoElement) {
                 videoElement.pause();
                 videoElement.style.display = 'none';
             }
+            if (pdfElement) pdfElement.style.display = 'none';
             if (imgElement) {
                 imgElement.style.display = 'block';
                 imgElement.style.opacity = 0;
@@ -562,6 +584,11 @@
         if (videoElement) {
             videoElement.pause();
             videoElement.style.display = 'none';
+        }
+        const pdfElement = document.getElementById('newsCarouselPdf');
+        if (pdfElement) {
+            pdfElement.src = '';
+            pdfElement.style.display = 'none';
         }
     }
     

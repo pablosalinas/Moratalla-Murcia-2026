@@ -87,7 +87,7 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             // Obtener medios de una noticia
             $news_id = $_GET['news_id'] ?? 0;
-            $stmt = $pdo->prepare("SELECT id, image_path, is_video, caption, sort_order FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+            $stmt = $pdo->prepare("SELECT id, image_path, is_video, caption, sort_order FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
             $stmt->execute([$news_id]);
             $media = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'media' => $media]);

@@ -128,7 +128,7 @@ require_once 'inc/header.php';
                     $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
                     
                     // Obtener imágenes adicionales de galería
-                    $stmtG = $pdo->prepare("SELECT image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id ASC");
+                    $stmtG = $pdo->prepare("SELECT image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
                     $stmtG->execute([$news['id']]);
                     $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
                     
