@@ -8,6 +8,13 @@ function checkLogin() {
         exit();
     }
 }
+
+// Llamar a checkLogin aquí, antes de emitir cualquier HTML
+// (las páginas que lo incluyen pueden llamarlo también, pero no pasará nada porque ya estamos seguros)
+$isLoginPage = (basename($_SERVER['PHP_SELF']) === 'index.php' || basename($_SERVER['PHP_SELF']) === 'login.php');
+if (!$isLoginPage) {
+    checkLogin();
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -35,6 +42,7 @@ function checkLogin() {
                 <li style="padding-left: 1rem; color: rgba(255,255,255,0.4); font-size: 0.7rem; text-transform: uppercase;">Ajustes</li>
                 <li><a href="settings.php">Configuración General</a></li>
                 <li><a href="banners.php">Banner Interactivo</a></li>
+                <li><a href="stats.php">Estadísticas</a></li>
                 <br>
                 <li><a href="logout.php?redirect=../index.php">Ver Web</a></li>
                 <br>

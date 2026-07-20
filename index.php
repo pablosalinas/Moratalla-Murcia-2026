@@ -2,11 +2,7 @@
 // index.php - v1.3.0 (Curiosidades / Accesos externos)
 require_once 'inc/header.php';
 
-// Contador global de visitas a la web
-if (!isset($_SESSION['global_visit_counted'])) {
-    $pdo->exec("UPDATE settings SET setting_value = setting_value + 1 WHERE setting_key = 'global_visits'");
-    $_SESSION['global_visit_counted'] = true;
-}
+// Contador global de visitas a la web (movido a header.php)
 $stmtGlobal = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'global_visits'");
 $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
 ?>

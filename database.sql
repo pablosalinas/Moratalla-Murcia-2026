@@ -40,3 +40,15 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Insertar el primer usuario administrador (pass: admin123)
 -- hash bcrypt: $2y$10$WkG.C4oB3n0O.z8kL4A2QOTM8R7A6SHTgT./QcOzT3Y5T.S/oR6J6
 INSERT IGNORE INTO `users` (`username`, `password`, `role`) VALUES ('admin', '$2y$10$WkG.C4oB3n0O.z8kL4A2QOTM8R7A6SHTgT./QcOzT3Y5T.S/oR6J6', 'admin');
+
+CREATE TABLE IF NOT EXISTS `visit_logs` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `ip_address` VARCHAR(45) NOT NULL,
+    `user_agent` TEXT,
+    `browser` VARCHAR(100),
+    `os` VARCHAR(100),
+    `page_url` VARCHAR(255),
+    `referrer` VARCHAR(255),
+    `visit_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

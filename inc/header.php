@@ -8,6 +8,62 @@ if (!isset($pdo)) {
     $pdo = getDB();
 }
 
+// --- INICIO CONTROL ESTADÍSTICAS ---
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `ip_address` VARCHAR(45) NOT NULL,
+        `user_agent` TEXT,
+        `browser` VARCHAR(100),
+        `os` VARCHAR(100),
+        `page_url` VARCHAR(255),
+        `referrer` VARCHAR(255),
+        `is_new_session` TINYINT(1) DEFAULT 0,
+        `visit_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $stmtCheck = $pdo->query("SHOW COLUMNS FROM `visit_logs` LIKE 'is_new_session'");
+    if($stmtCheck->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE `visit_logs` ADD COLUMN `is_new_session` TINYINT(1) DEFAULT 0 AFTER `referrer`");
+    }
+
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+    
+    // Evitar registrar la actividad en el admin para que no contamine los datos
+    if (strpos($_SERVER['REQUEST_URI'], '/admin/') === false) {
+        $url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+        $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+        
+        $os = 'Desconocido';
+        if (preg_match('/windows nt/i', $ua)) $os = 'Windows';
+        elseif (preg_match('/mac/i', $ua) && preg_match('/os x/i', $ua)) $os = 'Mac OS';
+        elseif (preg_match('/linux/i', $ua) && !preg_match('/android/i', $ua)) $os = 'Linux';
+        elseif (preg_match('/android/i', $ua)) $os = 'Android';
+        elseif (preg_match('/iphone|ipad|ipod/i', $ua)) $os = 'iOS';
+        
+        $browser = 'Desconocido';
+        if (preg_match('/edg/i', $ua)) $browser = 'Edge';
+        elseif (preg_match('/opr|opera/i', $ua)) $browser = 'Opera';
+        elseif (preg_match('/chrome|crios/i', $ua)) $browser = 'Chrome';
+        elseif (preg_match('/firefox|fxios/i', $ua)) $browser = 'Firefox';
+        elseif (preg_match('/safari/i', $ua)) $browser = 'Safari';
+
+        $is_new_session = 0;
+        if (!isset($_SESSION['global_visit_counted'])) {
+            $pdo->exec("UPDATE settings SET setting_value = setting_value + 1 WHERE setting_key = 'global_visits'");
+            $_SESSION['global_visit_counted'] = true;
+            $is_new_session = 1;
+        }
+
+        $stmtVisit = $pdo->prepare("INSERT INTO visit_logs (ip_address, user_agent, browser, os, page_url, referrer, is_new_session) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmtVisit->execute([$ip, $ua, $browser, $os, $url, $referrer, $is_new_session]);
+    }
+} catch (Exception $e) {
+    // Silencioso para no romper la web
+}
+// --- FIN CONTROL ESTADÍSTICAS ---
+
 // Variables SEO y Metadatos Dinámicos
 $seoKeywords = "moratalla, mOratalla, morAtalla,Moratalla, Murcia, Turismo Moratalla, Trieta Moratalla, Espana Moratalla,cultura moratalla, casas rurales moratalla, rural, alojamientos moratalla,alharabe, benamor, casa cristo moratalla, encantada, san jorge, buitre, sabinar moratalla, otos moratalla, ca ada de la cruz, benizar, mazuza, calar de la santa, campo san juan, campo bejar, rogativa, zaen, murtas, nogueras, bajil,  rupestres, rupestre,pinturas, pintura,mediterraneo,banda, rondalla,Pablo Salinas,casas rurales, naturaleza, monta a, campo, monte, pueblo, castillo, iglesia, calles, fiestas, musica, Maria del Carmen Rodriguez Rodriguez, Pablo Salinas Rodriguez, Francisco Salinas Rodriguez,futbol, automovilismo, tamborada,ciclismo, rocasas, albury, pepe el pintor, villa juana, el olivar, villa zorrilla";
 $defaultTitle = "moratalla-murcia.com - Patrimonio Histórico Digital";
