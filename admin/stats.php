@@ -19,16 +19,22 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 } catch (Exception $e) {}
 
-// Obtener totales
-$stmtTotal = $pdo->query("SELECT COUNT(*) FROM visit_logs");
-$totalVisits = $stmtTotal ? $stmtTotal->fetchColumn() : 0;
+$totalVisits = 0;
+$uniqueVisits = 0;
+try {
+    $stmtTotal = $pdo->query("SELECT COUNT(*) FROM visit_logs");
+    $totalVisits = $stmtTotal ? $stmtTotal->fetchColumn() : 0;
 
-$stmtUnique = $pdo->query("SELECT COUNT(*) FROM visit_logs WHERE is_new_session = 1");
-$uniqueVisits = $stmtUnique ? $stmtUnique->fetchColumn() : 0;
+    $stmtUnique = $pdo->query("SELECT COUNT(*) FROM visit_logs WHERE is_new_session = 1");
+    $uniqueVisits = $stmtUnique ? $stmtUnique->fetchColumn() : 0;
+} catch (Exception $e) {}
 
 // Visitas por día (Últimos 15 días)
-$stmtDays = $pdo->query("SELECT DATE(visit_time) as date, COUNT(*) as count FROM visit_logs WHERE visit_time >= DATE_SUB(CURDATE(), INTERVAL 15 DAY) GROUP BY DATE(visit_time) ORDER BY date ASC");
-$daysData = $stmtDays ? $stmtDays->fetchAll() : [];
+$daysData = [];
+try {
+    $stmtDays = $pdo->query("SELECT DATE(visit_time) as date, COUNT(*) as count FROM visit_logs WHERE visit_time >= DATE_SUB(CURDATE(), INTERVAL 15 DAY) GROUP BY DATE(visit_time) ORDER BY date ASC");
+    $daysData = $stmtDays ? $stmtDays->fetchAll() : [];
+} catch (Exception $e) {}
 $daysLabels = [];
 $daysCounts = [];
 foreach ($daysData as $d) {
@@ -37,8 +43,11 @@ foreach ($daysData as $d) {
 }
 
 // Navegadores
-$stmtBrowser = $pdo->query("SELECT browser, COUNT(*) as count FROM visit_logs GROUP BY browser ORDER BY count DESC");
-$browserData = $stmtBrowser ? $stmtBrowser->fetchAll() : [];
+$browserData = [];
+try {
+    $stmtBrowser = $pdo->query("SELECT browser, COUNT(*) as count FROM visit_logs GROUP BY browser ORDER BY count DESC");
+    $browserData = $stmtBrowser ? $stmtBrowser->fetchAll() : [];
+} catch (Exception $e) {}
 $browserLabels = [];
 $browserCounts = [];
 foreach ($browserData as $b) {
@@ -47,8 +56,11 @@ foreach ($browserData as $b) {
 }
 
 // Sistemas Operativos
-$stmtOs = $pdo->query("SELECT os, COUNT(*) as count FROM visit_logs GROUP BY os ORDER BY count DESC");
-$osData = $stmtOs ? $stmtOs->fetchAll() : [];
+$osData = [];
+try {
+    $stmtOs = $pdo->query("SELECT os, COUNT(*) as count FROM visit_logs GROUP BY os ORDER BY count DESC");
+    $osData = $stmtOs ? $stmtOs->fetchAll() : [];
+} catch (Exception $e) {}
 $osLabels = [];
 $osCounts = [];
 foreach ($osData as $o) {
@@ -57,12 +69,18 @@ foreach ($osData as $o) {
 }
 
 // Top Páginas
-$stmtPages = $pdo->query("SELECT page_url, COUNT(*) as count FROM visit_logs GROUP BY page_url ORDER BY count DESC LIMIT 10");
-$topPages = $stmtPages ? $stmtPages->fetchAll() : [];
+$topPages = [];
+try {
+    $stmtPages = $pdo->query("SELECT page_url, COUNT(*) as count FROM visit_logs GROUP BY page_url ORDER BY count DESC LIMIT 10");
+    $topPages = $stmtPages ? $stmtPages->fetchAll() : [];
+} catch (Exception $e) {}
 
 // Top Referidos
-$stmtRef = $pdo->query("SELECT referrer, COUNT(*) as count FROM visit_logs WHERE referrer != '' AND referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10");
-$topRefs = $stmtRef ? $stmtRef->fetchAll() : [];
+$topRefs = [];
+try {
+    $stmtRef = $pdo->query("SELECT referrer, COUNT(*) as count FROM visit_logs WHERE referrer != '' AND referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10");
+    $topRefs = $stmtRef ? $stmtRef->fetchAll() : [];
+} catch (Exception $e) {}
 ?>
 
 <div class="header-admin">
@@ -157,67 +175,97 @@ $topRefs = $stmtRef ? $stmtRef->fetchAll() : [];
 // Colores predefinidos
 const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
 
-// Gráfico de Líneas (Evolución)
-const ctxLine = document.getElementById('lineChart').getContext('2d');
-new Chart(ctxLine, {
-    type: 'line',
-    data: {
-        labels: <?= json_encode($daysLabels) ?>,
-        datasets: [{
-            label: 'Páginas Vistas',
-            data: <?= json_encode($daysCounts) ?>,
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 3,
-            tension: 0.3,
-            fill: true
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+const daysLabels = <?= json_encode($daysLabels) ?>;
+const daysCounts = <?= json_encode($daysCounts) ?>;
+const browserLabels = <?= json_encode($browserLabels) ?>;
+const browserCounts = <?= json_encode($browserCounts) ?>;
+const osLabels = <?= json_encode($osLabels) ?>;
+const osCounts = <?= json_encode($osCounts) ?>;
+
+// Función auxiliar para mostrar mensaje si no hay datos
+function handleEmpty(chartId, dataArray) {
+    if (dataArray.length === 0) {
+        const canvas = document.getElementById(chartId);
+        const parent = canvas.parentElement;
+        canvas.style.display = 'none';
+        const msg = document.createElement('div');
+        msg.style.padding = '2rem 0';
+        msg.style.textAlign = 'center';
+        msg.style.color = '#9ca3af';
+        msg.innerText = 'No hay datos suficientes para mostrar la gráfica.';
+        parent.appendChild(msg);
+        return true;
     }
-});
+    return false;
+}
+
+// Gráfico de Líneas (Evolución)
+if (!handleEmpty('lineChart', daysCounts)) {
+    const ctxLine = document.getElementById('lineChart').getContext('2d');
+    new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels: daysLabels,
+            datasets: [{
+                label: 'Páginas Vistas',
+                data: daysCounts,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 3,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+}
 
 // Gráfico Navegadores
-const ctxBrowser = document.getElementById('browserChart').getContext('2d');
-new Chart(ctxBrowser, {
-    type: 'doughnut',
-    data: {
-        labels: <?= json_encode($browserLabels) ?>,
-        datasets: [{
-            data: <?= json_encode($browserCounts) ?>,
-            backgroundColor: colors,
-            borderWidth: 0
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { position: 'bottom' } },
-        cutout: '65%'
-    }
-});
+if (!handleEmpty('browserChart', browserCounts)) {
+    const ctxBrowser = document.getElementById('browserChart').getContext('2d');
+    new Chart(ctxBrowser, {
+        type: 'doughnut',
+        data: {
+            labels: browserLabels,
+            datasets: [{
+                data: browserCounts,
+                backgroundColor: colors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '65%'
+        }
+    });
+}
 
 // Gráfico OS
-const ctxOs = document.getElementById('osChart').getContext('2d');
-new Chart(ctxOs, {
-    type: 'doughnut',
-    data: {
-        labels: <?= json_encode($osLabels) ?>,
-        datasets: [{
-            data: <?= json_encode($osCounts) ?>,
-            backgroundColor: colors,
-            borderWidth: 0
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { position: 'bottom' } },
-        cutout: '65%'
-    }
-});
+if (!handleEmpty('osChart', osCounts)) {
+    const ctxOs = document.getElementById('osChart').getContext('2d');
+    new Chart(ctxOs, {
+        type: 'doughnut',
+        data: {
+            labels: osLabels,
+            datasets: [{
+                data: osCounts,
+                backgroundColor: colors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '65%'
+        }
+    });
+}
 </script>
 
 <?php require_once 'inc/footer.php'; ?>
