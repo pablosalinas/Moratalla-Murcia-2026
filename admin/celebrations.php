@@ -148,7 +148,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
                 <option value="historico">📜 Acontecimiento Histórico (Cinta inferior)</option>
                 <option value="aniversario">🎉 Aniversario (Banner festivo)</option>
                 <option value="conmemoracion">🏛️ Conmemoración Institucional (Banner sobrio)</option>
-                <option value="luto">🖤 Luto Oficial (Página en blanco y negro)</option>
+                <option value="general_discreto">📣 Aviso General (Banner superior flotante discreto)</option>
+                <option value="luto">🖤 Luto Oficial (Página en blanco y negro opcional)</option>
             </select>
         </div>
 
@@ -270,10 +271,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
             css: '#commemoration-banner {\n    background: #2b3a42; color: #fff; text-align: center;\n    padding: 15px; font-size: 1.2rem; letter-spacing: 1px;\n    border-bottom: 2px solid #3f5765;\n}',
             js: ''
         },
+        'general_discreto': {
+            name: 'Aviso: [Motivo]',
+            html: '<div id="general-banner-container">\n    <div class="general-flag-banner">\n        [Título o Motivo del Acontecimiento]\n    </div>\n</div>',
+            css: '#general-banner-container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    z-index: 9999;\n    pointer-events: none;\n    display: flex;\n    justify-content: center;\n    animation: slideDown 1s ease-out forwards;\n    transform: translateY(-100%);\n}\n\n.general-flag-banner {\n    background: linear-gradient(to right, #1b4332 0%, #081c15 100%);\n    color: white;\n    font-size: clamp(1rem, 3vw, 1.3rem);\n    font-weight: 600;\n    padding: 10px 30px;\n    box-shadow: 0 4px 15px rgba(0,0,0,0.3);\n    border-radius: 0 0 15px 15px;\n    white-space: normal;\n    text-align: center;\n    max-width: 90vw;\n    border-bottom: 3px solid #d4af37;\n}\n\n@keyframes slideDown {\n    0% { transform: translateY(-100%); }\n    100% { transform: translateY(0); }\n}',
+            js: ''
+        },
         'luto': {
             name: 'Luto Oficial',
             html: '<div id="mourning-banner">\n    🖤 En señal de luto oficial. Descanse en paz.\n</div>',
-            css: 'html { filter: grayscale(100%); }\n#mourning-banner {\n    background: #000; color: #fff; text-align: center;\n    padding: 10px; font-weight: bold; font-size: 1.1rem;\n    border-bottom: 1px solid #333;\n}',
+            css: '/* Descomenta la siguiente línea para que TODA la web se vea en blanco y negro */\n/* html { filter: grayscale(100%); } */\n\n#mourning-banner {\n    background: #000; color: #fff; text-align: center;\n    padding: 10px; font-weight: bold; font-size: 1.1rem;\n    border-bottom: 1px solid #333;\n}',
             js: ''
         }
     };

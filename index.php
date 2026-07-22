@@ -7,6 +7,24 @@ $stmtGlobal = $pdo->query("SELECT setting_value FROM settings WHERE setting_key 
 $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
 ?>
 
+<!-- CELEBRACIONES DINÁMICAS -->
+<?php
+try {
+    $stmtCeleb = $pdo->query("SELECT * FROM celebrations WHERE is_active = 1 AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date >= NOW())");
+    while ($celeb = $stmtCeleb->fetch()) {
+        if (!empty($celeb['html_content'])) {
+            echo $celeb['html_content'] . "\n";
+        }
+        if (!empty($celeb['css_content'])) {
+            echo "<style>\n" . $celeb['css_content'] . "\n</style>\n";
+        }
+        if (!empty($celeb['js_content'])) {
+            echo "<script>\n" . $celeb['js_content'] . "\n</script>\n";
+        }
+    }
+} catch (Exception $e) {}
+?>
+<!-- FIN CELEBRACIONES -->
 
 <div class="container main-content" style="margin-top: 2rem;">
     <div class="content-card">
@@ -280,24 +298,5 @@ if (count($externalLinks) > 0):
         <i class="fas fa-chart-line"></i> Accesos totales: <?php echo number_format($globalVisits, 0, ',', '.'); ?>
     </span>
 </div>
-
-<!-- CELEBRACIONES DINÁMICAS -->
-<?php
-try {
-    $stmtCeleb = $pdo->query("SELECT * FROM celebrations WHERE is_active = 1 AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date >= NOW())");
-    while ($celeb = $stmtCeleb->fetch()) {
-        if (!empty($celeb['html_content'])) {
-            echo $celeb['html_content'] . "\n";
-        }
-        if (!empty($celeb['css_content'])) {
-            echo "<style>\n" . $celeb['css_content'] . "\n</style>\n";
-        }
-        if (!empty($celeb['js_content'])) {
-            echo "<script>\n" . $celeb['js_content'] . "\n</script>\n";
-        }
-    }
-} catch (Exception $e) {}
-?>
-<!-- FIN CELEBRACIONES -->
 
 <?php require_once 'inc/footer.php'; ?>
