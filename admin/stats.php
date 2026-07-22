@@ -82,7 +82,38 @@ foreach ($osData as $o) {
 $topPages = [];
 try {
     $stmtPages = $pdo->query("SELECT page_url, COUNT(*) as count FROM visit_logs GROUP BY page_url ORDER BY count DESC LIMIT 10");
-    $topPages = $stmtPages ? $stmtPages->fetchAll() : [];
+    $topPagesRaw = $stmtPages ? $stmtPages->fetchAll() : [];
+    
+    foreach ($topPagesRaw as $p) {
+        $url = $p['page_url'];
+        $title = 'Desconocido';
+        
+        if (strpos($url, 'page.php?id=') !== false) {
+            preg_match('/id=(\d+)/', $url, $matches);
+            if (isset($matches[1])) {
+                $stmtTitle = $pdo->prepare("SELECT title FROM pages WHERE id = ?");
+                $stmtTitle->execute([$matches[1]]);
+                $pageTitle = $stmtTitle->fetchColumn();
+                $title = $pageTitle ? $pageTitle : 'Página eliminada';
+            }
+        } elseif (strpos($url, 'category.php?id=') !== false) {
+            preg_match('/id=(\d+)/', $url, $matches);
+            if (isset($matches[1])) {
+                $stmtTitle = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                $stmtTitle->execute([$matches[1]]);
+                $catTitle = $stmtTitle->fetchColumn();
+                $title = $catTitle ? 'Categoría: ' . $catTitle : 'Categoría eliminada';
+            }
+        } elseif (strpos($url, 'index.php') !== false || $url === '/' || $url === '/moratalla-murcia.com/') {
+            $title = 'Inicio';
+        }
+        
+        $topPages[] = [
+            'page_url' => $url,
+            'count' => $p['count'],
+            'title' => $title
+        ];
+    }
 } catch (Exception $e) {}
 
 // Top Referidos
@@ -137,7 +168,7 @@ adminHeader("Estadísticas de Visitas");
         <table class="table">
             <thead>
                 <tr>
-                    <th>URL</th>
+                    <th>Página</th>
                     <th style="width: 80px; text-align: right;">Vistas</th>
                 </tr>
             </thead>
@@ -145,9 +176,10 @@ adminHeader("Estadísticas de Visitas");
                 <?php foreach($topPages as $p): ?>
                 <tr>
                     <td style="word-break: break-all; font-size: 0.9rem;">
-                        <a href="<?= htmlspecialchars($p['page_url']) ?>" target="_blank"><?= htmlspecialchars(urldecode($p['page_url'])) ?></a>
+                        <strong style="display: block; color: var(--primary);"><?= htmlspecialchars($p['title']) ?></strong>
+                        <a href="<?= htmlspecialchars($p['page_url']) ?>" target="_blank" style="font-size: 0.8rem; color: #6b7280;"><?= htmlspecialchars(urldecode($p['page_url'])) ?></a>
                     </td>
-                    <td style="text-align: right; font-weight: bold;"><?= $p['count'] ?></td>
+                    <td style="text-align: right; font-weight: bold; vertical-align: middle;"><?= $p['count'] ?></td>
                 </tr>
                 <?php endforeach; ?>
                 <?php if(empty($topPages)): ?>
