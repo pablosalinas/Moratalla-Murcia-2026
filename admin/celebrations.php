@@ -140,7 +140,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 <?php else: ?>
     <div class="card">
         <h3>Añadir Nuevo Evento</h3>
-        <form method="POST" style="margin-top: 1rem;">
+        
+        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 1rem; margin-bottom: 2rem;">
+            <label style="font-weight: 600; color: #334155; display: block; margin-bottom: 0.5rem;">Cargar Plantilla Predefinida (Opcional)</label>
+            <select id="templateSelector" class="form-control" style="width: 100%; padding: 0.8rem; border-color: #cbd5e1;">
+                <option value="">-- Selecciona una plantilla para rellenar los campos automáticamente --</option>
+                <option value="historico">📜 Acontecimiento Histórico (Cinta inferior)</option>
+                <option value="aniversario">🎉 Aniversario (Banner festivo)</option>
+                <option value="conmemoracion">🏛️ Conmemoración Institucional (Banner sobrio)</option>
+                <option value="luto">🖤 Luto Oficial (Página en blanco y negro)</option>
+            </select>
+        </div>
+
+        <form method="POST" id="addEventForm">
             <input type="hidden" name="action" value="add">
             
             <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
@@ -169,17 +181,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
             
             <div class="form-group" style="margin-bottom: 1rem;">
                 <label>Código HTML (Opcional)</label>
-                <textarea name="html_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="<div id='navidad'>Feliz Navidad</div>"></textarea>
+                <textarea id="htmlField" name="html_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="<div id='navidad'>Feliz Navidad</div>"></textarea>
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
                 <label>Código CSS (Opcional - Sin etiquetas &lt;style&gt;)</label>
-                <textarea name="css_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="#navidad { color: red; }"></textarea>
+                <textarea id="cssField" name="css_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="#navidad { color: red; }"></textarea>
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
                 <label>Código JS (Opcional - Sin etiquetas &lt;script&gt;)</label>
-                <textarea name="js_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="console.log('Navidad activa');"></textarea>
+                <textarea id="jsField" name="js_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="console.log('Navidad activa');"></textarea>
             </div>
             
             <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Crear Evento</button>
@@ -239,6 +251,48 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
     </div>
 
     <script>
+    const templates = {
+        'historico': {
+            name: 'Día Histórico: [Nombre]',
+            html: '<div id="historical-banner">\n    <div class="historical-content">\n        📜 <strong>Hoy en la historia:</strong> Se conmemora el acontecimiento de [Texto del acontecimiento]\n    </div>\n</div>',
+            css: '#historical-banner {\n    position: fixed; bottom: 0; left: 0; width: 100%;\n    background: rgba(44, 24, 16, 0.95); border-top: 3px solid #d4af37;\n    color: #fdf5e6; padding: 15px; text-align: center;\n    z-index: 9999; font-family: Georgia, serif; font-size: 1.2rem;\n    box-shadow: 0 -5px 15px rgba(0,0,0,0.5);\n}\n.historical-content { max-width: 800px; margin: 0 auto; line-height: 1.5; }',
+            js: ''
+        },
+        'aniversario': {
+            name: 'Aniversario: [Motivo]',
+            html: '<div id="anniversary-banner">\n    🎉 ¡Feliz Aniversario de [Motivo]! 🎉\n</div>',
+            css: '#anniversary-banner {\n    background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);\n    color: #333; font-weight: bold; font-size: 1.5rem; text-align: center;\n    padding: 15px; border-bottom: 2px solid #ff758c; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n}',
+            js: 'if (typeof confetti === "undefined") {\n    var script = document.createElement("script");\n    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";\n    script.onload = function() { confetti(); };\n    document.head.appendChild(script);\n} else {\n    confetti();\n}'
+        },
+        'conmemoracion': {
+            name: 'Conmemoración: [Motivo]',
+            html: '<div id="commemoration-banner">\n    En conmemoración de [Motivo de la conmemoración]\n</div>',
+            css: '#commemoration-banner {\n    background: #2b3a42; color: #fff; text-align: center;\n    padding: 15px; font-size: 1.2rem; letter-spacing: 1px;\n    border-bottom: 2px solid #3f5765;\n}',
+            js: ''
+        },
+        'luto': {
+            name: 'Luto Oficial',
+            html: '<div id="mourning-banner">\n    🖤 En señal de luto oficial. Descanse en paz.\n</div>',
+            css: 'html { filter: grayscale(100%); }\n#mourning-banner {\n    background: #000; color: #fff; text-align: center;\n    padding: 10px; font-weight: bold; font-size: 1.1rem;\n    border-bottom: 1px solid #333;\n}',
+            js: ''
+        }
+    };
+
+    document.getElementById('templateSelector').addEventListener('change', function() {
+        const val = this.value;
+        if (templates[val]) {
+            document.querySelector('input[name="name"]').value = templates[val].name;
+            document.getElementById('htmlField').value = templates[val].html;
+            document.getElementById('cssField').value = templates[val].css;
+            document.getElementById('jsField').value = templates[val].js;
+        } else {
+            document.querySelector('input[name="name"]').value = '';
+            document.getElementById('htmlField').value = '';
+            document.getElementById('cssField').value = '';
+            document.getElementById('jsField').value = '';
+        }
+    });
+
     document.querySelectorAll('.toggle-celebration').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const id = this.getAttribute('data-id');
