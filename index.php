@@ -281,21 +281,65 @@ if (count($externalLinks) > 0):
     </span>
 </div>
 
-<!-- CELEBRACIÓN MUNDIAL -->
-<div id="spain-celebration" style="position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #aa151b 0%, #aa151b 33%, #f1bf00 33%, #f1bf00 66%, #aa151b 66%, #aa151b 100%); color: white; padding: 15px 25px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(170, 21, 27, 0.5); z-index: 9999; display: flex; align-items: center; gap: 10px; animation: slideInUp 1s ease-out, pulseFloat 3s infinite alternate; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); border: 2px solid white;">
-    <span style="font-size: 1.5rem;">🏆</span>
-    <span>¡CAMPEONES DEL MUNDO! 🇪🇸</span>
-    <button onclick="document.getElementById('spain-celebration').style.display='none'" style="background:none; border:none; color:white; margin-left:10px; cursor:pointer; font-size: 1.2rem; text-shadow: none;">&times;</button>
+<!-- CELEBRACIÓN MUNDIAL BANDERA ONDEANDO -->
+<div id="spain-banner-container">
+    <div class="spain-flag-banner">
+        ESPAÑA, campeona del mundo 2026 🏆🇪🇸
+    </div>
 </div>
 
 <style>
-@keyframes slideInUp {
-    from { transform: translateY(100px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+#spain-banner-container {
+    position: fixed;
+    top: 20%;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    transform: translateX(-150%);
+    animation: flyAcross 15s linear infinite;
 }
-@keyframes pulseFloat {
-    0% { transform: translateY(0) scale(1); }
-    100% { transform: translateY(-10px) scale(1.05); }
+
+.spain-flag-banner {
+    background: linear-gradient(to bottom, #aa151b 0%, #aa151b 28%, #f1bf00 28%, #f1bf00 72%, #aa151b 72%, #aa151b 100%);
+    color: white;
+    font-size: 3.5rem;
+    font-weight: 900;
+    padding: 30px 60px;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.6), -1px -1px 2px rgba(170, 21, 27, 0.8);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    /* Efecto de onda simulado con rotación y radios de borde dinámicos */
+    animation: waveEffect 1.5s ease-in-out infinite alternate;
+    white-space: nowrap;
+}
+
+@keyframes flyAcross {
+    0% { transform: translateX(-150%); }
+    100% { transform: translateX(150%); }
+}
+
+@keyframes waveEffect {
+    0% {
+        transform: translateY(0) rotate(-3deg);
+        border-radius: 15px 40px 15px 40px;
+    }
+    100% {
+        transform: translateY(-20px) rotate(3deg);
+        border-radius: 40px 15px 40px 15px;
+    }
+}
+
+/* Ajuste para móviles */
+@media (max-width: 768px) {
+    .spain-flag-banner {
+        font-size: 1.8rem;
+        padding: 20px 30px;
+    }
+    #spain-banner-container {
+        top: 30%;
+    }
 }
 </style>
 
