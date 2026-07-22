@@ -56,8 +56,45 @@ try {
             $is_new_session = 1;
         }
 
-        $stmtVisit = $pdo->prepare("INSERT INTO visit_logs (ip_address, user_agent, browser, os, page_url, referrer, is_new_session) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmtVisit->execute([$ip, $ua, $browser, $os, $url, $referrer, $is_new_session]);
+        // Obtener Geolocalización (Cacheada en sesión)
+        if (!isset($_SESSION['geo_country']) || !isset($_SESSION['geo_city'])) {
+            $country = 'Desconocido';
+            $city = 'Desconocido';
+            
+            // Ignorar IPs locales
+            if ($ip !== '127.0.0.1' && $ip !== '::1') {
+                $ch = curl_init("http://ip-api.com/json/{$ip}?fields=status,country,city");
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 2); // 2 segundos máximo para no colgar la web
+                $response = curl_exec($ch);
+                curl_close($ch);
+                
+                if ($response) {
+                    $geo = json_decode($response, true);
+                    if ($geo && isset($geo['status']) && $geo['status'] === 'success') {
+                        $country = $geo['country'] ?? 'Desconocido';
+                        $city = $geo['city'] ?? 'Desconocido';
+                    }
+                }
+            }
+            $_SESSION['geo_country'] = $country;
+            $_SESSION['geo_city'] = $city;
+        }
+        
+        $country = $_SESSION['geo_country'];
+        $city = $_SESSION['geo_city'];
+
+        // Asegurar que existan las columnas en la DB (fallback por si no se ha ejecutado la migración)
+        try {
+            $stmtVisit = $pdo->prepare("INSERT INTO visit_logs (ip_address, user_agent, browser, os, page_url, referrer, country, city, is_new_session) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtVisit->execute([$ip, $ua, $browser, $os, $url, $referrer, $country, $city, $is_new_session]);
+        } catch (Exception $e) {
+            // Si la columna country no existe, falla silenciosamente y hace el INSERT original
+            if (strpos($e->getMessage(), 'Unknown column') !== false) {
+                $stmtVisit = $pdo->prepare("INSERT INTO visit_logs (ip_address, user_agent, browser, os, page_url, referrer, is_new_session) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmtVisit->execute([$ip, $ua, $browser, $os, $url, $referrer, $is_new_session]);
+            }
+        }
     }
 } catch (Exception $e) {
     file_put_contents(__DIR__ . '/../error_stats.log', $e->getMessage() . PHP_EOL, FILE_APPEND);

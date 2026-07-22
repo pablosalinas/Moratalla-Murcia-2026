@@ -16,9 +16,17 @@ try {
         `os` VARCHAR(100),
         `page_url` VARCHAR(255),
         `referrer` VARCHAR(255),
+        `country` VARCHAR(100),
+        `city` VARCHAR(100),
         `is_new_session` TINYINT(1) DEFAULT 0,
         `visit_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    
+    // Auto-añadir columnas si no existen (fallback)
+    try {
+        $pdo->exec("ALTER TABLE visit_logs ADD COLUMN country VARCHAR(100) NULL AFTER referrer");
+        $pdo->exec("ALTER TABLE visit_logs ADD COLUMN city VARCHAR(100) NULL AFTER country");
+    } catch(Exception $e) {}
 } catch (Exception $e) {}
 
 $totalVisits = 0;
@@ -122,6 +130,28 @@ try {
     $stmtRef = $pdo->query("SELECT referrer, COUNT(*) as count FROM visit_logs WHERE referrer != '' AND referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10");
     $topRefs = $stmtRef ? $stmtRef->fetchAll() : [];
 } catch (Exception $e) {}
+
+// Top Países
+$topCountries = [];
+try {
+    $stmtCountry = $pdo->query("SELECT country, COUNT(*) as count FROM visit_logs WHERE country IS NOT NULL AND country != 'Desconocido' GROUP BY country ORDER BY count DESC LIMIT 10");
+    $topCountries = $stmtCountry ? $stmtCountry->fetchAll() : [];
+} catch (Exception $e) {}
+
+$countryLabels = [];
+$countryCounts = [];
+foreach ($topCountries as $c) {
+    $countryLabels[] = $c['country'];
+    $countryCounts[] = $c['count'];
+}
+
+// Top Ciudades
+$topCities = [];
+try {
+    $stmtCity = $pdo->query("SELECT city, country, COUNT(*) as count FROM visit_logs WHERE city IS NOT NULL AND city != 'Desconocido' GROUP BY city, country ORDER BY count DESC LIMIT 10");
+    $topCities = $stmtCity ? $stmtCity->fetchAll() : [];
+} catch (Exception $e) {}
+
 adminHeader("Estadísticas de Visitas");
 ?>
 
@@ -147,37 +177,43 @@ adminHeader("Estadísticas de Visitas");
     <canvas id="lineChart" style="max-height: 300px;"></canvas>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <h3 style="text-align: center;">Navegadores</h3>
-        <div style="max-width: 300px; margin: 0 auto;">
+        <div style="max-width: 250px; margin: 0 auto;">
             <canvas id="browserChart"></canvas>
         </div>
     </div>
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <h3 style="text-align: center;">Sistemas Operativos</h3>
-        <div style="max-width: 300px; margin: 0 auto;">
+        <div style="max-width: 250px; margin: 0 auto;">
             <canvas id="osChart"></canvas>
+        </div>
+    </div>
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3 style="text-align: center;">Países</h3>
+        <div style="max-width: 250px; margin: 0 auto;">
+            <canvas id="countryChart"></canvas>
         </div>
     </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem;">
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <h3>Páginas Más Visitadas</h3>
         <table class="table">
             <thead>
                 <tr>
                     <th>Página</th>
-                    <th style="width: 80px; text-align: right;">Vistas</th>
+                    <th style="width: 60px; text-align: right;">Vistas</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach($topPages as $p): ?>
                 <tr>
-                    <td style="word-break: break-all; font-size: 0.9rem;">
+                    <td style="word-break: break-all; font-size: 0.85rem;">
                         <strong style="display: block; color: var(--primary);"><?= htmlspecialchars($p['title']) ?></strong>
-                        <a href="<?= htmlspecialchars($p['page_url']) ?>" target="_blank" style="font-size: 0.8rem; color: #6b7280;"><?= htmlspecialchars(urldecode($p['page_url'])) ?></a>
+                        <a href="<?= htmlspecialchars($p['page_url']) ?>" target="_blank" style="font-size: 0.75rem; color: #6b7280;"><?= htmlspecialchars(urldecode($p['page_url'])) ?></a>
                     </td>
                     <td style="text-align: right; font-weight: bold; vertical-align: middle;"><?= $p['count'] ?></td>
                 </tr>
@@ -189,18 +225,18 @@ adminHeader("Estadísticas de Visitas");
         </table>
     </div>
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h3>Fuentes de Tráfico (Referidos)</h3>
+        <h3>Fuentes de Tráfico</h3>
         <table class="table">
             <thead>
                 <tr>
                     <th>Origen</th>
-                    <th style="width: 80px; text-align: right;">Vistas</th>
+                    <th style="width: 60px; text-align: right;">Vistas</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach($topRefs as $r): ?>
                 <tr>
-                    <td style="word-break: break-all; font-size: 0.9rem;">
+                    <td style="word-break: break-all; font-size: 0.85rem;">
                         <a href="<?= htmlspecialchars($r['referrer']) ?>" target="_blank"><?= htmlspecialchars(urldecode($r['referrer'])) ?></a>
                     </td>
                     <td style="text-align: right; font-weight: bold;"><?= $r['count'] ?></td>
@@ -208,6 +244,31 @@ adminHeader("Estadísticas de Visitas");
                 <?php endforeach; ?>
                 <?php if(empty($topRefs)): ?>
                 <tr><td colspan="2" style="text-align: center; color: #9ca3af;">No hay datos suficientes</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3>Top Ciudades</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Ciudad</th>
+                    <th style="width: 60px; text-align: right;">Vistas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach($topCities as $c): ?>
+                <tr>
+                    <td style="word-break: break-all; font-size: 0.85rem;">
+                        <strong style="display: block; color: var(--primary);"><?= htmlspecialchars($c['city']) ?></strong>
+                        <span style="font-size: 0.75rem; color: #6b7280;"><?= htmlspecialchars($c['country']) ?></span>
+                    </td>
+                    <td style="text-align: right; font-weight: bold; vertical-align: middle;"><?= $c['count'] ?></td>
+                </tr>
+                <?php endforeach; ?>
+                <?php if(empty($topCities)): ?>
+                <tr><td colspan="2" style="text-align: center; color: #9ca3af;">No hay datos de ciudades</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -224,6 +285,8 @@ const browserLabels = <?= json_encode($browserLabels) ?>;
 const browserCounts = <?= json_encode($browserCounts) ?>;
 const osLabels = <?= json_encode($osLabels) ?>;
 const osCounts = <?= json_encode($osCounts) ?>;
+const countryLabels = <?= json_encode($countryLabels) ?>;
+const countryCounts = <?= json_encode($countryCounts) ?>;
 
 // Función auxiliar para mostrar mensaje si no hay datos
 function handleEmpty(chartId, dataArray) {
@@ -298,6 +361,27 @@ if (!handleEmpty('osChart', osCounts)) {
             labels: osLabels,
             datasets: [{
                 data: osCounts,
+                backgroundColor: colors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '65%'
+        }
+    });
+}
+
+// Gráfico Países
+if (!handleEmpty('countryChart', countryCounts)) {
+    const ctxCountry = document.getElementById('countryChart').getContext('2d');
+    new Chart(ctxCountry, {
+        type: 'doughnut',
+        data: {
+            labels: countryLabels,
+            datasets: [{
+                data: countryCounts,
                 backgroundColor: colors,
                 borderWidth: 0
             }]

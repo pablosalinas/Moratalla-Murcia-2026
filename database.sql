@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS `visit_logs` (
     `os` VARCHAR(100),
     `page_url` VARCHAR(255),
     `referrer` VARCHAR(255),
+    `country` VARCHAR(100),
+    `city` VARCHAR(100),
     `is_new_session` TINYINT(1) DEFAULT 0,
     `visit_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
