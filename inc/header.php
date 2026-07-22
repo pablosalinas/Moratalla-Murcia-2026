@@ -60,6 +60,7 @@ try {
         $stmtVisit->execute([$ip, $ua, $browser, $os, $url, $referrer, $is_new_session]);
     }
 } catch (Exception $e) {
+    file_put_contents(__DIR__ . '/../error_stats.log', $e->getMessage() . PHP_EOL, FILE_APPEND);
     // Silencioso para no romper la web
 }
 // --- FIN CONTROL ESTADÍSTICAS ---

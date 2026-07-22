@@ -23,10 +23,18 @@ $totalVisits = 0;
 $uniqueVisits = 0;
 try {
     $stmtTotal = $pdo->query("SELECT COUNT(*) FROM visit_logs");
-    $totalVisits = $stmtTotal ? $stmtTotal->fetchColumn() : 0;
+    $totalVisits = $stmtTotal ? (int)$stmtTotal->fetchColumn() : 0;
 
     $stmtUnique = $pdo->query("SELECT COUNT(*) FROM visit_logs WHERE is_new_session = 1");
-    $uniqueVisits = $stmtUnique ? $stmtUnique->fetchColumn() : 0;
+    $uniqueVisits = $stmtUnique ? (int)$stmtUnique->fetchColumn() : 0;
+    
+    // Añadir el histórico de global_visits
+    $stmtOld = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'global_visits'");
+    $oldVisits = $stmtOld ? (int)$stmtOld->fetchColumn() : 0;
+    
+    $totalVisits += $oldVisits;
+    // Las visitas únicas históricas no las tenemos exactas, pero podemos sumar el global para que no empiece de 0
+    $uniqueVisits += $oldVisits;
 } catch (Exception $e) {}
 
 // Visitas por día (Últimos 15 días)
