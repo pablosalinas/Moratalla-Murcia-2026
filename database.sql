@@ -49,6 +49,19 @@ CREATE TABLE IF NOT EXISTS `visit_logs` (
     `os` VARCHAR(100),
     `page_url` VARCHAR(255),
     `referrer` VARCHAR(255),
+    `is_new_session` TINYINT(1) DEFAULT 0,
     `visit_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `celebrations` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(255) NOT NULL,
+    `is_active` TINYINT(1) DEFAULT 0,
+    `start_date` DATETIME NULL,
+    `end_date` DATETIME NULL,
+    `html_content` TEXT,
+    `css_content` TEXT,
+    `js_content` TEXT,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
