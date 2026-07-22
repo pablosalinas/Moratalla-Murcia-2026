@@ -30,7 +30,7 @@ if (!$isLoginPage) {
 <div class="admin-container">
     <aside class="sidebar">
         <h2>Panel Moratalla</h2>
-        <nav>
+        <nav class="sidebar-nav">
             <ul>
                 <li><a href="dashboard.php">Inicio</a></li>
                 <li><a href="pages.php">Páginas y Textos</a></li>
