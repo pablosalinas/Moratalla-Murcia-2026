@@ -1,6 +1,8 @@
 <?php
-require_once 'inc/header.php';
-checkLogin();
+require_once 'inc/auth.php';
+checkAuth();
+require_once '../config.php';
+require_once 'inc/layout.php';
 
 $pdo = getDB();
 
@@ -89,10 +91,11 @@ try {
     $stmtRef = $pdo->query("SELECT referrer, COUNT(*) as count FROM visit_logs WHERE referrer != '' AND referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10");
     $topRefs = $stmtRef ? $stmtRef->fetchAll() : [];
 } catch (Exception $e) {}
+adminHeader("Estadísticas de Visitas");
 ?>
 
-<div class="header-admin">
-    <h1>Estadísticas de Visitas</h1>
+<div class="header-admin" style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; color: var(--primary);">Estadísticas de Visitas</h1>
 </div>
 
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-bottom: 2rem;">
@@ -276,4 +279,4 @@ if (!handleEmpty('osChart', osCounts)) {
 }
 </script>
 
-<?php require_once 'inc/footer.php'; ?>
+<?php adminFooter(); ?>
