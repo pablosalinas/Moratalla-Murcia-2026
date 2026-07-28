@@ -27,6 +27,13 @@ try {
     $hasUseLatestCol = false;
 }
 
+try {
+    $pdo->query("SELECT start_date FROM news_events LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("ALTER TABLE news_events ADD COLUMN start_date DATETIME NULL AFTER event_date");
+    $pdo->exec("ALTER TABLE news_events ADD COLUMN end_date DATETIME NULL AFTER start_date");
+}
+
 // PROCESAR AJAX UPLOAD
 if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
     $news_id = (int)$_POST['news_id'];
