@@ -10,6 +10,13 @@ if (!isset($pdo)) {
 
 // --- INICIO CONTROL ESTADÍSTICAS ---
 try {
+    // Auto-migración global: asegurar que existe la columna icon en pages
+    try {
+        $pdo->query("SELECT icon FROM pages LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(50) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `ip_address` VARCHAR(45) NOT NULL,
