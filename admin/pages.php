@@ -273,7 +273,11 @@ if ($action == 'list') {
         '🏢' => '🏢 Servicios Municipales',
         '✉️' => '✉️ Contacto',
         '🧳' => '🧳 Turismo',
-        '🍻' => '🍻 Bares y Restaurantes'
+        '🍻' => '🍻 Bares y Restaurantes',
+        '🏰' => '🏰 Castillo',
+        '🪨' => '🪨 Arte Rupestre',
+        '⛰️' => '⛰️ Montes y Montañas',
+        '🛤️' => '🛤️ Rutas'
     ];
     
     // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
