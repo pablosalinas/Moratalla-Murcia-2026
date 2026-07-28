@@ -4,13 +4,23 @@ require_once 'config.php';
 $pdo = getDB();
 
 $id = isset($_GET['id']) ? $_GET['id'] : null;
-if (!$id) { header("Location: index.php"); exit; }
+if (!$id) { 
+    http_response_code(404);
+    $_GET['code'] = 404;
+    require __DIR__ . '/error.php';
+    exit;
+}
 
 $stmt = $pdo->prepare("SELECT p.*, c.name as cat_name, c.id as cat_id, c.parent_id as cat_parent_id, c.is_visible as cat_is_visible FROM pages p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?");
 $stmt->execute([$id]);
 $page = $stmt->fetch();
 
-if (!$page) { header("Location: index.php"); exit; }
+if (!$page) { 
+    http_response_code(404);
+    $_GET['code'] = 404;
+    require __DIR__ . '/error.php';
+    exit;
+}
 
 // Contador de visitas por página (única por sesión)
 if (!isset($_SESSION['viewed_pages'])) {
@@ -23,7 +33,9 @@ if (!in_array($id, $_SESSION['viewed_pages'])) {
 
 // Si la página en sí no es visible, o si pertenece a una categoría oculta, denegar acceso
 if ($page['is_visible'] == 0 || ($page['cat_id'] && $page['cat_is_visible'] == 0)) {
-    header("Location: index.php");
+    http_response_code(404);
+    $_GET['code'] = 404;
+    require __DIR__ . '/error.php';
     exit;
 }
 

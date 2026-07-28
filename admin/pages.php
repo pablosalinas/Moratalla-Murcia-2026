@@ -233,6 +233,13 @@ if ($action == 'list') {
         $stmt = $pdo->prepare("SELECT * FROM pages WHERE id = ?");
         $stmt->execute([$id]);
         $page = $stmt->fetch();
+        
+        if (!$page) {
+            http_response_code(404);
+            $_GET['code'] = 404;
+            require dirname(__DIR__) . '/error.php';
+            exit;
+        }
     }
     
     // Obtener categorías para el select

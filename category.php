@@ -4,13 +4,23 @@ require_once 'config.php';
 $pdo = getDB();
 
 $id = isset($_GET['id']) ? $_GET['id'] : null;
-if (!$id) { header("Location: index.php"); exit; }
+if (!$id) { 
+    http_response_code(404);
+    $_GET['code'] = 404;
+    require __DIR__ . '/error.php';
+    exit;
+}
 
 $stmt = $pdo->prepare("SELECT * FROM categories WHERE id = ? AND is_visible = 1");
 $stmt->execute([$id]);
 $category = $stmt->fetch();
 
-if (!$category) { header("Location: index.php"); exit; }
+if (!$category) { 
+    http_response_code(404);
+    $_GET['code'] = 404;
+    require __DIR__ . '/error.php';
+    exit;
+}
 
 // Redirección especial: Bares y Restaurantes → página dedicada
 if (mb_stripos($category['name'], 'bares') !== false || mb_stripos($category['name'], 'restaurante') !== false) {

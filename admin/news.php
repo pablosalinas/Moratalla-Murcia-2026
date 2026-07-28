@@ -503,7 +503,9 @@ adminHeader("Noticias y Eventos");
         if ($fetched) {
             $news_data = array_merge($news_data, $fetched);
         } else {
-            header("Location: news.php");
+            http_response_code(404);
+            $_GET['code'] = 404;
+            require dirname(__DIR__) . '/error.php';
             exit;
         }
     }
