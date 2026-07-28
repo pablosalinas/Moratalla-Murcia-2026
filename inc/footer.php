@@ -734,9 +734,9 @@
             let voice = getMaleSpanishVoice();
             if (voice) utterance.voice = voice;
             
-            // Ajustar para voz de hombre ronca tipo narrador, pero con velocidad normal
-            utterance.pitch = 0.15; // Muy grave y ronca
-            utterance.rate = 0.95; // Velocidad normal
+            // Ajustar para voz de hombre natural y amena (sin alteraciones robóticas)
+            utterance.pitch = 1.0; // Tono natural (evita el efecto metálico)
+            utterance.rate = 1.0;  // Velocidad normal y fluida
             
             utterance.onend = () => {
                 readNext();
