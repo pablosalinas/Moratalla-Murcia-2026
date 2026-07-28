@@ -702,12 +702,20 @@
         }
         
         function getMaleSpanishVoice() {
-            // Intentar encontrar una voz masculina en español (Pablo, Diego, Jorge o Google español)
             let esVoices = voices.filter(v => v.lang.startsWith('es'));
-            let maleVoice = esVoices.find(v => v.name.toLowerCase().includes('pablo') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('jorge'));
+            
+            // 1. Intentar encontrar nombres explícitamente masculinos conocidos
+            let maleNames = ['pablo', 'diego', 'jorge', 'juan', 'carlos', 'alvaro', 'raul', 'antonio'];
+            let maleVoice = esVoices.find(v => maleNames.some(name => v.name.toLowerCase().includes(name)));
             if (maleVoice) return maleVoice;
             
-            // Fallback a cualquier voz en español si no hay una masculina explícita
+            // 2. Si no hay nombres masculinos, filtrar las que sabemos que son femeninas
+            let femaleNames = ['helena', 'laura', 'monica', 'paulina', 'luciana', 'victoria', 'sabina', 'carmen', 'mia', 'isabel', 'conchita'];
+            let unknownVoices = esVoices.filter(v => !femaleNames.some(name => v.name.toLowerCase().includes(name)));
+            
+            if (unknownVoices.length > 0) return unknownVoices[0]; // Retorna la primera que no sea claramente femenina
+            
+            // Fallback a cualquier voz en español si no hay más remedio (el sistema no tiene voces masculinas)
             if (esVoices.length > 0) return esVoices[0];
             
             // Si no hay español, devolver null
