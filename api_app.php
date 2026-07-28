@@ -58,7 +58,7 @@ switch ($action) {
     case 'news':
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             // Obtener noticias (solo las activas por defecto, pero dejemos que la app las vea todas para poder gestionar)
-            $stmt = $pdo->query("SELECT id, title, image_path, event_date, is_active_home, is_active_category FROM news_events ORDER BY id DESC LIMIT 100");
+            $stmt = $pdo->query("SELECT id, title, image_path, event_date, start_date, end_date, is_active_home, is_active_category FROM news_events ORDER BY id DESC LIMIT 100");
             $news = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['success' => true, 'news' => $news]);
         }

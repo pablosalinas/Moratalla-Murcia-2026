@@ -666,5 +666,192 @@
         }
     });
     </script>
+
+    <!-- TEXT-TO-SPEECH (TTS) LOGIC -->
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const ttsBtn = document.getElementById('tts-toggle');
+        if (!ttsBtn) return;
+        
+        let ttsActive = localStorage.getItem('tts-active') === 'true';
+        let synth = window.speechSynthesis;
+        let voices = [];
+        let ttsQueue = [];
+        let isReading = false;
+        
+        // Cargar voces
+        function loadVoices() {
+            voices = synth.getVoices();
+        }
+        
+        loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        
+        function updateTTSBtnUI() {
+            if (ttsActive) {
+                ttsBtn.style.background = 'var(--primary)';
+                ttsBtn.style.color = 'white';
+                ttsBtn.innerHTML = '<i class="fas fa-volume-up"></i> <span class="hide-mobile">Detener Lectura</span>';
+            } else {
+                ttsBtn.style.background = 'none';
+                ttsBtn.style.color = 'var(--primary)';
+                ttsBtn.innerHTML = '<i class="fas fa-volume-up"></i> <span class="hide-mobile">Leer Voz Alta</span>';
+            }
+        }
+        
+        function getMaleSpanishVoice() {
+            // Intentar encontrar una voz masculina en español (Pablo, Diego, Jorge o Google español)
+            let esVoices = voices.filter(v => v.lang.startsWith('es'));
+            let maleVoice = esVoices.find(v => v.name.toLowerCase().includes('pablo') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('jorge'));
+            if (maleVoice) return maleVoice;
+            
+            // Fallback a cualquier voz en español si no hay una masculina explícita
+            if (esVoices.length > 0) return esVoices[0];
+            
+            // Si no hay español, devolver null
+            return null;
+        }
+        
+        function readNext() {
+            if (!ttsActive || ttsQueue.length === 0) {
+                isReading = false;
+                return;
+            }
+            
+            isReading = true;
+            let text = ttsQueue.shift();
+            
+            // Skip empty text
+            if (!text || text.trim() === '') {
+                readNext();
+                return;
+            }
+            
+            let utterance = new SpeechSynthesisUtterance(text);
+            
+            let voice = getMaleSpanishVoice();
+            if (voice) utterance.voice = voice;
+            
+            // Ajustar para voz ronca/narrador
+            utterance.pitch = 0.6; // más grave
+            utterance.rate = 0.9; // un poco más lento para dar tono de narrador
+            
+            utterance.onend = () => {
+                readNext();
+            };
+            
+            utterance.onerror = (e) => {
+                console.error("TTS Error:", e);
+                readNext();
+            };
+            
+            synth.speak(utterance);
+        }
+        
+        function extractTextFromPage() {
+            ttsQueue = [];
+            
+            // Extraer textos relevantes (Evitar menús, footers, etc si es posible)
+            // Primero buscar el contenedor principal, si no, buscar en el body
+            let mainContainer = document.querySelector('.main-content') || document.querySelector('.content-card');
+            
+            if (!mainContainer) {
+                // Si no hay un contenedor claro, recopilamos de todos modos pero omitiendo el header/footer/nav
+                mainContainer = document.body;
+            }
+            
+            // Leer título de la página
+            if (document.title) {
+                ttsQueue.push(document.title.split('-')[0].trim());
+            }
+            
+            // Seleccionar elementos de texto dentro del contenedor principal
+            let elements = mainContainer.querySelectorAll('h1, h2, h3, h4, p, .news-card-title, .news-card-excerpt, .curiosidad-title, .curiosidad-desc');
+            
+            elements.forEach(el => {
+                // Si es el body entero, evitar elementos dentro de header, footer, nav
+                if (el.closest('header') || el.closest('footer') || el.closest('nav') || el.closest('#cookie-banner')) return;
+                
+                // Verificar que el elemento es visible
+                if (el.offsetParent !== null && window.getComputedStyle(el).display !== 'none') {
+                    let text = el.innerText || el.textContent;
+                    if (text && text.trim().length > 0) {
+                        ttsQueue.push(text.trim());
+                    }
+                }
+            });
+        }
+        
+        function startTTS() {
+            synth.cancel(); // Detener cualquier lectura previa
+            extractTextFromPage();
+            if (ttsQueue.length > 0) {
+                readNext();
+            }
+        }
+        
+        function stopTTS() {
+            synth.cancel();
+            ttsQueue = [];
+            isReading = false;
+        }
+        
+        ttsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            ttsActive = !ttsActive;
+            localStorage.setItem('tts-active', ttsActive);
+            updateTTSBtnUI();
+            
+            if (ttsActive) {
+                // A veces el navegador requiere interacción del usuario para cargar voces o iniciar TTS
+                if (voices.length === 0) loadVoices();
+                startTTS();
+            } else {
+                stopTTS();
+            }
+        });
+        
+        // Inicializar estado UI
+        updateTTSBtnUI();
+        
+        // Autostart si estaba activo y navegó a otra página (requiere que el navegador lo permita, a veces bloquean autoplay de TTS)
+        if (ttsActive) {
+            // Pequeño delay para asegurar que el DOM y voces cargaron
+            setTimeout(() => {
+                if (voices.length === 0) loadVoices();
+                
+                // Intento de inicio automático (puede fallar si el navegador requiere interacción)
+                startTTS();
+            }, 1000);
+        }
+        
+        // Escuchar cambios en modales de noticias (para leer la noticia abierta)
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target.id === 'newsDetailModal' && mutation.target.classList.contains('active')) {
+                    if (ttsActive) {
+                        synth.cancel();
+                        ttsQueue = [];
+                        
+                        let mTitle = document.getElementById('modalTitle');
+                        let mText = document.getElementById('modalText');
+                        
+                        if (mTitle) ttsQueue.push(mTitle.innerText);
+                        if (mText) ttsQueue.push(mText.innerText);
+                        
+                        readNext();
+                    }
+                }
+            });
+        });
+        
+        const newsModal = document.getElementById('newsDetailModal');
+        if (newsModal) {
+            observer.observe(newsModal, { attributes: true, attributeFilter: ['class'] });
+        }
+    });
+    </script>
 </body>
 </html>

@@ -98,6 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $content = trim($_POST['content'] ?? '');
         $image_caption = trim($_POST['image_caption'] ?? '');
         $event_date = $_POST['event_date'] ?? null;
+        $start_date = $_POST['start_date'] ?? null;
+        $end_date = $_POST['end_date'] ?? null;
         $is_active_home = isset($_POST['is_active_home']) ? 1 : 0;
         $use_latest_gallery_image = isset($_POST['use_latest_gallery_image']) ? 1 : 0;
     
@@ -111,6 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (empty($event_date)) {
             $event_date = null;
+        }
+        if (empty($start_date)) {
+            $start_date = null;
+        }
+        if (empty($end_date)) {
+            $end_date = null;
         }
         if (empty($category_id)) {
             $category_id = null;
@@ -169,9 +177,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'is_active_home', 'category_id', 'is_active_category'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category];
+                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'is_active_category'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category];
                 
                 if ($hasSortOrderColumn) {
                     $columns[] = 'sort_order';
@@ -194,8 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'is_active_home = ?', 'category_id = ?', 'is_active_category = ?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $is_active_home, $category_id, $is_active_category];
+                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'is_active_category = ?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category];
                 
                 if ($hasSortOrderColumn) {
                     $setCols[] = 'sort_order = ?';
@@ -480,7 +488,7 @@ adminHeader("Noticias y Eventos");
     </script>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'is_active_home' => 1, 'category_id' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
+    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM news_events WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -562,6 +570,18 @@ adminHeader("Noticias y Eventos");
                     <input type="checkbox" name="is_active_home" id="is_active_home" value="1" <?php echo ($news_data['is_active_home'] ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
                     <label for="is_active_home" style="font-weight: 600; color: var(--text); cursor: pointer; user-select: none;">Mostrar en la Página de Inicio</label>
                 </div>
+
+                <div style="margin-bottom: 1.2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Fecha de Inicio de Visibilidad (Opcional)</label>
+                        <input type="datetime-local" name="start_date" value="<?php echo htmlspecialchars($news_data['start_date'] ?? ''); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Fecha de Fin de Visibilidad (Opcional)</label>
+                        <input type="datetime-local" name="end_date" value="<?php echo htmlspecialchars($news_data['end_date'] ?? ''); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    </div>
+                </div>
+                <small style="color: #666; display: block; margin-bottom: 1rem;">Si defines fechas y activas la casilla "Mostrar en la Página de Inicio", la noticia solo se mostrará dentro de ese periodo. Si dejas las fechas en blanco, se mostrará siempre que la casilla esté activa.</small>
                 
                 <div style="margin-bottom: 1.2rem; display: flex; align-items: center; gap: 10px;">
                     <input type="checkbox" name="use_latest_gallery_image" id="use_latest_gallery_image" value="1" <?php echo (!empty($news_data['use_latest_gallery_image']) ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">

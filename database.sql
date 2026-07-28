@@ -67,3 +67,4 @@ CREATE TABLE IF NOT EXISTS `celebrations` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE news_events ADD COLUMN start_date DATETIME NULL AFTER event_date; ALTER TABLE news_events ADD COLUMN end_date DATETIME NULL AFTER start_date;

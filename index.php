@@ -32,7 +32,7 @@ try {
         
         <div class="news-grid">
             <?php
-            $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 ORDER BY sort_order ASC, event_date DESC, id DESC");
+            $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date >= NOW()) ORDER BY sort_order ASC, event_date DESC, id DESC");
             $hasNews = false;
             $isFirstNews = true;
             while ($news = $stmt->fetch()) {
