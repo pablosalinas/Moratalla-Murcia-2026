@@ -34,6 +34,20 @@ $cleanText = trim(strip_tags($page['content']));
 $pageDescription = mb_substr(preg_replace('/\s+/', ' ', $cleanText), 0, 150);
 if (strlen($cleanText) > 150) $pageDescription .= "...";
 
+// Extraer la primera imagen del contenido para usarla en OpenGraph / Redes Sociales
+$ogImage = '';
+if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $page['content'], $matches)) {
+    $ogImage = $matches[1];
+    // Asegurar que la URL sea absoluta si es relativa
+    if (!preg_match('/^https?:\/\//i', $ogImage)) {
+        $ogImage = "https://www.moratalla-murcia.com/moratalla/" . ltrim($ogImage, '/');
+    }
+}
+
+// Marcar para usar el schema.org Article
+$isArticle = true;
+$articleDate = $page['updated_at'] ?? $page['created_at'] ?? date('Y-m-d H:i:s');
+
 require_once 'inc/header.php';
 
 // Evitar bucle en botón "Volver": si la categoría actual es de 1 sola página, volver al padre o al Inicio

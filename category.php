@@ -63,6 +63,14 @@ if (!empty($category['parent_id'])) {
 
 // Ahora que hemos pasado todas las posibles redirecciones de cabecera, cargamos el Header
 $pageTitle = $category['name'];
+
+// SEO: Descripción de la categoría
+if (!empty($category['hint_text'])) {
+    $pageDescription = $category['hint_text'];
+} else {
+    $pageDescription = "Explora la sección de " . $category['name'] . " en el archivo histórico digital de Moratalla.";
+}
+
 require_once 'inc/header.php';
 
 // La función getCategoryIcon ha sido movida a inc/header.php para uso global

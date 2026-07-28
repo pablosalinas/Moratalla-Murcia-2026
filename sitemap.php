@@ -38,14 +38,9 @@ while ($page = $stmtPages->fetch()) {
     addUrl($baseUrl . 'page.php?id=' . $page['id'], $lastmod, 'monthly', '0.7');
 }
 
-// 4. News / Events
-$stmtNews = $pdo->query("SELECT id, created_at FROM news ORDER BY created_at DESC");
-while ($news = $stmtNews->fetch()) {
-    $lastmod = !empty($news['created_at']) ? date('Y-m-d', strtotime($news['created_at'])) : date('Y-m-d');
-    addUrl($baseUrl . 'news_detail.php?id=' . $news['id'], $lastmod, 'monthly', '0.6');
-}
-
-// 5. Static Pages
+// 4. Static and Important Pages
 addUrl($baseUrl . 'contacto.php', null, 'monthly', '0.5');
+addUrl($baseUrl . 'restaurantes.php', null, 'weekly', '0.8');
+addUrl($baseUrl . 'alojamientos.php', null, 'weekly', '0.8');
 
 echo '</urlset>';

@@ -251,17 +251,61 @@ function renderHorizontalMenu($parentId = null) {
     <meta name="keywords" content="<?php echo htmlspecialchars($seoKeywords); ?>">
     <meta name="robots" content="index, follow">
     
-    <!-- Open Graph (WhatsApp, Redes Sociales) -->
+    <!-- Open Graph (WhatsApp, Facebook) -->
     <meta property="og:title" content="<?php echo htmlspecialchars($finalTitle); ?>">
     <meta property="og:description" content="<?php echo htmlspecialchars($finalDesc); ?>">
-    <meta property="og:type" content="website">
-    <meta property="og:image" content="https://www.moratalla-murcia.com/moratalla/uploads/theme/logo.jpg">
-    <?php $currentUrl = "https://www.moratalla-murcia.com" . $_SERVER['REQUEST_URI']; ?>
-    <meta property="og:url" content="<?php echo $currentUrl; ?>">
-    <link rel="canonical" href="<?php echo $currentUrl; ?>" />
+    <meta property="og:type" content="<?php echo isset($isArticle) && $isArticle ? 'article' : 'website'; ?>">
+    <?php 
+        $finalOgImage = !empty($ogImage) ? $ogImage : "https://www.moratalla-murcia.com/moratalla/uploads/theme/logo.jpg";
+    ?>
+    <meta property="og:image" content="<?php echo htmlspecialchars($finalOgImage); ?>">
+    <?php 
+        // Limpiar URL canonical para evitar parámetros de sesión o rastreo
+        $canonicalPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $canonicalQuery = '';
+        if (isset($_GET['id'])) {
+            $canonicalQuery = '?id=' . (int)$_GET['id'];
+        }
+        $currentUrl = "https://www.moratalla-murcia.com" . $canonicalPath . $canonicalQuery; 
+    ?>
+    <meta property="og:url" content="<?php echo htmlspecialchars($currentUrl); ?>">
+    
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo htmlspecialchars($finalTitle); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars($finalDesc); ?>">
+    <meta name="twitter:image" content="<?php echo htmlspecialchars($finalOgImage); ?>">
+
+    <link rel="canonical" href="<?php echo htmlspecialchars($currentUrl); ?>" />
     
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
+    <?php if (isset($isArticle) && $isArticle): ?>
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "<?php echo htmlspecialchars($currentUrl); ?>"
+      },
+      "headline": "<?php echo htmlspecialchars($finalTitle); ?>",
+      "description": "<?php echo htmlspecialchars($finalDesc); ?>",
+      "image": "<?php echo htmlspecialchars($finalOgImage); ?>",
+      "datePublished": "<?php echo isset($articleDate) ? $articleDate : date('c'); ?>",
+      "author": {
+        "@type": "Organization",
+        "name": "moratalla-murcia.com"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "moratalla-murcia.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.moratalla-murcia.com/moratalla/uploads/theme/logo.jpg"
+        }
+      }
+    }
+    <?php else: ?>
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
@@ -278,6 +322,7 @@ function renderHorizontalMenu($parentId = null) {
         }
       }
     }
+    <?php endif; ?>
     </script>
 
     <!-- Preload critical assets -->
