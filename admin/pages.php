@@ -7,6 +7,14 @@ require_once 'inc/layout.php';
 require_once 'inc/image_helper.php';
 
 $pdo = getDB();
+
+// Auto-migración de la columna icon
+try {
+    $pdo->query("SELECT icon FROM pages LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(50) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
+}
+
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 
 // Función para generar slugs limpios
@@ -41,6 +49,7 @@ if ($action == 'save') {
     $title = isset($_POST['title']) ? trim($_POST['title']) : '';
     $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
+    $icon = isset($_POST['icon']) ? trim($_POST['icon']) : 'far fa-file-alt';
     $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
     $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     
@@ -52,8 +61,8 @@ if ($action == 'save') {
     }
 
     if ($id) {
-        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, sort_order=?, is_visible=? WHERE id=?");
-        $stmt->execute([$title, $category_id, $content, $sort_order, $is_visible, $id]);
+        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, icon=?, sort_order=?, is_visible=? WHERE id=?");
+        $stmt->execute([$title, $category_id, $content, $icon, $sort_order, $is_visible, $id]);
         $msg = "Página actualizada.";
     } else {
         $slug = slugify($title);
@@ -64,8 +73,8 @@ if ($action == 'save') {
             $slug .= '-' . rand(100, 999);
         }
         
-        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $slug, $sort_order, $is_visible]);
+        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, icon, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $icon, $slug, $sort_order, $is_visible]);
         $id = $pdo->lastInsertId();
         $msg = "Página creada.";
     }
@@ -228,6 +237,17 @@ if ($action == 'list') {
     
     // Obtener categorías para el select
     $cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
+    
+    // Obtener iconos ya usados en páginas
+    $usedIcons = $pdo->query("SELECT DISTINCT icon FROM pages WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $defaultIcons = [
+        'far fa-file-alt', 'fas fa-info-circle', 'fas fa-landmark', 'fas fa-tree', 
+        'fas fa-camera', 'fas fa-music', 'fas fa-futbol', 'fas fa-church', 
+        'fas fa-cross', 'fas fa-newspaper', 'fas fa-users', 'fas fa-book-reader', 
+        'fas fa-history', 'fas fa-video', 'fas fa-image', 'fas fa-map-marked-alt',
+        'fas fa-star', 'fas fa-heart', 'fas fa-utensils', 'fas fa-bed'
+    ];
+    $allIcons = array_unique(array_merge($defaultIcons, $usedIcons));
     ?>
     
     <?php if (isset($_GET['msg'])): ?>
@@ -258,6 +278,17 @@ if ($action == 'list') {
                             <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $page['category_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Icono (Menú)</label>
+                    <input type="text" name="icon" list="iconList" value="<?php echo htmlspecialchars($page['icon'] ?? 'far fa-file-alt'); ?>" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;" placeholder="Ej: fas fa-star">
+                    <datalist id="iconList">
+                        <?php foreach($allIcons as $ico): ?>
+                            <option value="<?php echo htmlspecialchars($ico); ?>"></option>
+                        <?php endforeach; ?>
+                    </datalist>
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Selecciona un icono existente o escribe una nueva clase de FontAwesome para añadirlo a la colección.</small>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">

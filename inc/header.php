@@ -171,7 +171,7 @@ function renderHorizontalMenu($parentId = null) {
     $pages = [];
     $extLinks = [];
     if ($parentId !== null) {
-        $stmtPages = $pdo->prepare("SELECT id, title FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+        $stmtPages = $pdo->prepare("SELECT id, title, icon FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
         $stmtPages->execute([$parentId]);
         $pages = $stmtPages->fetchAll();
         
@@ -227,7 +227,8 @@ function renderHorizontalMenu($parentId = null) {
         
         // Render Páginas
         foreach ($pages as $p) {
-            echo "<li><a href='page.php?id={$p['id']}'><i class='far fa-file-alt' style='margin-right:8px; opacity:0.6;'></i>" . htmlspecialchars($p['title']) . "</a></li>";
+            $pageIcon = !empty($p['icon']) ? htmlspecialchars($p['icon']) : 'far fa-file-alt';
+            echo "<li><a href='page.php?id={$p['id']}'><i class='{$pageIcon}' style='margin-right:8px; opacity:0.6;'></i>" . htmlspecialchars($p['title']) . "</a></li>";
         }
         
         // Render Enlaces Externos
