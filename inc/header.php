@@ -24,6 +24,13 @@ try {
         $pdo->exec("ALTER TABLE news_events ADD COLUMN icon VARCHAR(50) NULL DEFAULT '📰' AFTER category_id");
     }
 
+    // Auto-migración global: asegurar que existe la columna icon en categories
+    try {
+        $pdo->query("SELECT icon FROM categories LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL DEFAULT '📁' AFTER parent_id");
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `ip_address` VARCHAR(45) NOT NULL,
@@ -236,6 +243,17 @@ function renderHorizontalMenu($parentId = null) {
             
             echo "<li>";
             echo "<a href='{$url}'{$hintAttr}>";
+            
+            // Si es una subcategoría, mostramos su icono
+            if ($parentId !== null) {
+                $catIcon = !empty($cat['icon']) ? htmlspecialchars($cat['icon']) : '📁';
+                if (strpos($catIcon, 'fa-') !== false) {
+                    echo "<i class='{$catIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
+                } else {
+                    echo "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$catIcon}</span>";
+                }
+            }
+            
             echo htmlspecialchars($cat['name']);
             if ($hasChildren) echo " <i class='fas fa-angle-" . ($parentId === null ? 'down' : 'right') . "'></i>";
             echo "</a>";
