@@ -117,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $category_id = $_POST['category_id'] ?? null;
         $is_active_category = isset($_POST['is_active_category']) ? 1 : 0;
         $sort_order_news = (int)($_POST['sort_order_news'] ?? 0);
+        $icon = $_POST['icon'] ?? '📰';
         
         if (empty($event_date)) {
             $event_date = null;
@@ -184,9 +185,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'is_active_category'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category];
+                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'is_active_category', 'icon'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category, $icon];
                 
                 if ($hasSortOrderColumn) {
                     $columns[] = 'sort_order';
@@ -209,8 +210,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'is_active_category = ?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category];
+                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'is_active_category = ?', 'icon = ?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category, $icon];
                 
                 if ($hasSortOrderColumn) {
                     $setCols[] = 'sort_order = ?';
@@ -512,6 +513,70 @@ adminHeader("Noticias y Eventos");
     
     // Obtener categorías para dropdown
     $cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
+    
+    // Obtener iconos ya usados en noticias
+    $usedIcons = $pdo->query("SELECT DISTINCT icon FROM news_events WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $defaultIcons = [
+        '📄' => '📄 Página genérica',
+        'ℹ️' => 'ℹ️ Información',
+        '🏛️' => '🏛️ Patrimonio / Historia',
+        '🌳' => '🌳 Naturaleza',
+        '📷' => '📷 Fotografía',
+        '🎵' => '🎵 Música',
+        '⚽' => '⚽ Deportes',
+        '⛪' => '⛪ Iglesia',
+        '✝️' => '✝️ Religión',
+        '📰' => '📰 Noticias',
+        '👥' => '👥 Asociaciones',
+        '📖' => '📖 Cultura / Lectura',
+        '🕰️' => '🕰️ Historia (Reloj)',
+        '🎥' => '🎥 Vídeo',
+        '🖼️' => '🖼️ Galería',
+        '🗺️' => '🗺️ Mapa / Rutas',
+        '⭐' => '⭐ Destacado',
+        '❤️' => '❤️ Favorito',
+        '🍽️' => '🍽️ Gastronomía',
+        '🛏️' => '🛏️ Alojamiento',
+        '🏀' => '🏀 Baloncesto',
+        '🏺' => '🏺 Artesanía',
+        '🧺' => '🧺 Esparto',
+        '🎨' => '🎨 Pintura',
+        '🚴' => '🚴 Ciclismo',
+        '🚗' => '🚗 Automóvil',
+        '🏫' => '🏫 Escuelas',
+        '🎒' => '🎒 Colegios',
+        '🎓' => '🎓 Institutos',
+        '🏢' => '🏢 Servicios Municipales',
+        '✉️' => '✉️ Contacto',
+        '🧳' => '🧳 Turismo',
+        '🍻' => '🍻 Bares y Restaurantes',
+        '🏰' => '🏰 Castillo',
+        '🪨' => '🪨 Arte Rupestre',
+        '⛰️' => '⛰️ Montes y Montañas',
+        '🛤️' => '🛤️ Rutas',
+        '🥁' => '🥁 Tambor',
+        '🐂' => '🐂 Tauromaquia'
+    ];
+    
+    // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
+    $allIconsOptions = $defaultIcons;
+    foreach ($usedIcons as $uIcon) {
+        if (!isset($allIconsOptions[$uIcon])) {
+            $allIconsOptions[$uIcon] = $uIcon; // Si es un "fas fa-star", se muestra tal cual
+        }
+    }
+    // Ordenar alfabéticamente por el nombre (valor) ignorando el emoji inicial
+    uasort($allIconsOptions, function($a, $b) {
+        $textA = trim(mb_substr($a, mb_strpos($a, ' ') !== false ? mb_strpos($a, ' ') : 0));
+        $textB = trim(mb_substr($b, mb_strpos($b, ' ') !== false ? mb_strpos($b, ' ') : 0));
+        
+        $search  = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
+        $replace = ['A','E','I','O','U','a','e','i','o','u'];
+        $textA = str_replace($search, $replace, $textA);
+        $textB = str_replace($search, $replace, $textB);
+        
+        return strcasecmp($textA, $textB);
+    });
 ?>
     <div class="card" style="max-width: 700px; margin: 0 auto;">
         <h3 style="color: var(--primary); margin-bottom: 0.5rem;">
@@ -608,9 +673,97 @@ adminHeader("Noticias y Eventos");
                         </select>
                     </div>
 
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
                         <input type="checkbox" name="is_active_category" id="is_active_category" value="1" <?php echo ($news_data['is_active_category'] ? 'checked' : ''); ?> style="transform: scale(1.3); cursor: pointer;">
                         <label for="is_active_category" style="font-weight: 600; color: var(--text); cursor: pointer; user-select: none;">Mostrar en la categoría seleccionada (cuando no esté visible o activa en Inicio)</label>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Icono para el Menú (Aparecerá junto al título en el desplegable)</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <?php $currentIcon = !empty($news_data['icon']) ? $news_data['icon'] : '📰'; ?>
+                            <input type="hidden" name="icon" id="newsIconInput" value="<?php echo htmlspecialchars($currentIcon); ?>">
+                            
+                            <!-- Select inteligente -->
+                            <div style="flex: 1; min-width: 250px;">
+                                <select id="iconSelect" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white; cursor: pointer;">
+                                    <?php
+                                    $iconFound = false;
+                                    foreach ($allIconsOptions as $iconVal => $iconLabel) {
+                                        $selected = ($currentIcon === $iconVal) ? 'selected' : '';
+                                        if ($selected) $iconFound = true;
+                                        echo "<option value=\"" . htmlspecialchars($iconVal) . "\" {$selected}>" . htmlspecialchars($iconLabel) . "</option>";
+                                    }
+                                    
+                                    // Si tiene un icono raro (ej antiguo fontawesome) no listado
+                                    if (!$iconFound && !empty($currentIcon)) {
+                                        echo "<option value=\"" . htmlspecialchars($currentIcon) . "\" selected>" . htmlspecialchars($currentIcon) . " (Actual)</option>";
+                                    }
+                                    ?>
+                                    <option value="_custom_">✏️ Escribir Emoji / Icono Manual...</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Input manual oculto por defecto -->
+                            <div id="customIconDiv" style="display: none; flex: 1; min-width: 200px; display: flex; align-items: center; gap: 5px;">
+                                <input type="text" id="customIconInput" placeholder="Ej: 🍕 o fas fa-star" value="<?php echo htmlspecialchars($currentIcon); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                                <button type="button" id="applyCustomIcon" class="btn" style="background: var(--primary); color: white; padding: 0.8rem; border-radius: 8px;"><i class="fas fa-check"></i></button>
+                            </div>
+                        </div>
+                        
+                        <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const iconSelect = document.getElementById('iconSelect');
+                            const customIconDiv = document.getElementById('customIconDiv');
+                            const newsIconInput = document.getElementById('newsIconInput');
+                            const customIconInput = document.getElementById('customIconInput');
+                            const applyCustomIcon = document.getElementById('applyCustomIcon');
+                            
+                            // Mostrar/ocultar custom div si hay que escribir a mano
+                            function toggleCustom() {
+                                if (iconSelect.value === '_custom_') {
+                                    customIconDiv.style.display = 'flex';
+                                    customIconInput.focus();
+                                } else {
+                                    customIconDiv.style.display = 'none';
+                                    newsIconInput.value = iconSelect.value;
+                                }
+                            }
+                            
+                            iconSelect.addEventListener('change', toggleCustom);
+                            
+                            // Si se empieza con custom seleccionado
+                            if (iconSelect.value === '_custom_') {
+                                customIconDiv.style.display = 'flex';
+                            } else {
+                                customIconDiv.style.display = 'none';
+                            }
+                            
+                            applyCustomIcon.addEventListener('click', function() {
+                                const val = customIconInput.value.trim();
+                                if (val) {
+                                    newsIconInput.value = val;
+                                    
+                                    // Comprobar si ya existe en las opciones, si no añadirlo y seleccionarlo
+                                    let exists = false;
+                                    for (let i = 0; i < iconSelect.options.length; i++) {
+                                        if (iconSelect.options[i].value === val) {
+                                            iconSelect.selectedIndex = i;
+                                            exists = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (!exists) {
+                                        const newOption = new Option(val + ' (Personalizado)', val, true, true);
+                                        iconSelect.insertBefore(newOption, iconSelect.options[iconSelect.options.length - 1]);
+                                    }
+                                    
+                                    customIconDiv.style.display = 'none';
+                                }
+                            });
+                        });
+                        </script>
                     </div>
                 </div>
             </div>

@@ -17,6 +17,13 @@ try {
         $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(50) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
     }
 
+    // Auto-migración global: asegurar que existe la columna icon en news_events
+    try {
+        $pdo->query("SELECT icon FROM news_events LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE news_events ADD COLUMN icon VARCHAR(50) NULL DEFAULT '📰' AFTER category_id");
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `ip_address` VARCHAR(45) NOT NULL,
@@ -177,6 +184,7 @@ function renderHorizontalMenu($parentId = null) {
     
     $pages = [];
     $extLinks = [];
+    $newsLinks = [];
     if ($parentId !== null) {
         $stmtPages = $pdo->prepare("SELECT id, title, icon FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
         $stmtPages->execute([$parentId]);
@@ -185,9 +193,13 @@ function renderHorizontalMenu($parentId = null) {
         $stmtExt = $pdo->prepare("SELECT title, url FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
         $stmtExt->execute([$parentId]);
         $extLinks = $stmtExt->fetchAll();
+        
+        $stmtNews = $pdo->prepare("SELECT id, title, icon FROM news_events WHERE category_id = ? AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY event_date DESC, title ASC");
+        $stmtNews->execute([$parentId]);
+        $newsLinks = $stmtNews->fetchAll();
     }
     
-    $totalItems = count($categories) + count($pages) + count($extLinks);
+    $totalItems = count($categories) + count($pages) + count($extLinks) + count($newsLinks);
     
     if ($totalItems > 0) {
         echo $parentId === null ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
@@ -206,7 +218,11 @@ function renderHorizontalMenu($parentId = null) {
             $stmtE->execute([$cat['id']]);
             $numE = $stmtE->fetchColumn();
             
-            $hasChildren = ($numCat + $numP + $numE) > 0;
+            $stmtN = $pdo->prepare("SELECT COUNT(*) FROM news_events WHERE category_id = ? AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())");
+            $stmtN->execute([$cat['id']]);
+            $numN = $stmtN->fetchColumn();
+            
+            $hasChildren = ($numCat + $numP + $numE + $numN) > 0;
             
             $url = "category.php?id={$cat['id']}";
             if (mb_strtolower(trim($cat['name']), 'UTF-8') === 'contacto') {
@@ -236,13 +252,22 @@ function renderHorizontalMenu($parentId = null) {
         foreach ($pages as $p) {
             $pageIcon = !empty($p['icon']) ? htmlspecialchars($p['icon']) : '📄';
             if (strpos($pageIcon, 'fa-') !== false) {
-                // Es un icono de FontAwesome (antiguo o escrito a mano)
                 $iconHtml = "<i class='{$pageIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
             } else {
-                // Es un Emoji
                 $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$pageIcon}</span>";
             }
             echo "<li><a href='page.php?id={$p['id']}'>{$iconHtml}" . htmlspecialchars($p['title']) . "</a></li>";
+        }
+        
+        // Render Noticias
+        foreach ($newsLinks as $n) {
+            $newsIcon = !empty($n['icon']) ? htmlspecialchars($n['icon']) : '📰';
+            if (strpos($newsIcon, 'fa-') !== false) {
+                $iconHtml = "<i class='{$newsIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
+            } else {
+                $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$newsIcon}</span>";
+            }
+            echo "<li><a href='index.php?action=ver_noticia&id={$n['id']}'>{$iconHtml}" . htmlspecialchars($n['title']) . "</a></li>";
         }
         
         // Render Enlaces Externos
