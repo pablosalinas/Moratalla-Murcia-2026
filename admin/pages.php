@@ -289,9 +289,18 @@ if ($action == 'list') {
             $allIconsOptions[$uIcon] = $uIcon; // Si es un "fas fa-star", se muestra tal cual
         }
     }
-    
-    // Ordenar alfabéticamente por el nombre (valor)
-    asort($allIconsOptions);
+    // Ordenar alfabéticamente por el nombre (valor) ignorando el emoji inicial
+    uasort($allIconsOptions, function($a, $b) {
+        $textA = trim(mb_substr($a, mb_strpos($a, ' ') !== false ? mb_strpos($a, ' ') : 0));
+        $textB = trim(mb_substr($b, mb_strpos($b, ' ') !== false ? mb_strpos($b, ' ') : 0));
+        
+        $search  = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
+        $replace = ['A','E','I','O','U','a','e','i','o','u'];
+        $textA = str_replace($search, $replace, $textA);
+        $textB = str_replace($search, $replace, $textB);
+        
+        return strcasecmp($textA, $textB);
+    });
     ?>
     
     <?php if (isset($_GET['msg'])): ?>
