@@ -277,7 +277,9 @@ if ($action == 'list') {
         '🏰' => '🏰 Castillo',
         '🪨' => '🪨 Arte Rupestre',
         '⛰️' => '⛰️ Montes y Montañas',
-        '🛤️' => '🛤️ Rutas'
+        '🛤️' => '🛤️ Rutas',
+        '🥁' => '🥁 Tambor',
+        '🐂' => '🐂 Tauromaquia'
     ];
     
     // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
