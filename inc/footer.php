@@ -734,9 +734,9 @@
             let voice = getMaleSpanishVoice();
             if (voice) utterance.voice = voice;
             
-            // Ajustar para voz ronca/narrador
-            utterance.pitch = 0.6; // más grave
-            utterance.rate = 0.9; // un poco más lento para dar tono de narrador
+            // Ajustar para voz ronca/narrador y pausada
+            utterance.pitch = 0.3; // Mucho más grave
+            utterance.rate = 0.75; // Más pausada y sosegada
             
             utterance.onend = () => {
                 readNext();
