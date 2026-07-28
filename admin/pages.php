@@ -260,7 +260,20 @@ if ($action == 'list') {
         '⭐' => '⭐ Destacado',
         '❤️' => '❤️ Favorito',
         '🍽️' => '🍽️ Gastronomía',
-        '🛏️' => '🛏️ Alojamiento'
+        '🛏️' => '🛏️ Alojamiento',
+        '🏀' => '🏀 Baloncesto',
+        '🏺' => '🏺 Artesanía',
+        '🧺' => '🧺 Esparto',
+        '🎨' => '🎨 Pintura',
+        '🚴' => '🚴 Ciclismo',
+        '🚗' => '🚗 Automóvil',
+        '🏫' => '🏫 Escuelas',
+        '🎒' => '🎒 Colegios',
+        '🎓' => '🎓 Institutos',
+        '🏢' => '🏢 Servicios Municipales',
+        '✉️' => '✉️ Contacto',
+        '🧳' => '🧳 Turismo',
+        '🍻' => '🍻 Bares y Restaurantes'
     ];
     
     // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
@@ -270,6 +283,9 @@ if ($action == 'list') {
             $allIconsOptions[$uIcon] = $uIcon; // Si es un "fas fa-star", se muestra tal cual
         }
     }
+    
+    // Ordenar alfabéticamente por el nombre (valor)
+    asort($allIconsOptions);
     ?>
     
     <?php if (isset($_GET['msg'])): ?>
