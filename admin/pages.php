@@ -282,13 +282,21 @@ if ($action == 'list') {
 
                 <div style="margin-bottom: 1.5rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Icono (Menú)</label>
-                    <input type="text" name="icon" list="iconList" value="<?php echo htmlspecialchars($page['icon'] ?? 'far fa-file-alt'); ?>" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;" placeholder="Ej: fas fa-star">
-                    <datalist id="iconList">
-                        <?php foreach($allIcons as $ico): ?>
-                            <option value="<?php echo htmlspecialchars($ico); ?>"></option>
-                        <?php endforeach; ?>
-                    </datalist>
-                    <small style="color: #666; display: block; margin-top: 0.4rem;">Selecciona un icono existente o escribe una nueva clase de FontAwesome para añadirlo a la colección.</small>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="iconSelect" onchange="if(this.value=='_other'){document.getElementById('iconInput').style.display='block'; document.getElementById('iconInput').value='';}else{document.getElementById('iconInput').style.display='none'; document.getElementById('iconInput').value=this.value;}" style="flex: 1; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                            <?php 
+                            $currentIcon = $page['icon'] ?? 'far fa-file-alt';
+                            foreach($allIcons as $ico): ?>
+                                <option value="<?php echo htmlspecialchars($ico); ?>" <?php echo ($currentIcon == $ico) ? 'selected' : ''; ?>><?php echo htmlspecialchars($ico); ?></option>
+                            <?php endforeach; ?>
+                            <?php if(!empty($currentIcon) && !in_array($currentIcon, $allIcons)): ?>
+                                <option value="<?php echo htmlspecialchars($currentIcon); ?>" selected><?php echo htmlspecialchars($currentIcon); ?></option>
+                            <?php endif; ?>
+                            <option value="_other">-- Otro (Escribir manual) --</option>
+                        </select>
+                        <input type="text" id="iconInput" name="icon" value="<?php echo htmlspecialchars($currentIcon); ?>" style="display: none; flex: 1; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;" placeholder="Ej: fas fa-star">
+                    </div>
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Selecciona un icono existente de la lista, o elige "Otro" para escribir una nueva clase de FontAwesome manualmente.</small>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
