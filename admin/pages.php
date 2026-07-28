@@ -241,13 +241,35 @@ if ($action == 'list') {
     // Obtener iconos ya usados en páginas
     $usedIcons = $pdo->query("SELECT DISTINCT icon FROM pages WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
     $defaultIcons = [
-        'far fa-file-alt', 'fas fa-info-circle', 'fas fa-landmark', 'fas fa-tree', 
-        'fas fa-camera', 'fas fa-music', 'fas fa-futbol', 'fas fa-church', 
-        'fas fa-cross', 'fas fa-newspaper', 'fas fa-users', 'fas fa-book-reader', 
-        'fas fa-history', 'fas fa-video', 'fas fa-image', 'fas fa-map-marked-alt',
-        'fas fa-star', 'fas fa-heart', 'fas fa-utensils', 'fas fa-bed'
+        '📄' => '📄 Página genérica',
+        'ℹ️' => 'ℹ️ Información',
+        '🏛️' => '🏛️ Patrimonio / Historia',
+        '🌳' => '🌳 Naturaleza',
+        '📷' => '📷 Fotografía',
+        '🎵' => '🎵 Música',
+        '⚽' => '⚽ Deportes',
+        '⛪' => '⛪ Iglesia',
+        '✝️' => '✝️ Religión',
+        '📰' => '📰 Noticias',
+        '👥' => '👥 Asociaciones',
+        '📖' => '📖 Cultura / Lectura',
+        '🕰️' => '🕰️ Historia (Reloj)',
+        '🎥' => '🎥 Vídeo',
+        '🖼️' => '🖼️ Galería',
+        '🗺️' => '🗺️ Mapa / Rutas',
+        '⭐' => '⭐ Destacado',
+        '❤️' => '❤️ Favorito',
+        '🍽️' => '🍽️ Gastronomía',
+        '🛏️' => '🛏️ Alojamiento'
     ];
-    $allIcons = array_unique(array_merge($defaultIcons, $usedIcons));
+    
+    // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
+    $allIconsOptions = $defaultIcons;
+    foreach ($usedIcons as $uIcon) {
+        if (!isset($allIconsOptions[$uIcon])) {
+            $allIconsOptions[$uIcon] = $uIcon; // Si es un "fas fa-star", se muestra tal cual
+        }
+    }
     ?>
     
     <?php if (isset($_GET['msg'])): ?>
@@ -285,14 +307,14 @@ if ($action == 'list') {
                     <div style="display: flex; gap: 10px;">
                         <select id="iconSelect" onchange="if(this.value=='_other'){document.getElementById('iconInput').style.display='block'; document.getElementById('iconInput').value='';}else{document.getElementById('iconInput').style.display='none'; document.getElementById('iconInput').value=this.value;}" style="flex: 1; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
                             <?php 
-                            $currentIcon = $page['icon'] ?? 'far fa-file-alt';
-                            foreach($allIcons as $ico): ?>
-                                <option value="<?php echo htmlspecialchars($ico); ?>" <?php echo ($currentIcon == $ico) ? 'selected' : ''; ?>><?php echo htmlspecialchars($ico); ?></option>
+                            $currentIcon = $page['icon'] ?? '📄';
+                            foreach($allIconsOptions as $val => $label): ?>
+                                <option value="<?php echo htmlspecialchars($val); ?>" <?php echo ($currentIcon == $val) ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
                             <?php endforeach; ?>
-                            <?php if(!empty($currentIcon) && !in_array($currentIcon, $allIcons)): ?>
+                            <?php if(!empty($currentIcon) && !isset($allIconsOptions[$currentIcon])): ?>
                                 <option value="<?php echo htmlspecialchars($currentIcon); ?>" selected><?php echo htmlspecialchars($currentIcon); ?></option>
                             <?php endif; ?>
-                            <option value="_other">-- Otro (Escribir manual) --</option>
+                            <option value="_other">-- Otro (Pegar Emoji o escribir manual) --</option>
                         </select>
                         <input type="text" id="iconInput" name="icon" value="<?php echo htmlspecialchars($currentIcon); ?>" style="display: none; flex: 1; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;" placeholder="Ej: fas fa-star">
                     </div>

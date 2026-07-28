@@ -234,8 +234,15 @@ function renderHorizontalMenu($parentId = null) {
         
         // Render Páginas
         foreach ($pages as $p) {
-            $pageIcon = !empty($p['icon']) ? htmlspecialchars($p['icon']) : 'far fa-file-alt';
-            echo "<li><a href='page.php?id={$p['id']}'><i class='{$pageIcon}' style='margin-right:8px; opacity:0.6;'></i>" . htmlspecialchars($p['title']) . "</a></li>";
+            $pageIcon = !empty($p['icon']) ? htmlspecialchars($p['icon']) : '📄';
+            if (strpos($pageIcon, 'fa-') !== false) {
+                // Es un icono de FontAwesome (antiguo o escrito a mano)
+                $iconHtml = "<i class='{$pageIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
+            } else {
+                // Es un Emoji
+                $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$pageIcon}</span>";
+            }
+            echo "<li><a href='page.php?id={$p['id']}'>{$iconHtml}" . htmlspecialchars($p['title']) . "</a></li>";
         }
         
         // Render Enlaces Externos
