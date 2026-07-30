@@ -5,16 +5,30 @@ require_once 'inc/auth.php';
 if (isset($_POST['download_backup'])) {
     $pdo = getDB();
     
-    // Preparar el archivo de backup en memoria
-    $sqlDump = "-- =================================================\n";
-    $sqlDump .= "-- Copia de seguridad de Base de Datos moratalla-murcia.com\n";
-    $sqlDump .= "-- Fecha de generacion: " . date('Y-m-d H:i:s') . "\n";
-    $sqlDump .= "-- =================================================\n\n";
-    $sqlDump .= "SET NAMES 'utf8mb4';\n";
-    $sqlDump .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
-
     try {
         set_time_limit(0); // Evitar timeout para zips grandes
+        
+        // Usar carpeta local para evitar problemas de open_basedir en producción
+        $tmpDir = realpath(__DIR__ . '/../uploads') . '/tmp_backup';
+        if (!is_dir($tmpDir)) {
+            @mkdir($tmpDir, 0755, true);
+        }
+        
+        $sqlFile = $tmpDir . '/database_' . date('Y_m_d_His') . '.sql';
+        $zipFile = $tmpDir . '/backup_' . date('Y_m_d_His') . '.zip';
+        
+        // Escribir SQL directamente a archivo para evitar límite de memoria
+        $fp = fopen($sqlFile, 'w');
+        if (!$fp) {
+            throw new Exception("No se pudo crear el archivo temporal para la base de datos.");
+        }
+        
+        fwrite($fp, "-- =================================================\n");
+        fwrite($fp, "-- Copia de seguridad de Base de Datos moratalla-murcia.com\n");
+        fwrite($fp, "-- Fecha de generacion: " . date('Y-m-d H:i:s') . "\n");
+        fwrite($fp, "-- =================================================\n\n");
+        fwrite($fp, "SET NAMES 'utf8mb4';\n");
+        fwrite($fp, "SET FOREIGN_KEY_CHECKS = 0;\n\n");
         
         // Obtener todas las tablas
         $tables = [];
@@ -26,13 +40,13 @@ if (isset($_POST['download_backup'])) {
         foreach ($tables as $table) {
             $stmt = $pdo->query("SHOW CREATE TABLE `$table`");
             $createRow = $stmt->fetch(PDO::FETCH_NUM);
-            $sqlDump .= "-- Estructura de la tabla `$table`\n";
-            $sqlDump .= "DROP TABLE IF EXISTS `$table`;\n";
-            $sqlDump .= $createRow[1] . ";\n\n";
+            fwrite($fp, "-- Estructura de la tabla `$table`\n");
+            fwrite($fp, "DROP TABLE IF EXISTS `$table`;\n");
+            fwrite($fp, $createRow[1] . ";\n\n");
 
             $stmt = $pdo->query("SELECT * FROM `$table`");
             if ($stmt->rowCount() > 0) {
-                $sqlDump .= "-- Datos de la tabla `$table`\n";
+                fwrite($fp, "-- Datos de la tabla `$table`\n");
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $keys = array_keys($row);
                     $keysString = '`' . implode('`, `', $keys) . '`';
@@ -46,36 +60,39 @@ if (isset($_POST['download_backup'])) {
                         }
                     }
                     $valuesString = implode(', ', $values);
-                    $sqlDump .= "INSERT INTO `$table` ($keysString) VALUES ($valuesString);\n";
+                    fwrite($fp, "INSERT INTO `$table` ($keysString) VALUES ($valuesString);\n");
                 }
-                $sqlDump .= "\n";
+                fwrite($fp, "\n");
             }
         }
-        $sqlDump .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+        fwrite($fp, "SET FOREIGN_KEY_CHECKS = 1;\n");
+        fclose($fp);
 
-        // Crear ZIP temporal
-        $zipFile = sys_get_temp_dir() . '/backup_' . date('Y_m_d_His') . '.zip';
+        // Crear ZIP
         $zip = new ZipArchive();
         if ($zip->open($zipFile, ZipArchive::CREATE) !== TRUE) {
-            throw new Exception("No se pudo crear el archivo ZIP.");
+            throw new Exception("No se pudo crear el archivo ZIP temporal.");
         }
 
         // Añadir base de datos al ZIP
-        $zip->addFromString('database.sql', $sqlDump);
+        $zip->addFile($sqlFile, 'database.sql');
 
         // Añadir carpeta uploads al ZIP
         $uploadsDir = realpath(__DIR__ . '/../uploads');
         if ($uploadsDir !== false && is_dir($uploadsDir)) {
             $files = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($uploadsDir),
+                new RecursiveDirectoryIterator($uploadsDir, RecursiveDirectoryIterator::SKIP_DOTS),
                 RecursiveIteratorIterator::LEAVES_ONLY
             );
 
             foreach ($files as $name => $file) {
                 if (!$file->isDir()) {
                     $filePath = $file->getRealPath();
-                    $relativePath = 'uploads/' . substr($filePath, strlen($uploadsDir) + 1);
-                    $zip->addFile($filePath, $relativePath);
+                    // Evitar incluir la carpeta tmp_backup en el ZIP
+                    if (strpos($filePath, 'tmp_backup') === false) {
+                        $relativePath = 'uploads/' . substr($filePath, strlen($uploadsDir) + 1);
+                        $zip->addFile($filePath, $relativePath);
+                    }
                 }
             }
         }
@@ -94,7 +111,10 @@ if (isset($_POST['download_backup'])) {
         header('Expires: 0');
         
         readfile($zipFile);
-        unlink($zipFile); // Borrar temporal
+        
+        // Limpiar archivos temporales
+        @unlink($sqlFile);
+        @unlink($zipFile); 
         exit;
 
     } catch (Exception $e) {
