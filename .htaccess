@@ -1,7 +1,6 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
 SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-RewriteBase /moratalla/
 
 # Sitemap
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
@@ -9,9 +8,38 @@ RewriteRule ^sitemap\.xml$ sitemap.php [L]
 # Si el archivo no existe (!-f) y el directorio no existe (!-d)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-# Redirigir a la carpeta principal usando URL absoluta (necesario en IONOS)
-RewriteRule ^(.*)$ https://www.moratalla-murcia.com/moratalla/ [R=301,L]
+# Redirigir internamente a la página de error unificada sin cambiar la URL (SEO friendly)
+RewriteRule ^(.*)$ error.php?code=404 [L,QSA]
 </IfModule>
 
-# Fallback nativo (ruta interna) para anular la página de error por defecto de IONOS
-ErrorDocument 404 /moratalla/index.php
+# Fallback nativo para anular la página de error por defecto
+ErrorDocument 400 /error.php?code=400
+ErrorDocument 401 /error.php?code=401
+ErrorDocument 403 /error.php?code=403
+ErrorDocument 404 /error.php?code=404
+ErrorDocument 500 /error.php?code=500
+ErrorDocument 503 /error.php?code=503
+
+<IfModule mod_php.c>
+  php_value upload_max_filesize 256M
+  php_value post_max_size 256M
+  php_value memory_limit 512M
+  php_value max_execution_time 600
+  php_value max_input_time 600
+</IfModule>
+
+<IfModule mod_php7.c>
+  php_value upload_max_filesize 256M
+  php_value post_max_size 256M
+  php_value memory_limit 512M
+  php_value max_execution_time 600
+  php_value max_input_time 600
+</IfModule>
+
+<IfModule mod_php8.c>
+  php_value upload_max_filesize 256M
+  php_value post_max_size 256M
+  php_value memory_limit 512M
+  php_value max_execution_time 600
+  php_value max_input_time 600
+</IfModule>

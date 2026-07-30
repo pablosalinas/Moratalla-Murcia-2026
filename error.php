@@ -21,6 +21,8 @@ if (!array_key_exists($code, $errorMessages)) {
     $code = 404;
 }
 
+http_response_code($code);
+
 $pageTitle = "Error " . $code . " - " . $errorMessages[$code]['title'];
 
 // Incluimos el header nativo de la web para mantener el menú y la navegación
