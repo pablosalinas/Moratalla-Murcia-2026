@@ -234,7 +234,12 @@ adminHeader("Manual de Usuario Avanzado");
             border: 1px solid #ccc !important;
             border-top: 4px solid var(--manual-primary) !important;
             margin-bottom: 2rem !important;
-            page-break-inside: avoid;
+            page-break-inside: auto;
+            break-inside: auto;
+        }
+        h2, h3 { 
+            page-break-after: avoid; 
+            break-after: avoid; 
         }
         .manual-card-icon { display: none; }
         @page { margin: 1.5cm; }
