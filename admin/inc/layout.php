@@ -33,6 +33,10 @@ function adminHeader($title = "Admin Panel") {
             .logout-btn:hover {
                 background: #c1121f !important;
             }
+            /* Evitar que el buscador sticky tape los anclajes al volver */
+            tr[id], div.tree-item[id], div.image-item[id] {
+                scroll-margin-top: 120px;
+            }
         </style>
     </head>
     <body class="admin-body">
