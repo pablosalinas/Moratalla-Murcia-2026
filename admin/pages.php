@@ -286,7 +286,8 @@ if ($action == 'list') {
         '⛰️' => '⛰️ Montes y Montañas',
         '🛤️' => '🛤️ Rutas',
         '🥁' => '🥁 Tambor',
-        '🐂' => '🐂 Tauromaquia'
+        '🐂' => '🐂 Tauromaquia',
+        '🎉' => '🎉 Fiestas / Celebraciones'
     ];
     
     // Preparar lista final fusionando emojis por defecto y clases antiguas usadas

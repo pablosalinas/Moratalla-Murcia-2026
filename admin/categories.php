@@ -278,7 +278,8 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
         '⛰️' => '⛰️ Montes y Montañas',
         '🛤️' => '🛤️ Rutas',
         '🥁' => '🥁 Tambor',
-        '🐂' => '🐂 Tauromaquia'
+        '🐂' => '🐂 Tauromaquia',
+        '🎉' => '🎉 Fiestas / Celebraciones'
     ];
     
     // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
