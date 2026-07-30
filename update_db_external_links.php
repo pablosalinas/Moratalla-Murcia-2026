@@ -13,6 +13,13 @@ try {
 }
 
 try {
+    $pdo->exec("ALTER TABLE `external_links` ADD COLUMN `icon` VARCHAR(50) NULL DEFAULT '🔗' AFTER `show_in_category`;");
+    $results[] = "Columna icon añadida a external_links correctamente.";
+} catch (Exception $e) {
+    $results[] = "Nota icon: " . $e->getMessage();
+}
+
+try {
     $pdo->exec("ALTER TABLE `external_links` ADD COLUMN `show_in_category` TINYINT(1) DEFAULT 0;");
     $results[] = "Columna show_in_category añadida correctamente.";
 } catch (Exception $e) {
