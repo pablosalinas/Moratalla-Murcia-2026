@@ -204,7 +204,7 @@ function renderHorizontalMenu($parentId = null) {
         $stmtPages->execute([$parentId]);
         $pages = $stmtPages->fetchAll();
         
-        $stmtExt = $pdo->prepare("SELECT title, url FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+        $stmtExt = $pdo->prepare("SELECT title, url, icon FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
         $stmtExt->execute([$parentId]);
         $extLinks = $stmtExt->fetchAll();
         
@@ -297,7 +297,13 @@ function renderHorizontalMenu($parentId = null) {
         
         // Render Enlaces Externos
         foreach ($extLinks as $e) {
-            echo "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'><i class='fas fa-external-link-alt' style='margin-right:8px; opacity:0.6; color:#d4af37;'></i>" . htmlspecialchars($e['title']) . "</a></li>";
+            $extIcon = !empty($e['icon']) ? htmlspecialchars($e['icon']) : '🔗';
+            if (strpos($extIcon, 'fa-') !== false) {
+                $iconHtml = "<i class='{$extIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center; color:#d4af37;'></i>";
+            } else {
+                $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$extIcon}</span>";
+            }
+            echo "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'>{$iconHtml}" . htmlspecialchars($e['title']) . "</a></li>";
         }
         
         echo "</ul>";

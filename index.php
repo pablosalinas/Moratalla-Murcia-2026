@@ -158,7 +158,14 @@ if (count($externalLinks) > 0):
             ?>
             <a href="<?php echo htmlspecialchars($el['url']); ?>" target="_blank" rel="noopener noreferrer" class="curiosidad-card">
                 <div class="curiosidad-icon" style="background:<?php echo $p['bg']; ?>; color:<?php echo $p['color']; ?>;">
-                    <i class="fas <?php echo $p['icon']; ?>"></i>
+                    <?php
+                    $cardIcon = !empty($el['icon']) ? htmlspecialchars($el['icon']) : $p['icon'];
+                    if (strpos($cardIcon, 'fa-') !== false) {
+                        echo '<i class="' . (strpos($cardIcon, 'fas ') === false && strpos($cardIcon, 'far ') === false && strpos($cardIcon, 'fab ') === false ? 'fas ' : '') . $cardIcon . '"></i>';
+                    } else {
+                        echo '<span style="font-size: 1.2em;">' . $cardIcon . '</span>';
+                    }
+                    ?>
                 </div>
                 <div class="curiosidad-body">
                     <h3 class="curiosidad-title"><?php echo htmlspecialchars($el['title']); ?></h3>
