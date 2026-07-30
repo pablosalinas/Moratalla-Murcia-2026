@@ -184,7 +184,7 @@ adminHeader("Alojamientos");
         </div>
     <?php endif; ?>
 
-    <div style="margin-bottom:1rem;">
+    <div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
         <input type="text" id="searchInput" placeholder="Buscar por nombre, población..." style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:6px; font-size:1rem;">
     </div>
 
@@ -357,7 +357,7 @@ async function toggleVisible(id) {
 
             <div style="display:flex; gap:1rem; flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary" style="font-size:1.05rem; padding:0.9rem 2rem;"><i class="fas fa-save"></i> Guardar</button>
-                <a href="alojamientos.php" class="btn" style="background:var(--gray-200);">Volver al listado</a>
+                <a href="alojamientos.php<?php echo !empty($r['id']) ? '#tr-'.$r['id'] : ''; ?>" class="btn" style="background:var(--gray-200);">Volver al listado</a>
                 <?php if ($action === 'edit'): ?>
                     <a href="../alojamientos.php" target="_blank" class="btn" style="background:#e8f5e9; color:#2e7d32;"><i class="fas fa-eye"></i> Ver en web</a>
                 <?php endif; ?>

@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $stmt = $pdo->prepare("UPDATE page_images SET caption = ?, sort_order = ?, is_visible = ?, is_cover = ? WHERE id = ?");
     $stmt->execute([$caption, $sort_order, $is_visible, $is_cover, $img_id]);
     
-    header("Location: images.php?page=" . $current_page . "&msg=updated");
+    header("Location: images.php?page=" . $current_page . "&msg=updated#img-" . $img_id);
     exit;
 }
 
@@ -82,13 +82,13 @@ adminHeader("Galería General");
     <?php if (isset($_GET['msg']) && $_GET['msg'] === 'deleted'): ?>
         <div class="alert alert-success">Imagen eliminada permanentemente.</div>
     <?php endif; ?>
-    <div style="margin-bottom: 1rem;">
+    <div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
         <input type="text" id="searchInput" placeholder="Buscar por título de página, ID o descripción de foto..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
     </div>
 
     <div id="imageGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
         <?php foreach ($images as $row): ?>
-            <div class="image-item" style="background: var(--bg-alt); border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+            <div class="image-item" id="img-<?php echo $row['id']; ?>" style="background: var(--bg-alt); border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; position: relative; display: flex; flex-direction: column;">
                 
                 <!-- Imagen / Vídeo -->
                 <div style="position: relative; height: 180px; background: #eee;">

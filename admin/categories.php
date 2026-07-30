@@ -116,7 +116,7 @@ function renderCategoryTree($parentId = null, $depth = 0) {
         $hasItems = true;
         $padding = $depth * 25;
         ?>
-        <div class="tree-item" style="padding-left: <?php echo $padding; ?>px; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; background: white; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid var(--gray-200); box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s;">
+        <div class="tree-item" id="row-<?php echo $cat['id']; ?>" style="padding-left: <?php echo $padding; ?>px; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; background: white; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid var(--gray-200); box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <?php if ($depth > 0): ?>
                     <span style="color: var(--gray-300); font-weight: bold;">&mdash;</span>
@@ -216,7 +216,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
             </div>
             <a href="?action=add" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-plus"></i> Nueva Categoría</a>
         </div>
-        <div style="margin-bottom: 1rem;">
+        <div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
             <input type="text" id="searchInput" placeholder="Buscar categoría..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
         </div>
 
@@ -440,7 +440,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
             
             <div style="display: flex; gap: 10px; margin-top: 2.5rem; border-top: 1px solid var(--gray-200); padding-top: 1.5rem;">
                 <button type="submit" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-save"></i> Guardar Cambios</button>
-                <a href="categories.php" class="btn" style="background: var(--gray-200); color: var(--text);"><i class="fas fa-times"></i> Cancelar</a>
+                <a href="categories.php<?php echo !empty($cat_data['id']) ? '#row-'.$cat_data['id'] : ''; ?>" class="btn" style="background: var(--gray-200); color: var(--text);"><i class="fas fa-times"></i> Cancelar</a>
             </div>
         </form>
     </div>

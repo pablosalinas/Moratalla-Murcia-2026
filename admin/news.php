@@ -376,7 +376,7 @@ adminHeader("Noticias y Eventos");
             <a href="?action=add" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-plus"></i> Nueva Noticia / Evento</a>
         </div>
 
-        <div style="margin-bottom: 1rem;">
+        <div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
             <input type="text" id="searchInput" placeholder="Buscar por título, fecha o sección..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
         </div>
 
@@ -406,7 +406,7 @@ adminHeader("Noticias y Eventos");
                     while ($row = $stmt->fetch()) {
                         $hasItems = true;
                         ?>
-                        <tr style="border-bottom: 1px solid var(--gray-200); transition: background-color 0.2s;">
+                        <tr id="row-<?php echo $row['id']; ?>" style="border-bottom: 1px solid var(--gray-200); transition: background-color 0.2s;">
                             <?php if ($hasSortOrderColumn): ?>
                             <td style="padding: 0.5rem 1rem; text-align:center;">
                                 <form method="POST" action="?action=edit" style="display:inline;">
@@ -814,7 +814,7 @@ adminHeader("Noticias y Eventos");
             
             <div style="display: flex; gap: 10px; margin-top: 2.5rem; border-top: 1px solid var(--gray-200); padding-top: 1.5rem;">
                 <button type="submit" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-save"></i> Guardar</button>
-                <a href="news.php" class="btn" style="background: var(--gray-200); color: var(--text);"><i class="fas fa-times"></i> Cancelar</a>
+                <a href="news.php<?php echo !empty($news_data['id']) ? '#row-'.$news_data['id'] : ''; ?>" class="btn" style="background: var(--gray-200); color: var(--text);"><i class="fas fa-times"></i> Cancelar</a>
             </div>
         </form>
     </div>

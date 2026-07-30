@@ -176,7 +176,7 @@ if ($action == 'list') {
             <a href="?action=add" class="btn btn-primary"><i class="fas fa-plus"></i> Añadir Nueva Página</a>
         </div>
 
-        <div style="margin-bottom: 1rem;">
+        <div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
             <input type="text" id="searchInput" placeholder="Buscar por título o categoría..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 1rem;">
         </div>
 
@@ -194,7 +194,7 @@ if ($action == 'list') {
                 $stmt = $pdo->query("SELECT p.*, c.name as cat_name FROM pages p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC, p.title ASC");
                 while ($row = $stmt->fetch()) {
                     $visBadge = $row['is_visible'] ? '<span class="badge" style="background: #e8f5e9; color: #2e7d32; font-size: 0.75rem;"><i class="fas fa-eye"></i> Visible</span>' : '<span class="badge" style="background: #ffebee; color: #c62828; font-size: 0.75rem;"><i class="fas fa-eye-slash"></i> Oculta</span>';
-                    echo "<tr style='border-bottom: 1px solid var(--gray-100);'>";
+                    echo "<tr id='row-{$row['id']}' style='border-bottom: 1px solid var(--gray-100);'>";
                     echo "<td style='padding: 1rem;'><strong>{$row['title']}</strong><br>{$visBadge}</td>";
                     echo "<td><span class='badge badge-info'>{$row['cat_name']}</span></td>";
                     echo "<td>" . number_format((int)$row['views'], 0, ',', '.') . "</td>";
@@ -389,7 +389,7 @@ if ($action == 'list') {
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;"><i class="fas fa-save"></i> Guardar Todo</button>
-                <a href="pages.php" class="btn" style="background: var(--gray-200);">Volver</a>
+                <a href="pages.php<?php echo !empty($page['id']) ? '#row-'.$page['id'] : ''; ?>" class="btn" style="background: var(--gray-200);">Volver</a>
             </form>
         </div>
 
