@@ -9,9 +9,17 @@ if (isset($_POST['download_backup'])) {
         set_time_limit(0); // Evitar timeout para zips grandes
         
         // Usar carpeta local para evitar problemas de open_basedir en producción
-        $tmpDir = realpath(__DIR__ . '/../uploads') . '/tmp_backup';
+        $uploadsDir = realpath(__DIR__ . '/../uploads');
+        $tmpDir = $uploadsDir ? $uploadsDir . '/tmp_backup' : __DIR__ . '/tmp_backup';
+        
         if (!is_dir($tmpDir)) {
-            @mkdir($tmpDir, 0755, true);
+            if (!@mkdir($tmpDir, 0755, true)) {
+                throw new Exception("No hay permisos de escritura para crear la carpeta temporal en el servidor.");
+            }
+        }
+        
+        if (!class_exists('ZipArchive')) {
+            throw new Exception("El servidor (hosting) no tiene habilitada la extensión ZipArchive de PHP. Contacta a tu proveedor.");
         }
         
         $sqlFile = $tmpDir . '/database_' . date('Y_m_d_His') . '.sql';
@@ -40,9 +48,11 @@ if (isset($_POST['download_backup'])) {
         foreach ($tables as $table) {
             $stmt = $pdo->query("SHOW CREATE TABLE `$table`");
             $createRow = $stmt->fetch(PDO::FETCH_NUM);
-            fwrite($fp, "-- Estructura de la tabla `$table`\n");
-            fwrite($fp, "DROP TABLE IF EXISTS `$table`;\n");
-            fwrite($fp, $createRow[1] . ";\n\n");
+            if ($createRow && isset($createRow[1])) {
+                fwrite($fp, "-- Estructura de la tabla `$table`\n");
+                fwrite($fp, "DROP TABLE IF EXISTS `$table`;\n");
+                fwrite($fp, $createRow[1] . ";\n\n");
+            }
 
             $stmt = $pdo->query("SELECT * FROM `$table`");
             if ($stmt->rowCount() > 0) {
@@ -110,6 +120,10 @@ if (isset($_POST['download_backup'])) {
         header('Pragma: no-cache');
         header('Expires: 0');
         
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
         readfile($zipFile);
         
         // Limpiar archivos temporales
@@ -117,7 +131,18 @@ if (isset($_POST['download_backup'])) {
         @unlink($zipFile); 
         exit;
 
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+        // Limpiar temporales si hubo error a medias
+        if (isset($sqlFile) && file_exists($sqlFile)) @unlink($sqlFile);
+        if (isset($zipFile) && file_exists($zipFile)) @unlink($zipFile);
+
+        // Si es una petición Fetch (no un submit normal de formulario donde headers no se han enviado para descargar ZIP)
+        // La petición Fetch espera el ZIP directamente. Si fallamos, mandamos 500 para que JS lo sepa
+        if (!headers_sent()) {
+            http_response_code(500);
+            echo $e->getMessage();
+            exit;
+        }
         $error = "Error al generar la copia de seguridad: " . $e->getMessage();
     }
 }
@@ -189,7 +214,10 @@ document.getElementById('backupForm').addEventListener('submit', async function(
                 body: formData
             });
             
-            if (!response.ok) throw new Error('Error al generar la copia en el servidor.');
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Error al generar la copia en el servidor.');
+            }
             
             const writable = await handle.createWritable();
             await writable.write(await response.blob());
