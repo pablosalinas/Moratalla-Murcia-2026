@@ -6,7 +6,8 @@ if (isset($_POST['download_backup'])) {
     $pdo = getDB();
     
     try {
-        set_time_limit(0); // Evitar timeout para zips grandes
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(0); // Evitar timeout para zips grandes
         
         // Usar carpeta local para evitar problemas de open_basedir en producción
         $uploadsDir = realpath(__DIR__ . '/../uploads');
@@ -98,10 +99,12 @@ if (isset($_POST['download_backup'])) {
             foreach ($files as $name => $file) {
                 if (!$file->isDir()) {
                     $filePath = $file->getRealPath();
-                    // Evitar incluir la carpeta tmp_backup en el ZIP
-                    if (strpos($filePath, 'tmp_backup') === false) {
+                    // Evitar incluir la carpeta tmp_backup y otros .zip pesados antiguos
+                    if (strpos($filePath, 'tmp_backup') === false && strtolower($file->getExtension()) !== 'zip') {
                         $relativePath = 'uploads/' . substr($filePath, strlen($uploadsDir) + 1);
                         $zip->addFile($filePath, $relativePath);
+                        // Desactivar compresión para estos archivos (acelera enormemente y evita límite de CPU)
+                        $zip->setCompressionName($relativePath, ZipArchive::CM_STORE);
                     }
                 }
             }
@@ -216,6 +219,14 @@ document.getElementById('backupForm').addEventListener('submit', async function(
             
             if (!response.ok) {
                 const errorText = await response.text();
+                if (errorText.toLowerCase().includes('<html') || errorText.toLowerCase().includes('<body')) {
+                    const win = window.open('', '_blank');
+                    if (win) {
+                        win.document.write(errorText);
+                        win.document.close();
+                        throw new Error('El servidor devolvió una página de error (probablemente por falta de recursos o tiempo límite). Se ha abierto en una nueva pestaña para que puedas leerla.');
+                    }
+                }
                 throw new Error(errorText || 'Error al generar la copia en el servidor.');
             }
             
