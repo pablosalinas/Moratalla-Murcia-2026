@@ -20,19 +20,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sort_order  = (int)($_POST['sort_order'] ?? 0);
         $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
         $show_in_category = isset($_POST['show_in_category']) ? 1 : 0;
+        $icon = $_POST['icon'] ?? '🔗';
 
         if (empty($title) || empty($url)) {
             $message     = 'El título y la URL son obligatorios.';
             $messageType = 'error';
         } else {
             if ($action === 'create') {
-                $pdo->prepare("INSERT INTO external_links (title, description, url, is_visible, sort_order, category_id, show_in_category) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    ->execute([$title, $description, $url, $is_visible, $sort_order, $category_id, $show_in_category]);
+                $pdo->prepare("INSERT INTO external_links (title, description, url, is_visible, sort_order, category_id, show_in_category, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                    ->execute([$title, $description, $url, $is_visible, $sort_order, $category_id, $show_in_category, $icon]);
                 $message = 'Acceso externo creado correctamente.';
             } else {
                 $id = (int)($_POST['id'] ?? 0);
-                $pdo->prepare("UPDATE external_links SET title=?, description=?, url=?, is_visible=?, sort_order=?, category_id=?, show_in_category=? WHERE id=?")
-                    ->execute([$title, $description, $url, $is_visible, $sort_order, $category_id, $show_in_category, $id]);
+                $pdo->prepare("UPDATE external_links SET title=?, description=?, url=?, is_visible=?, sort_order=?, category_id=?, show_in_category=?, icon=? WHERE id=?")
+                    ->execute([$title, $description, $url, $is_visible, $sort_order, $category_id, $show_in_category, $icon, $id]);
                 $message = 'Acceso externo actualizado correctamente.';
             }
         }
@@ -66,6 +67,67 @@ $links = $pdo->query("SELECT el.*, c.name as cat_name FROM external_links el LEF
 
 // ─── Obtener categorías para el selector ─────────────────────────────────────
 $cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
+
+// ─── Iconos ──────────────────────────────────────────────────────────────────
+$usedIcons = $pdo->query("SELECT DISTINCT icon FROM external_links WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
+$defaultIcons = [
+    '📄' => '📄 Página genérica',
+    'ℹ️' => 'ℹ️ Información',
+    '🏛️' => '🏛️ Patrimonio / Historia',
+    '🌳' => '🌳 Naturaleza',
+    '📷' => '📷 Fotografía',
+    '🎵' => '🎵 Música',
+    '⚽' => '⚽ Deportes',
+    '⛪' => '⛪ Iglesia',
+    '✝️' => '✝️ Religión',
+    '📰' => '📰 Noticias',
+    '👥' => '👥 Asociaciones',
+    '📖' => '📖 Cultura / Lectura',
+    '🕰️' => '🕰️ Historia (Reloj)',
+    '🎥' => '🎥 Vídeo',
+    '🖼️' => '🖼️ Galería',
+    '🗺️' => '🗺️ Mapa / Rutas',
+    '⭐' => '⭐ Destacado',
+    '❤️' => '❤️ Favorito',
+    '🍽️' => '🍽️ Gastronomía',
+    '🛏️' => '🛏️ Alojamiento',
+    '🏀' => '🏀 Baloncesto',
+    '🏺' => '🏺 Artesanía',
+    '🧺' => '🧺 Esparto',
+    '🎨' => '🎨 Pintura',
+    '🚴' => '🚴 Ciclismo',
+    '🚗' => '🚗 Automóvil',
+    '🏫' => '🏫 Escuelas',
+    '🎒' => '🎒 Colegios',
+    '🎓' => '🎓 Institutos',
+    '🏢' => '🏢 Servicios Municipales',
+    '✉️' => '✉️ Contacto',
+    '🧳' => '🧳 Turismo',
+    '🍻' => '🍻 Bares y Restaurantes',
+    '🏰' => '🏰 Castillo',
+    '🪨' => '🪨 Arte Rupestre',
+    '⛰️' => '⛰️ Montes y Montañas',
+    '🛤️' => '🛤️ Rutas',
+    '🥁' => '🥁 Tambor',
+    '🐂' => '🐂 Tauromaquia',
+    '🎉' => '🎉 Fiestas / Celebraciones',
+    '🔗' => '🔗 Enlace Externo'
+];
+$allIconsOptions = $defaultIcons;
+foreach ($usedIcons as $uIcon) {
+    if (!isset($allIconsOptions[$uIcon])) {
+        $allIconsOptions[$uIcon] = $uIcon;
+    }
+}
+uasort($allIconsOptions, function($a, $b) {
+    $textA = trim(mb_substr($a, mb_strpos($a, ' ') !== false ? mb_strpos($a, ' ') : 0));
+    $textB = trim(mb_substr($b, mb_strpos($b, ' ') !== false ? mb_strpos($b, ' ') : 0));
+    $search  = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
+    $replace = ['A','E','I','O','U','a','e','i','o','u'];
+    $textA = str_replace($search, $replace, $textA);
+    $textB = str_replace($search, $replace, $textB);
+    return strcasecmp($textA, $textB);
+});
 
 adminHeader("Accesos Externos / Curiosidades");
 ?>
@@ -239,7 +301,10 @@ adminHeader("Accesos Externos / Curiosidades");
                 <?php foreach ($links as $link): ?>
                 <tr>
                     <td style="color: #aaa; font-weight: 600;"><?php echo $link['id']; ?></td>
-                    <td><strong><?php echo htmlspecialchars($link['title']); ?></strong></td>
+                    <td>
+                        <span style="margin-right: 5px; font-size: 1.1rem;"><?php echo htmlspecialchars($link['icon'] ?? '🔗'); ?></span>
+                        <strong><?php echo htmlspecialchars($link['title']); ?></strong>
+                    </td>
                     <td style="color: #666; font-size: 0.88rem;"><?php echo htmlspecialchars(mb_strimwidth($link['description'] ?? '', 0, 80, '...')); ?></td>
                     <td class="url-cell">
                         <a href="<?php echo htmlspecialchars($link['url']); ?>" target="_blank" rel="noopener">
@@ -340,9 +405,39 @@ adminHeader("Accesos Externos / Curiosidades");
                               placeholder="Breve explicación de qué encontrará el visitante al hacer clic..."><?php echo htmlspecialchars($editItem['description'] ?? ''); ?></textarea>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group full">
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Icono para el Menú</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <?php $currentIcon = !empty($editItem['icon']) ? $editItem['icon'] : '🔗'; ?>
+                        <input type="hidden" name="icon" id="elIconInput" value="<?php echo htmlspecialchars($currentIcon); ?>">
+                        
+                        <div style="flex: 1; min-width: 250px;">
+                            <select id="iconSelect" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white; cursor: pointer;">
+                                <?php
+                                $iconFound = false;
+                                foreach ($allIconsOptions as $iconVal => $iconLabel) {
+                                    $selected = ($currentIcon === $iconVal) ? 'selected' : '';
+                                    if ($selected) $iconFound = true;
+                                    echo "<option value=\"" . htmlspecialchars($iconVal) . "\" {$selected}>" . htmlspecialchars($iconLabel) . "</option>";
+                                }
+                                if (!$iconFound && !empty($currentIcon)) {
+                                    echo "<option value=\"" . htmlspecialchars($currentIcon) . "\" selected>" . htmlspecialchars($currentIcon) . " (Actual)</option>";
+                                }
+                                ?>
+                                <option value="_custom_">✏️ Escribir Emoji / Icono Manual...</option>
+                            </select>
+                        </div>
+                        
+                        <div id="customIconDiv" style="display: none; flex: 1; min-width: 200px; display: flex; align-items: center; gap: 5px;">
+                            <input type="text" id="customIconInput" placeholder="Ej: 🍕 o fas fa-star" value="<?php echo htmlspecialchars($currentIcon); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                            <button type="button" id="applyCustomIcon" class="btn" style="background: var(--primary); color: white; padding: 0.8rem; border-radius: 8px;"><i class="fas fa-check"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="background: #f8f9fa; padding: 1.2rem; border-radius: 8px; border: 1px solid #e9ecef; display: flex; flex-direction: column; justify-content: center;">
                     <label for="category_id"><i class="fas fa-folder-open"></i> Asignar a Categoría (Opcional)</label>
-                    <select name="category_id" id="category_id" style="width: 100%; padding: 0.85rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                    <select name="category_id" id="category_id" style="width: 100%; padding: 0.85rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; margin-bottom: 1rem;">
                         <option value="">-- Ninguna --</option>
                         <?php foreach($cats as $c): ?>
                             <option value="<?php echo $c['id']; ?>" <?php echo (isset($editItem['category_id']) && $editItem['category_id'] == $c['id']) ? 'selected' : ''; ?>>
@@ -350,22 +445,22 @@ adminHeader("Accesos Externos / Curiosidades");
                             </option>
                         <?php endforeach; ?>
                     </select>
-                </div>
 
-                <div class="form-group" style="display: flex; align-items: center; margin-top: 1.5rem;">
-                    <label class="toggle-switch">
+                    <label class="toggle-switch" style="display: flex; align-items: center; width: 100%;">
                         <input type="checkbox" name="show_in_category" id="show_in_category"
                                <?php echo (!isset($editItem) || !empty($editItem['show_in_category'])) ? 'checked' : ''; ?>>
                         <span class="toggle-slider"></span>
-                        <span id="show-cat-label" style="font-weight: 600;">Mostrar en la categoría</span>
+                        <span id="show-cat-label" style="font-weight: 600; margin-left: 0.5rem; white-space: normal; color: #444;">Mostrar en la categoría elegida</span>
                     </label>
                 </div>
-                <div class="form-group full">
-                    <label class="toggle-switch">
+
+                <div class="form-group" style="background: #f8f9fa; padding: 1.2rem; border-radius: 8px; border: 1px solid #e9ecef; display: flex; flex-direction: column; justify-content: center;">
+                    <label style="display:block; margin-bottom: 1rem; font-weight: 600; color: #444;"><i class="fas fa-eye"></i> Visibilidad Global</label>
+                    <label class="toggle-switch" style="display: flex; align-items: center; width: 100%;">
                         <input type="checkbox" name="is_visible" id="is_visible"
                                <?php echo (!$editItem || $editItem['is_visible']) ? 'checked' : ''; ?>>
                         <span class="toggle-slider"></span>
-                        <span id="vis-label" style="font-weight: 600;">
+                        <span id="vis-label" style="font-weight: 600; margin-left: 0.5rem; white-space: normal; color: #444;">
                             <?php echo (!$editItem || $editItem['is_visible']) ? 'Visible en la web pública' : 'Oculto (no aparece en la web)'; ?>
                         </span>
                     </label>
@@ -394,6 +489,49 @@ const lbl = document.getElementById('vis-label');
 if (chk && lbl) {
     chk.addEventListener('change', () => {
         lbl.textContent = chk.checked ? 'Visible en la web pública' : 'Oculto (no aparece en la web)';
+    });
+}
+
+// Icon logic
+const iconSelect = document.getElementById('iconSelect');
+const customIconDiv = document.getElementById('customIconDiv');
+const elIconInput = document.getElementById('elIconInput');
+const customIconInput = document.getElementById('customIconInput');
+const applyCustomIcon = document.getElementById('applyCustomIcon');
+
+if(iconSelect && customIconDiv && elIconInput) {
+    iconSelect.addEventListener('change', function() {
+        if (iconSelect.value === '_custom_') {
+            customIconDiv.style.display = 'flex';
+            customIconInput.focus();
+        } else {
+            customIconDiv.style.display = 'none';
+            elIconInput.value = iconSelect.value;
+        }
+    });
+    if (iconSelect.value === '_custom_') customIconDiv.style.display = 'flex';
+    
+    applyCustomIcon.addEventListener('click', function() {
+        const val = customIconInput.value.trim();
+        if (val) {
+            elIconInput.value = val;
+            let exists = false;
+            for (let i = 0; i < iconSelect.options.length; i++) {
+                if (iconSelect.options[i].value === val) {
+                    iconSelect.selectedIndex = i;
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.text = val;
+                iconSelect.insertBefore(opt, iconSelect.options[iconSelect.options.length - 1]);
+                iconSelect.value = val;
+            }
+            customIconDiv.style.display = 'none';
+        }
     });
 }
 
