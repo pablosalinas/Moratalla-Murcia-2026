@@ -31,6 +31,13 @@ try {
         $pdo->exec("ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL DEFAULT '📁' AFTER parent_id");
     }
 
+    // Auto-migración global: asegurar que existe la columna icon en external_links
+    try {
+        $pdo->query("SELECT icon FROM external_links LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE external_links ADD COLUMN icon VARCHAR(50) NULL DEFAULT '🔗' AFTER show_in_category");
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `ip_address` VARCHAR(45) NOT NULL,

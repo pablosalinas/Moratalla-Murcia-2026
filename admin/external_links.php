@@ -8,6 +8,16 @@ $pdo = getDB();
 $message = '';
 $messageType = 'success';
 
+// Auto-migración para asegurar que las nuevas columnas existen en producción
+try { $pdo->query("SELECT category_id FROM external_links LIMIT 1"); } 
+catch (PDOException $e) { $pdo->exec("ALTER TABLE external_links ADD COLUMN category_id INT DEFAULT NULL"); }
+
+try { $pdo->query("SELECT show_in_category FROM external_links LIMIT 1"); } 
+catch (PDOException $e) { $pdo->exec("ALTER TABLE external_links ADD COLUMN show_in_category TINYINT(1) DEFAULT 0"); }
+
+try { $pdo->query("SELECT icon FROM external_links LIMIT 1"); } 
+catch (PDOException $e) { $pdo->exec("ALTER TABLE external_links ADD COLUMN icon VARCHAR(50) NULL DEFAULT '🔗' AFTER show_in_category"); }
+
 // ─── Acciones POST ───────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
