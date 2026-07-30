@@ -29,28 +29,44 @@ try {
     } catch(Exception $e) {}
 } catch (Exception $e) {}
 
+$startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+$endDate = $_GET['end_date'] ?? date('Y-m-d');
+
+// Validate dates
+if (!DateTime::createFromFormat('Y-m-d', $startDate)) $startDate = date('Y-m-d', strtotime('-30 days'));
+if (!DateTime::createFromFormat('Y-m-d', $endDate)) $endDate = date('Y-m-d');
+
+$dateCondition = "visit_time >= :start_date AND visit_time <= :end_date_full";
+$dateParams = [
+    'start_date' => $startDate . ' 00:00:00',
+    'end_date_full' => $endDate . ' 23:59:59'
+];
+
 $totalVisits = 0;
 $uniqueVisits = 0;
 try {
-    $stmtTotal = $pdo->query("SELECT COUNT(*) FROM visit_logs");
+    $stmtTotal = $pdo->prepare("SELECT COUNT(*) FROM visit_logs WHERE $dateCondition");
+    $stmtTotal->execute($dateParams);
     $totalVisits = $stmtTotal ? (int)$stmtTotal->fetchColumn() : 0;
 
-    $stmtUnique = $pdo->query("SELECT COUNT(*) FROM visit_logs WHERE is_new_session = 1");
+    $stmtUnique = $pdo->prepare("SELECT COUNT(*) FROM visit_logs WHERE is_new_session = 1 AND $dateCondition");
+    $stmtUnique->execute($dateParams);
     $uniqueVisits = $stmtUnique ? (int)$stmtUnique->fetchColumn() : 0;
     
-    // Añadir el histórico de global_visits
-    $stmtOld = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'global_visits'");
-    $oldVisits = $stmtOld ? (int)$stmtOld->fetchColumn() : 0;
-    
-    $totalVisits += $oldVisits;
-    // Las visitas únicas históricas no las tenemos exactas, pero podemos sumar el global para que no empiece de 0
-    $uniqueVisits += $oldVisits;
+    // Añadir el histórico de global_visits solo si se buscan fechas muy antiguas o sin filtro restrictivo
+    if ($startDate <= '2025-01-01') {
+        $stmtOld = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'global_visits'");
+        $oldVisits = $stmtOld ? (int)$stmtOld->fetchColumn() : 0;
+        $totalVisits += $oldVisits;
+        $uniqueVisits += $oldVisits;
+    }
 } catch (Exception $e) {}
 
-// Visitas por día (Últimos 15 días)
+// Visitas por día
 $daysData = [];
 try {
-    $stmtDays = $pdo->query("SELECT DATE(visit_time) as date, COUNT(*) as count FROM visit_logs WHERE visit_time >= DATE_SUB(CURDATE(), INTERVAL 15 DAY) GROUP BY DATE(visit_time) ORDER BY date ASC");
+    $stmtDays = $pdo->prepare("SELECT DATE(visit_time) as date, COUNT(*) as count FROM visit_logs WHERE $dateCondition GROUP BY DATE(visit_time) ORDER BY date ASC");
+    $stmtDays->execute($dateParams);
     $daysData = $stmtDays ? $stmtDays->fetchAll() : [];
 } catch (Exception $e) {}
 $daysLabels = [];
@@ -63,7 +79,8 @@ foreach ($daysData as $d) {
 // Navegadores
 $browserData = [];
 try {
-    $stmtBrowser = $pdo->query("SELECT browser, COUNT(*) as count FROM visit_logs GROUP BY browser ORDER BY count DESC");
+    $stmtBrowser = $pdo->prepare("SELECT browser, COUNT(*) as count FROM visit_logs WHERE $dateCondition GROUP BY browser ORDER BY count DESC");
+    $stmtBrowser->execute($dateParams);
     $browserData = $stmtBrowser ? $stmtBrowser->fetchAll() : [];
 } catch (Exception $e) {}
 $browserLabels = [];
@@ -76,7 +93,8 @@ foreach ($browserData as $b) {
 // Sistemas Operativos
 $osData = [];
 try {
-    $stmtOs = $pdo->query("SELECT os, COUNT(*) as count FROM visit_logs GROUP BY os ORDER BY count DESC");
+    $stmtOs = $pdo->prepare("SELECT os, COUNT(*) as count FROM visit_logs WHERE $dateCondition GROUP BY os ORDER BY count DESC");
+    $stmtOs->execute($dateParams);
     $osData = $stmtOs ? $stmtOs->fetchAll() : [];
 } catch (Exception $e) {}
 $osLabels = [];
@@ -89,7 +107,8 @@ foreach ($osData as $o) {
 // Top Páginas
 $topPages = [];
 try {
-    $stmtPages = $pdo->query("SELECT page_url, COUNT(*) as count FROM visit_logs GROUP BY page_url ORDER BY count DESC LIMIT 10");
+    $stmtPages = $pdo->prepare("SELECT page_url, COUNT(*) as count FROM visit_logs WHERE $dateCondition GROUP BY page_url ORDER BY count DESC LIMIT 10");
+    $stmtPages->execute($dateParams);
     $topPagesRaw = $stmtPages ? $stmtPages->fetchAll() : [];
     
     foreach ($topPagesRaw as $p) {
@@ -112,8 +131,16 @@ try {
                 $catTitle = $stmtTitle->fetchColumn();
                 $title = $catTitle ? 'Categoría: ' . $catTitle : 'Categoría eliminada';
             }
-        } elseif (strpos($url, 'index.php') !== false || $url === '/' || $url === '/moratalla-murcia.com/') {
+        } elseif (strpos($url, 'index.php') !== false || $url === '/' || $url === '/moratalla-murcia.com/' || $url === '/moratalla' || $url === '/moratalla/') {
             $title = 'Inicio';
+        } elseif (strpos($url, 'alojamientos.php') !== false) {
+            $title = 'Alojamientos';
+        } elseif (strpos($url, 'restaurantes.php') !== false) {
+            $title = 'Restaurantes';
+        } elseif (strpos($url, 'contacto.php') !== false) {
+            $title = 'Contacto';
+        } elseif (strpos($url, 'celebrations.php') !== false) {
+            $title = 'Fiestas';
         }
         
         $topPages[] = [
@@ -127,14 +154,16 @@ try {
 // Top Referidos
 $topRefs = [];
 try {
-    $stmtRef = $pdo->query("SELECT referrer, COUNT(*) as count FROM visit_logs WHERE referrer != '' AND referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10");
+    $stmtRef = $pdo->prepare("SELECT referrer, COUNT(*) as count FROM visit_logs WHERE referrer != '' AND referrer IS NOT NULL AND $dateCondition GROUP BY referrer ORDER BY count DESC LIMIT 10");
+    $stmtRef->execute($dateParams);
     $topRefs = $stmtRef ? $stmtRef->fetchAll() : [];
 } catch (Exception $e) {}
 
 // Top Países
 $topCountries = [];
 try {
-    $stmtCountry = $pdo->query("SELECT country, COUNT(*) as count FROM visit_logs WHERE country IS NOT NULL AND country != 'Desconocido' GROUP BY country ORDER BY count DESC LIMIT 10");
+    $stmtCountry = $pdo->prepare("SELECT country, COUNT(*) as count FROM visit_logs WHERE country IS NOT NULL AND country != 'Desconocido' AND $dateCondition GROUP BY country ORDER BY count DESC LIMIT 10");
+    $stmtCountry->execute($dateParams);
     $topCountries = $stmtCountry ? $stmtCountry->fetchAll() : [];
 } catch (Exception $e) {}
 
@@ -148,15 +177,29 @@ foreach ($topCountries as $c) {
 // Top Ciudades
 $topCities = [];
 try {
-    $stmtCity = $pdo->query("SELECT city, country, COUNT(*) as count FROM visit_logs WHERE city IS NOT NULL AND city != 'Desconocido' GROUP BY city, country ORDER BY count DESC LIMIT 10");
+    $stmtCity = $pdo->prepare("SELECT city, country, COUNT(*) as count FROM visit_logs WHERE city IS NOT NULL AND city != 'Desconocido' AND $dateCondition GROUP BY city, country ORDER BY count DESC LIMIT 10");
+    $stmtCity->execute($dateParams);
     $topCities = $stmtCity ? $stmtCity->fetchAll() : [];
 } catch (Exception $e) {}
 
 adminHeader("Estadísticas de Visitas");
 ?>
 
-<div class="header-admin" style="margin-bottom: 2rem;">
-    <h1 style="font-size: 2rem; color: var(--primary);">Estadísticas de Visitas</h1>
+<div class="header-admin" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="font-size: 2rem; color: var(--primary); margin: 0;">Estadísticas de Visitas</h1>
+    <form method="GET" style="display: flex; gap: 1rem; align-items: center; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div>
+            <label for="start_date" style="font-size: 0.85rem; color: #6b7280; display: block; margin-bottom: 0.25rem;">Desde</label>
+            <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="form-control" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;">
+        </div>
+        <div>
+            <label for="end_date" style="font-size: 0.85rem; color: #6b7280; display: block; margin-bottom: 0.25rem;">Hasta</label>
+            <input type="date" id="end_date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="form-control" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;">
+        </div>
+        <div style="align-self: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Filtrar</button>
+        </div>
+    </form>
 </div>
 
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-bottom: 2rem;">
@@ -173,7 +216,7 @@ adminHeader("Estadísticas de Visitas");
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem;">
-    <h3>Evolución de Páginas Vistas (Últimos 15 días)</h3>
+    <h3>Evolución de Páginas Vistas</h3>
     <canvas id="lineChart" style="max-height: 300px;"></canvas>
 </div>
 
@@ -198,7 +241,7 @@ adminHeader("Estadísticas de Visitas");
     </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         <h3>Páginas Más Visitadas</h3>
         <table class="table">
@@ -244,6 +287,30 @@ adminHeader("Estadísticas de Visitas");
                 <?php endforeach; ?>
                 <?php if(empty($topRefs)): ?>
                 <tr><td colspan="2" style="text-align: center; color: #9ca3af;">No hay datos suficientes</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3>Top Países</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>País</th>
+                    <th style="width: 60px; text-align: right;">Vistas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach($topCountries as $c): ?>
+                <tr>
+                    <td style="word-break: break-all; font-size: 0.85rem;">
+                        <strong style="display: block; color: var(--primary);"><?= htmlspecialchars($c['country']) ?></strong>
+                    </td>
+                    <td style="text-align: right; font-weight: bold; vertical-align: middle;"><?= $c['count'] ?></td>
+                </tr>
+                <?php endforeach; ?>
+                <?php if(empty($topCountries)): ?>
+                <tr><td colspan="2" style="text-align: center; color: #9ca3af;">No hay datos de países</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
