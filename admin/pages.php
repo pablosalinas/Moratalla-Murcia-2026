@@ -470,7 +470,7 @@ if ($action == 'list') {
             selector: '#page_content',
             language: 'es',
             plugins: 'code lists link image table media help wordcount fullscreen',
-            toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link image media table | fullscreen code',
+            toolbar: 'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | link image media table | fullscreen code',
             height: 500,
             menubar: false,
             valid_elements: '*[*]',
