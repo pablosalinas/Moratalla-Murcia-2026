@@ -262,7 +262,7 @@ function renderHorizontalMenu($parentId = null) {
             }
             
             echo htmlspecialchars($cat['name']);
-            if ($hasChildren) echo " <i class='fas fa-angle-" . ($parentId === null ? 'down' : 'right') . "'></i>";
+            if ($hasChildren) echo " <i class='fas fa-angle-" . ($parentId === null ? 'down' : 'right') . "' style='margin-left: auto;'></i>";
             echo "</a>";
             renderHorizontalMenu($cat['id']);
             echo "</li>";
