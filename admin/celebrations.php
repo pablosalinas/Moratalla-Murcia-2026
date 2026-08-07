@@ -97,6 +97,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
     <p style="color: var(--text-light);">Gestiona efectos visuales para fechas o eventos especiales (Mundiales, Navidad, Fiestas Locales, etc).</p>
 </div>
 
+<div class="alert" style="background-color: #e0f2fe; border-left: 4px solid #0284c7; padding: 1rem; margin-bottom: 2rem; border-radius: 4px; color: #0369a1;">
+    <h4 style="margin-top: 0; margin-bottom: 0.5rem; display: flex; align-items: center;"><i class="fas fa-info-circle" style="margin-right: 8px;"></i> Sobre la programación automática</h4>
+    <p style="margin: 0; font-size: 0.95rem; line-height: 1.5;">
+        Los eventos marcados con repetición (Anual, Mensual o Semana Santa) se calculan <strong>"al vuelo"</strong> por el sistema. 
+        El acontecimiento aparecerá automáticamente en la web <strong>desde 5 días antes hasta 2 días después</strong> de la fecha central calculada para el año actual. De esta forma, no necesitas estar pendiente de reprogramar las fechas anualmente.
+    </p>
+</div>
+
 <?php echo $message; ?>
 
 <?php if ($editMode): ?>
