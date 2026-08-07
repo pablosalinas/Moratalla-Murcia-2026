@@ -81,6 +81,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
         $editMode = true;
     }
 }
+
+$stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('celebration_days_before', 'celebration_days_after')");
+$settings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
+$daysBefore = isset($settings['celebration_days_before']) ? (int)$settings['celebration_days_before'] : 5;
+$daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebration_days_after'] : 2;
 ?>
 
 <style>
@@ -101,7 +106,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
     <h4 style="margin-top: 0; margin-bottom: 0.5rem; display: flex; align-items: center;"><i class="fas fa-info-circle" style="margin-right: 8px;"></i> Sobre la programación automática</h4>
     <p style="margin: 0; font-size: 0.95rem; line-height: 1.5;">
         Los eventos marcados con repetición (Anual, Mensual o Semana Santa) se calculan <strong>"al vuelo"</strong> por el sistema. 
-        El acontecimiento aparecerá automáticamente en la web <strong>desde 5 días antes hasta 2 días después</strong> de la fecha central calculada para el año actual. De esta forma, no necesitas estar pendiente de reprogramar las fechas anualmente.
+        El acontecimiento aparecerá automáticamente en la web <strong>desde <?php echo $daysBefore; ?> días antes hasta <?php echo $daysAfter; ?> días después</strong> de la fecha central calculada para el año actual. De esta forma, no necesitas estar pendiente de reprogramar las fechas anualmente.
     </p>
 </div>
 
@@ -132,7 +137,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
                 <div class="form-group date-field event-date-field" style="flex: 1; <?php echo ($editRow['recurrence'] === 'annual' || $editRow['recurrence'] === 'monthly') ? '' : 'display: none;'; ?>">
                     <label>Día del Evento</label>
                     <input type="date" name="event_date" class="form-control" style="width: 100%; padding: 0.5rem;" value="<?php echo htmlspecialchars($editRow['event_date']); ?>">
-                    <small style="color: #666; font-size: 0.8rem;">El sistema lo mostrará automáticamente 5 días antes y 2 días después de esta fecha.</small>
+                    <small style="color: #666; font-size: 0.8rem;">El sistema lo mostrará automáticamente <?php echo $daysBefore; ?> días antes y <?php echo $daysAfter; ?> días después de esta fecha.</small>
                 </div>
                 <div class="form-group date-field easter-offset-field" style="flex: 1; <?php echo ($editRow['recurrence'] === 'easter') ? '' : 'display: none;'; ?>">
                     <label>Días respecto al Domingo de Resurrección</label>
@@ -218,7 +223,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
                 <div class="form-group date-field event-date-field" style="flex: 1; display: none;">
                     <label>Día del Evento</label>
                     <input type="date" name="event_date" class="form-control" style="width: 100%; padding: 0.5rem;">
-                    <small style="color: #666; font-size: 0.8rem;">El sistema lo mostrará automáticamente 5 días antes y 2 días después de esta fecha.</small>
+                    <small style="color: #666; font-size: 0.8rem;">El sistema lo mostrará automáticamente <?php echo $daysBefore; ?> días antes y <?php echo $daysAfter; ?> días después de esta fecha.</small>
                 </div>
                 <div class="form-group date-field easter-offset-field" style="flex: 1; display: none;">
                     <label>Días respecto al Domingo de Resurrección</label>

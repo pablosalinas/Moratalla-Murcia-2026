@@ -11,9 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tickerText = isset($_POST['ticker_text']) ? $_POST['ticker_text'] : '';
     $tickerSpeed = isset($_POST['ticker_speed']) ? $_POST['ticker_speed'] : '30';
     $adminEmail = isset($_POST['admin_email']) ? trim($_POST['admin_email']) : '';
+    $daysBefore = isset($_POST['celebration_days_before']) ? (int)$_POST['celebration_days_before'] : 5;
+    $daysAfter = isset($_POST['celebration_days_after']) ? (int)$_POST['celebration_days_after'] : 2;
     
     $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('ticker_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$tickerText, $tickerText]);
     $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('ticker_speed', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$tickerSpeed, $tickerSpeed]);
+    $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('celebration_days_before', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$daysBefore, $daysBefore]);
+    $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('celebration_days_after', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$daysAfter, $daysAfter]);
     
     if (!empty($adminEmail)) {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('admin_email', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$adminEmail, $adminEmail]);
@@ -29,6 +33,8 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 $currentTicker = isset($settings['ticker_text']) ? $settings['ticker_text'] : '';
 $currentSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : '30';
 $currentAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com';
+$currentDaysBefore = isset($settings['celebration_days_before']) ? $settings['celebration_days_before'] : '5';
+$currentDaysAfter = isset($settings['celebration_days_after']) ? $settings['celebration_days_after'] : '2';
 
 adminHeader("Configuración General");
 ?>
@@ -62,6 +68,18 @@ adminHeader("Configuración General");
                 <span style="font-weight: 800; color: var(--primary); font-size: 1.2rem; min-width: 50px;"><?php echo $currentSpeed; ?>s</span>
             </div>
             <small style="color: #666; display: block; margin-top: 0.5rem;">Menos segundos = más rápido. Más segundos = más lento.</small>
+        </div>
+        
+        <div style="margin-bottom: 2.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Días antes para Acontecimientos Recurrentes</label>
+            <input type="number" name="celebration_days_before" min="0" value="<?php echo htmlspecialchars($currentDaysBefore); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+            <small style="color: #666; display: block; margin-top: 0.5rem;">Cuántos días antes de la fecha principal aparecerá el banner automáticamente (por defecto: 5).</small>
+        </div>
+
+        <div style="margin-bottom: 2.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Días después para Acontecimientos Recurrentes</label>
+            <input type="number" name="celebration_days_after" min="0" value="<?php echo htmlspecialchars($currentDaysAfter); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+            <small style="color: #666; display: block; margin-top: 0.5rem;">Cuántos días después de la fecha principal se ocultará el banner automáticamente (por defecto: 2).</small>
         </div>
         
         <button type="submit" class="btn btn-primary">

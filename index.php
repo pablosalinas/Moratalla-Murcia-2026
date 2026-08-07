@@ -10,6 +10,11 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
 <!-- CELEBRACIONES DINÁMICAS -->
 <?php
 try {
+    $stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('celebration_days_before', 'celebration_days_after')");
+    $settings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
+    $daysBefore = isset($settings['celebration_days_before']) ? (int)$settings['celebration_days_before'] : 5;
+    $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebration_days_after'] : 2;
+
     $stmtCeleb = $pdo->query("SELECT * FROM celebrations WHERE is_active = 1");
     $now = new DateTime();
     while ($celeb = $stmtCeleb->fetch()) {
@@ -55,9 +60,9 @@ try {
             
             foreach ($occurrences as $occ) {
                 $windowStart = clone $occ;
-                $windowStart->modify('-5 days');
+                $windowStart->modify("-{$daysBefore} days");
                 $windowEnd = clone $occ;
-                $windowEnd->modify('+2 days');
+                $windowEnd->modify("+{$daysAfter} days");
                 $windowEnd->setTime(23, 59, 59);
                 
                 if ($now >= $windowStart && $now <= $windowEnd) {
