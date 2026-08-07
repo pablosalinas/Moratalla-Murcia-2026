@@ -10,19 +10,78 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
 <!-- CELEBRACIONES DINÁMICAS -->
 <?php
 try {
-    $stmtCeleb = $pdo->query("SELECT * FROM celebrations WHERE is_active = 1 AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date >= NOW())");
+    $stmtCeleb = $pdo->query("SELECT * FROM celebrations WHERE is_active = 1");
+    $now = new DateTime();
     while ($celeb = $stmtCeleb->fetch()) {
-        if (!empty($celeb['html_content'])) {
-            echo $celeb['html_content'] . "\n";
+        $shouldShow = false;
+        $recurrence = $celeb['recurrence'] ?? 'none';
+        
+        if (empty($recurrence) || $recurrence === 'none') {
+            $start = $celeb['start_date'] ? new DateTime($celeb['start_date']) : null;
+            $end = $celeb['end_date'] ? new DateTime($celeb['end_date']) : null;
+            if ((!$start || $start <= $now) && (!$end || $end >= $now)) {
+                $shouldShow = true;
+            }
+        } else {
+            $occurrences = [];
+            if ($recurrence === 'easter') {
+                $year = $now->format('Y');
+                $easterDays = easter_days($year);
+                $easterDate = new DateTime($year . '-03-21');
+                $easterDate->modify("+{$easterDays} days");
+                
+                $offset = (int)($celeb['easter_offset'] ?? 0);
+                $easterDate->modify(($offset >= 0 ? "+{$offset}" : $offset) . " days");
+                $easterDate->setTime(0, 0, 0);
+                $occurrences[] = $easterDate;
+            } elseif (!empty($celeb['event_date'])) {
+                $baseDate = new DateTime($celeb['event_date']);
+                if ($recurrence === 'annual') {
+                    for ($y = -1; $y <= 1; $y++) {
+                        $occ = clone $now; 
+                        $occ->setDate($now->format('Y') + $y, $baseDate->format('m'), $baseDate->format('d')); 
+                        $occ->setTime(0,0,0);
+                        $occurrences[] = $occ;
+                    }
+                } elseif ($recurrence === 'monthly') {
+                    for ($m = -1; $m <= 1; $m++) {
+                        $occ = clone $now; 
+                        $occ->setDate($now->format('Y'), $now->format('m') + $m, $baseDate->format('d')); 
+                        $occ->setTime(0,0,0);
+                        $occurrences[] = $occ;
+                    }
+                }
+            }
+            
+            foreach ($occurrences as $occ) {
+                $windowStart = clone $occ;
+                $windowStart->modify('-5 days');
+                $windowEnd = clone $occ;
+                $windowEnd->modify('+2 days');
+                $windowEnd->setTime(23, 59, 59);
+                
+                if ($now >= $windowStart && $now <= $windowEnd) {
+                    $shouldShow = true;
+                    break;
+                }
+            }
         }
-        if (!empty($celeb['css_content'])) {
-            echo "<style>\n" . $celeb['css_content'] . "\n</style>\n";
-        }
-        if (!empty($celeb['js_content'])) {
-            echo "<script>\n" . $celeb['js_content'] . "\n</script>\n";
+        
+        if ($shouldShow) {
+            if (!empty($celeb['html_content'])) {
+                echo $celeb['html_content'] . "\n";
+            }
+            if (!empty($celeb['css_content'])) {
+                echo "<style>\n" . $celeb['css_content'] . "\n</style>\n";
+            }
+            if (!empty($celeb['js_content'])) {
+                echo "<script>\n" . $celeb['js_content'] . "\n</script>\n";
+            }
         }
     }
-} catch (Exception $e) {}
+} catch (Exception $e) {
+    // Log or ignore silently
+}
 ?>
 <!-- FIN CELEBRACIONES -->
 

@@ -18,10 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $start_date = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
             $end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
             $is_active = isset($_POST['is_active']) ? 1 : 0;
+            $recurrence = $_POST['recurrence'] ?? 'none';
+            $event_date = !empty($_POST['event_date']) ? $_POST['event_date'] : null;
+            $easter_offset = ($_POST['recurrence'] === 'easter') ? (int)($_POST['easter_offset'] ?? 0) : null;
             
             if ($name) {
-                $stmt = $pdo->prepare("INSERT INTO celebrations (name, is_active, start_date, end_date, html_content, css_content, js_content) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                if ($stmt->execute([$name, $is_active, $start_date, $end_date, $html, $css, $js])) {
+                $stmt = $pdo->prepare("INSERT INTO celebrations (name, is_active, start_date, end_date, html_content, css_content, js_content, recurrence, event_date, easter_offset) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                if ($stmt->execute([$name, $is_active, $start_date, $end_date, $html, $css, $js, $recurrence, $event_date, $easter_offset])) {
                     $message = '<div class="alert alert-success">Celebración añadida correctamente.</div>';
                 }
             } else {
@@ -35,10 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $js = trim($_POST['js_content'] ?? '');
             $start_date = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
             $end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
+            $recurrence = $_POST['recurrence'] ?? 'none';
+            $event_date = !empty($_POST['event_date']) ? $_POST['event_date'] : null;
+            $easter_offset = ($_POST['recurrence'] === 'easter') ? (int)($_POST['easter_offset'] ?? 0) : null;
             
             if ($id && $name) {
-                $stmt = $pdo->prepare("UPDATE celebrations SET name = ?, start_date = ?, end_date = ?, html_content = ?, css_content = ?, js_content = ? WHERE id = ?");
-                if ($stmt->execute([$name, $start_date, $end_date, $html, $css, $js, $id])) {
+                $stmt = $pdo->prepare("UPDATE celebrations SET name = ?, start_date = ?, end_date = ?, html_content = ?, css_content = ?, js_content = ?, recurrence = ?, event_date = ?, easter_offset = ? WHERE id = ?");
+                if ($stmt->execute([$name, $start_date, $end_date, $html, $css, $js, $recurrence, $event_date, $easter_offset, $id])) {
                     $message = '<div class="alert alert-success">Celebración actualizada correctamente.</div>';
                 }
             }
@@ -107,6 +113,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
             
             <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
                 <div class="form-group" style="flex: 1;">
+                    <label>¿Se repite periódicamente?</label>
+                    <select name="recurrence" class="form-control recurrence-select" style="width: 100%; padding: 0.5rem;">
+                        <option value="none" <?php echo (empty($editRow['recurrence']) || $editRow['recurrence'] === 'none') ? 'selected' : ''; ?>>No se repite (Fechas manuales)</option>
+                        <option value="annual" <?php echo ($editRow['recurrence'] === 'annual') ? 'selected' : ''; ?>>Anualmente (Mismo día y mes)</option>
+                        <option value="monthly" <?php echo ($editRow['recurrence'] === 'monthly') ? 'selected' : ''; ?>>Mensualmente (Mismo día)</option>
+                        <option value="easter" <?php echo ($editRow['recurrence'] === 'easter') ? 'selected' : ''; ?>>Variable (Respecto a Semana Santa)</option>
+                    </select>
+                </div>
+                <div class="form-group date-field event-date-field" style="flex: 1; <?php echo ($editRow['recurrence'] === 'annual' || $editRow['recurrence'] === 'monthly') ? '' : 'display: none;'; ?>">
+                    <label>Día del Evento</label>
+                    <input type="date" name="event_date" class="form-control" style="width: 100%; padding: 0.5rem;" value="<?php echo htmlspecialchars($editRow['event_date']); ?>">
+                    <small style="color: #666; font-size: 0.8rem;">El sistema lo mostrará automáticamente 5 días antes y 2 días después de esta fecha.</small>
+                </div>
+                <div class="form-group date-field easter-offset-field" style="flex: 1; <?php echo ($editRow['recurrence'] === 'easter') ? '' : 'display: none;'; ?>">
+                    <label>Días respecto al Domingo de Resurrección</label>
+                    <input type="number" name="easter_offset" class="form-control" style="width: 100%; padding: 0.5rem;" value="<?php echo htmlspecialchars($editRow['easter_offset']); ?>" placeholder="Ej. -3 para Jueves Santo, 0 para Domingo">
+                    <small style="color: #666; font-size: 0.8rem;">-3: Jueves Santo, -2: Viernes Santo, 0: Dom Resurrección.</small>
+                </div>
+            </div>
+            
+            <div class="manual-dates-container" style="display: flex; gap: 1rem; margin-bottom: 1rem; <?php echo (empty($editRow['recurrence']) || $editRow['recurrence'] === 'none') ? '' : 'display: none !important;'; ?>">
+                <div class="form-group" style="flex: 1;">
                     <label>Fecha y hora de inicio (Opcional)</label>
                     <input type="datetime-local" name="start_date" class="form-control" style="width: 100%; padding: 0.5rem;" value="<?php echo $editRow['start_date'] ? date('Y-m-d\TH:i', strtotime($editRow['start_date'])) : ''; ?>">
                 </div>
@@ -170,6 +198,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
             </div>
             
             <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label>¿Se repite periódicamente?</label>
+                    <select name="recurrence" class="form-control recurrence-select" style="width: 100%; padding: 0.5rem;">
+                        <option value="none" selected>No se repite (Fechas manuales)</option>
+                        <option value="annual">Anualmente (Mismo día y mes)</option>
+                        <option value="monthly">Mensualmente (Mismo día)</option>
+                        <option value="easter">Variable (Respecto a Semana Santa)</option>
+                    </select>
+                </div>
+                <div class="form-group date-field event-date-field" style="flex: 1; display: none;">
+                    <label>Día del Evento</label>
+                    <input type="date" name="event_date" class="form-control" style="width: 100%; padding: 0.5rem;">
+                    <small style="color: #666; font-size: 0.8rem;">El sistema lo mostrará automáticamente 5 días antes y 2 días después de esta fecha.</small>
+                </div>
+                <div class="form-group date-field easter-offset-field" style="flex: 1; display: none;">
+                    <label>Días respecto al Domingo de Resurrección</label>
+                    <input type="number" name="easter_offset" class="form-control" style="width: 100%; padding: 0.5rem;" placeholder="Ej. -3 para Jueves Santo, 0 para Domingo">
+                    <small style="color: #666; font-size: 0.8rem;">-3: Jueves Santo, -2: Viernes Santo, 0: Dom Resurrección.</small>
+                </div>
+            </div>
+            
+            <div class="manual-dates-container" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
                 <div class="form-group" style="flex: 1;">
                     <label>Fecha y hora de inicio (Opcional)</label>
                     <input type="datetime-local" name="start_date" class="form-control" style="width: 100%; padding: 0.5rem;">
@@ -320,6 +370,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
                       this.checked = !this.checked; // revert
                   }
               });
+        });
+    });
+    document.querySelectorAll('.recurrence-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const form = this.closest('form');
+            const manualDates = form.querySelector('.manual-dates-container');
+            const eventDate = form.querySelector('.event-date-field');
+            const easterOffset = form.querySelector('.easter-offset-field');
+            
+            if (this.value === 'none') {
+                if(manualDates) manualDates.style.setProperty('display', 'flex', 'important');
+                if(eventDate) eventDate.style.setProperty('display', 'none', 'important');
+                if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
+            } else if (this.value === 'easter') {
+                if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
+                if(eventDate) eventDate.style.setProperty('display', 'none', 'important');
+                if(easterOffset) easterOffset.style.setProperty('display', 'block', 'important');
+            } else {
+                if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
+                if(eventDate) eventDate.style.setProperty('display', 'block', 'important');
+                if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
+            }
         });
     });
     </script>
