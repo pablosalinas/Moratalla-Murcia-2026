@@ -122,6 +122,31 @@
                 navContainer.classList.toggle('active');
             });
         }
+        
+        // Mobile Submenu Accordion Logic
+        const menuItemsWithDropdown = document.querySelectorAll('.nav-menu > li');
+        menuItemsWithDropdown.forEach(li => {
+            const dropdown = li.querySelector('.dropdown');
+            if (dropdown) {
+                const toggleBtn = document.createElement('div');
+                toggleBtn.className = 'mobile-submenu-toggle';
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                li.appendChild(toggleBtn);
+                
+                toggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Close other open submenus
+                    menuItemsWithDropdown.forEach(otherLi => {
+                        if (otherLi !== li && otherLi.classList.contains('active')) {
+                            otherLi.classList.remove('active');
+                        }
+                    });
+                    // Toggle current
+                    li.classList.toggle('active');
+                });
+            }
+        });
 
         // Swiper Banner Initialization
         const swiper = new Swiper('.main-banner-swiper', {
