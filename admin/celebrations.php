@@ -158,13 +158,41 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Código HTML</label>
-                <textarea name="html_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['html_content']); ?></textarea>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Código HTML</span>
+                    <select class="form-control html-effect-selector" data-target="htmlFieldEdit" style="width: auto; padding: 0.2rem; font-size: 0.9rem;">
+                        <option value="">Añadir plantilla HTML...</option>
+                        <option value="historico">📜 Acontecimiento Histórico</option>
+                        <option value="aniversario">🎉 Aniversario</option>
+                        <option value="conmemoracion">🏛️ Conmemoración</option>
+                        <option value="general_discreto">📣 Aviso General</option>
+                        <option value="luto">🖤 Luto Oficial</option>
+                        <option value="musica">🎸 Música / Concierto</option>
+                        <option value="sorteo">🎁 Sorteo</option>
+                        <option value="procesion">🕯️ Procesión</option>
+                        <option value="misa">⛪ Misa</option>
+                    </select>
+                </label>
+                <textarea id="htmlFieldEdit" name="html_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['html_content']); ?></textarea>
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Código CSS (Sin etiquetas &lt;style&gt;)</label>
-                <textarea name="css_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['css_content']); ?></textarea>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Código CSS (Sin etiquetas &lt;style&gt;)</span>
+                    <select class="form-control css-effect-selector" data-target="cssFieldEdit" style="width: auto; padding: 0.2rem; font-size: 0.9rem;">
+                        <option value="">Añadir plantilla CSS...</option>
+                        <option value="historico">📜 Acontecimiento Histórico</option>
+                        <option value="aniversario">🎉 Aniversario</option>
+                        <option value="conmemoracion">🏛️ Conmemoración</option>
+                        <option value="general_discreto">📣 Aviso General</option>
+                        <option value="luto">🖤 Luto Oficial</option>
+                        <option value="musica">🎸 Música / Concierto</option>
+                        <option value="sorteo">🎁 Sorteo</option>
+                        <option value="procesion">🕯️ Procesión</option>
+                        <option value="misa">⛪ Misa</option>
+                    </select>
+                </label>
+                <textarea id="cssFieldEdit" name="css_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['css_content']); ?></textarea>
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
@@ -178,6 +206,9 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
                         <option value="rainbow">Arcoíris Flotante</option>
                         <option value="snow">Nieve</option>
                         <option value="balloons">Globos</option>
+                        <option value="music_notes">Notas Musicales</option>
+                        <option value="sorteo">Confeti Sorteo</option>
+                        <option value="candle">Vela Procesión</option>
                     </select>
                 </label>
                 <textarea id="jsFieldEdit" name="js_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['js_content']); ?></textarea>
@@ -193,18 +224,6 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
     <div class="card">
         <h3>Añadir Nuevo Evento</h3>
         
-        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 1rem; margin-bottom: 2rem;">
-            <label style="font-weight: 600; color: #334155; display: block; margin-bottom: 0.5rem;">Cargar Plantilla Predefinida (Opcional)</label>
-            <select id="templateSelector" class="form-control" style="width: 100%; padding: 0.8rem; border-color: #cbd5e1;">
-                <option value="">-- Selecciona una plantilla para rellenar los campos automáticamente --</option>
-                <option value="historico">📜 Acontecimiento Histórico (Cinta inferior)</option>
-                <option value="aniversario">🎉 Aniversario (Banner festivo)</option>
-                <option value="conmemoracion">🏛️ Conmemoración Institucional (Banner sobrio)</option>
-                <option value="general_discreto">📣 Aviso General (Banner superior flotante discreto)</option>
-                <option value="luto">🖤 Luto Oficial (Página en blanco y negro opcional)</option>
-            </select>
-        </div>
-
         <form method="POST" id="addEventForm">
             <input type="hidden" name="action" value="add">
             
@@ -255,12 +274,40 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Código HTML (Opcional)</label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Código HTML (Opcional)</span>
+                    <select class="form-control html-effect-selector" data-target="htmlField" style="width: auto; padding: 0.2rem; font-size: 0.9rem;">
+                        <option value="">Añadir plantilla HTML...</option>
+                        <option value="historico">📜 Acontecimiento Histórico</option>
+                        <option value="aniversario">🎉 Aniversario</option>
+                        <option value="conmemoracion">🏛️ Conmemoración</option>
+                        <option value="general_discreto">📣 Aviso General</option>
+                        <option value="luto">🖤 Luto Oficial</option>
+                        <option value="musica">🎸 Música / Concierto</option>
+                        <option value="sorteo">🎁 Sorteo</option>
+                        <option value="procesion">🕯️ Procesión</option>
+                        <option value="misa">⛪ Misa</option>
+                    </select>
+                </label>
                 <textarea id="htmlField" name="html_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="<div id='navidad'>Feliz Navidad</div>"></textarea>
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Código CSS (Opcional - Sin etiquetas &lt;style&gt;)</label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Código CSS (Opcional - Sin etiquetas &lt;style&gt;)</span>
+                    <select class="form-control css-effect-selector" data-target="cssField" style="width: auto; padding: 0.2rem; font-size: 0.9rem;">
+                        <option value="">Añadir plantilla CSS...</option>
+                        <option value="historico">📜 Acontecimiento Histórico</option>
+                        <option value="aniversario">🎉 Aniversario</option>
+                        <option value="conmemoracion">🏛️ Conmemoración</option>
+                        <option value="general_discreto">📣 Aviso General</option>
+                        <option value="luto">🖤 Luto Oficial</option>
+                        <option value="musica">🎸 Música / Concierto</option>
+                        <option value="sorteo">🎁 Sorteo</option>
+                        <option value="procesion">🕯️ Procesión</option>
+                        <option value="misa">⛪ Misa</option>
+                    </select>
+                </label>
                 <textarea id="cssField" name="css_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="#navidad { color: red; }"></textarea>
             </div>
             
@@ -275,6 +322,9 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
                         <option value="rainbow">Arcoíris Flotante</option>
                         <option value="snow">Nieve</option>
                         <option value="balloons">Globos</option>
+                        <option value="music_notes">Notas Musicales</option>
+                        <option value="sorteo">Confeti Sorteo</option>
+                        <option value="candle">Vela Procesión</option>
                     </select>
                 </label>
                 <textarea id="jsField" name="js_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="console.log('Navidad activa');"></textarea>
@@ -348,98 +398,30 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
     </div>
 
     <script>
-    const templates = {
-        'historico': {
-            name: 'Día Histórico: [Nombre]',
-            html: '<div id="historical-banner">\n    <div class="historical-content">\n        📜 <strong>Hoy en la historia:</strong> Se conmemora el acontecimiento de [Texto del acontecimiento]\n    </div>\n</div>',
-            css: '#historical-banner {\n    position: fixed; bottom: 0; left: 0; width: 100%;\n    background: rgba(44, 24, 16, 0.95); border-top: 3px solid #d4af37;\n    color: #fdf5e6; padding: 15px; text-align: center;\n    z-index: 9999; font-family: Georgia, serif; font-size: 1.2rem;\n    box-shadow: 0 -5px 15px rgba(0,0,0,0.5);\n}\n.historical-content { max-width: 800px; margin: 0 auto; line-height: 1.5; }',
-            js: ''
-        },
-        'aniversario': {
-            name: 'Aniversario: [Motivo]',
-            html: '<div id="anniversary-banner">\n    🎉 ¡Feliz Aniversario de [Motivo]! 🎉\n</div>',
-            css: '#anniversary-banner {\n    background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);\n    color: #333; font-weight: bold; font-size: 1.5rem; text-align: center;\n    padding: 15px; border-bottom: 2px solid #ff758c; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n}',
-            js: 'if (typeof confetti === "undefined") {\n    var script = document.createElement("script");\n    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";\n    script.onload = function() { confetti(); };\n    document.head.appendChild(script);\n} else {\n    confetti();\n}'
-        },
-        'conmemoracion': {
-            name: 'Conmemoración: [Motivo]',
-            html: '<div id="commemoration-banner">\n    En conmemoración de [Motivo de la conmemoración]\n</div>',
-            css: '#commemoration-banner {\n    background: #2b3a42; color: #fff; text-align: center;\n    padding: 15px; font-size: 1.2rem; letter-spacing: 1px;\n    border-bottom: 2px solid #3f5765;\n}',
-            js: ''
-        },
-        'general_discreto': {
-            name: 'Aviso: [Motivo]',
-            html: '<div id="general-banner-container">\n    <div class="general-flag-banner">\n        [Título o Motivo del Acontecimiento]\n    </div>\n</div>',
-            css: '#general-banner-container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    z-index: 9999;\n    pointer-events: none;\n    display: flex;\n    justify-content: center;\n    animation: slideDown 1s ease-out forwards;\n    transform: translateY(-100%);\n}\n\n.general-flag-banner {\n    background: linear-gradient(to right, #1b4332 0%, #081c15 100%);\n    color: white;\n    font-size: clamp(1rem, 3vw, 1.3rem);\n    font-weight: 600;\n    padding: 10px 30px;\n    box-shadow: 0 4px 15px rgba(0,0,0,0.3);\n    border-radius: 0 0 15px 15px;\n    white-space: normal;\n    text-align: center;\n    max-width: 90vw;\n    border-bottom: 3px solid #d4af37;\n}\n\n@keyframes slideDown {\n    0% { transform: translateY(-100%); }\n    100% { transform: translateY(0); }\n}',
-            js: ''
-        },
-        'luto': {
-            name: 'Luto Oficial',
-            html: '<div id="mourning-banner">\n    🖤 En señal de luto oficial. Descanse en paz.\n</div>',
-            css: '/* Descomenta la siguiente línea para que TODA la web se vea en blanco y negro */\n/* html { filter: grayscale(100%); } */\n\n#mourning-banner {\n    background: #000; color: #fff; text-align: center;\n    padding: 10px; font-weight: bold; font-size: 1.1rem;\n    border-bottom: 1px solid #333;\n}',
-            js: ''
-        }
+    const htmlTemplates = {
+        'historico': '<div id="historical-banner">\n    <div class="historical-content">\n        📜 <strong>Hoy en la historia:</strong> Se conmemora el acontecimiento de [Texto del acontecimiento]\n    </div>\n</div>',
+        'aniversario': '<div id="anniversary-banner">\n    🎉 ¡Feliz Aniversario de [Motivo]! 🎉\n</div>',
+        'conmemoracion': '<div id="commemoration-banner">\n    En conmemoración de [Motivo de la conmemoración]\n</div>',
+        'general_discreto': '<div id="general-banner-container">\n    <div class="general-flag-banner">\n        [Título o Motivo del Acontecimiento]\n    </div>\n</div>',
+        'luto': '<div id="mourning-banner">\n    🖤 En señal de luto oficial. Descanse en paz.\n</div>',
+        'musica': '<div id="music-banner">\n    🎸 Gran Concierto / Festival de Música: [Nombre]\n</div>',
+        'sorteo': '<div id="raffle-banner">\n    🎁 ¡Participa en el Gran Sorteo! 🎁\n</div>',
+        'procesion': '<div id="procession-banner">\n    🕯️ Solemne Procesión de [Nombre]\n</div>',
+        'misa': '<div id="mass-banner">\n    ⛪ Misa en honor a [Nombre]\n</div>'
+    };
+    
+    const cssTemplates = {
+        'historico': '#historical-banner {\n    position: fixed; bottom: 0; left: 0; width: 100%;\n    background: rgba(44, 24, 16, 0.95); border-top: 3px solid #d4af37;\n    color: #fdf5e6; padding: 15px; text-align: center;\n    z-index: 9999; font-family: Georgia, serif; font-size: 1.2rem;\n    box-shadow: 0 -5px 15px rgba(0,0,0,0.5);\n}\n.historical-content { max-width: 800px; margin: 0 auto; line-height: 1.5; }',
+        'aniversario': '#anniversary-banner {\n    background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);\n    color: #333; font-weight: bold; font-size: 1.5rem; text-align: center;\n    padding: 15px; border-bottom: 2px solid #ff758c; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n}',
+        'conmemoracion': '#commemoration-banner {\n    background: #2b3a42; color: #fff; text-align: center;\n    padding: 15px; font-size: 1.2rem; letter-spacing: 1px;\n    border-bottom: 2px solid #3f5765;\n}',
+        'general_discreto': '#general-banner-container {\n    position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; pointer-events: none; display: flex; justify-content: center; animation: slideDown 1s ease-out forwards; transform: translateY(-100%);\n}\n.general-flag-banner {\n    background: linear-gradient(to right, #1b4332 0%, #081c15 100%); color: white; font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 600; padding: 10px 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-radius: 0 0 15px 15px; border-bottom: 3px solid #d4af37;\n}\n@keyframes slideDown { 0% { transform: translateY(-100%); } 100% { transform: translateY(0); } }',
+        'luto': '/* html { filter: grayscale(100%); } */\n#mourning-banner {\n    background: #000; color: #fff; text-align: center; padding: 10px; font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #333;\n}',
+        'musica': '#music-banner {\n    background: linear-gradient(45deg, #000428, #004e92);\n    color: #fff; font-weight: bold; font-size: 1.5rem; text-align: center;\n    padding: 15px; border-bottom: 3px solid #ff0055;\n    text-shadow: 0 0 10px rgba(255,0,85,0.7);\n}',
+        'sorteo': '#raffle-banner {\n    background: #ffd700; color: #d32f2f; font-weight: 900; font-size: 1.4rem; text-align: center; padding: 15px;\n    border: 4px dashed #d32f2f; box-shadow: inset 0 0 15px rgba(255,255,255,0.5);\n    animation: pulseRaffle 2s infinite;\n}\n@keyframes pulseRaffle { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }',
+        'procesion': '#procession-banner {\n    background: #1a0033; color: #d4af37; font-family: "Times New Roman", serif; font-size: 1.3rem; text-align: center; padding: 15px; border-bottom: 2px solid #5c3a21; letter-spacing: 2px;\n}',
+        'misa': '#mass-banner {\n    background: #fdfdfd; color: #333; font-family: Georgia, serif; font-size: 1.2rem; text-align: center; padding: 15px; border-bottom: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);\n}'
     };
 
-    document.getElementById('templateSelector').addEventListener('change', function() {
-        const val = this.value;
-        if (templates[val]) {
-            document.querySelector('input[name="name"]').value = templates[val].name;
-            document.getElementById('htmlField').value = templates[val].html;
-            document.getElementById('cssField').value = templates[val].css;
-            document.getElementById('jsField').value = templates[val].js;
-        } else {
-            document.querySelector('input[name="name"]').value = '';
-            document.getElementById('htmlField').value = '';
-            document.getElementById('cssField').value = '';
-            document.getElementById('jsField').value = '';
-        }
-    });
-
-    document.querySelectorAll('.toggle-celebration').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const id = this.getAttribute('data-id');
-            const value = this.checked ? 1 : 0;
-            
-            const formData = new FormData();
-            formData.append('action', 'toggle');
-            formData.append('id', id);
-            formData.append('is_active', value);
-            
-            fetch('celebrations.php', {
-                method: 'POST',
-                body: formData
-            }).then(response => response.json())
-              .then(data => {
-                  if(!data.success) {
-                      alert('Error al actualizar el estado.');
-                      this.checked = !this.checked; // revert
-                  }
-              });
-        });
-    });
-    document.querySelectorAll('.recurrence-select').forEach(select => {
-        select.addEventListener('change', function() {
-            const form = this.closest('form');
-            const manualDates = form.querySelector('.manual-dates-container');
-            const eventDate = form.querySelector('.event-date-field');
-            const easterOffset = form.querySelector('.easter-offset-field');
-            
-            if (this.value === 'none') {
-                if(manualDates) manualDates.style.setProperty('display', 'flex', 'important');
-                if(eventDate) eventDate.style.setProperty('display', 'none', 'important');
-                if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
-            } else if (this.value === 'easter') {
-                if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
-                if(eventDate) eventDate.style.setProperty('display', 'none', 'important');
-                if(easterOffset) easterOffset.style.setProperty('display', 'block', 'important');
-            } else {
-                if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
-                if(eventDate) eventDate.style.setProperty('display', 'block', 'important');
-                if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
-            }
-        });
-    });
     const jsEffects = {
         'confetti': `if (typeof confetti === "undefined") {
     var script = document.createElement("script");
@@ -523,14 +505,65 @@ for(var i=0; i<15; i++) {
     document.body.appendChild(b);
     setTimeout(() => { b.style.bottom = '120vh'; b.style.transform = 'rotate('+(Math.random()*360-180)+'deg)'; }, 100);
     setTimeout(() => b.remove(), 4100);
-}`
+}`,
+        'music_notes': `var emojis = ['🎵','🎶','🎸','🥁'];
+for(var i=0; i<15; i++) {
+    let b = document.createElement('div');
+    b.innerText = emojis[Math.floor(Math.random()*emojis.length)];
+    b.style.position = 'fixed'; b.style.top = '-50px'; b.style.left = Math.random()*100 + 'vw';
+    b.style.fontSize = (Math.random()*2+1.5)+'rem'; b.style.zIndex = '99999'; b.style.pointerEvents = 'none';
+    b.style.transition = 'top 5s linear, transform 5s ease-in-out';
+    document.body.appendChild(b);
+    setTimeout(() => { b.style.top = '120vh'; b.style.transform = 'rotate('+(Math.random()*360-180)+'deg)'; }, 100);
+    setTimeout(() => b.remove(), 5100);
+}`,
+        'sorteo': `if (typeof confetti === "undefined") {
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+    script.onload = function() { confetti({ particleCount: 200, spread: 360, origin: { y: 0.5 }, colors: ['#ffd700', '#d32f2f'] }); };
+    document.head.appendChild(script);
+} else {
+    confetti({ particleCount: 200, spread: 360, origin: { y: 0.5 }, colors: ['#ffd700', '#d32f2f'] });
+}`,
+        'candle': `var c = document.createElement('div');
+c.innerText = '🕯️'; c.style.position = 'fixed'; c.style.bottom = '20px'; c.style.right = '20px';
+c.style.fontSize = '3rem'; c.style.zIndex = '99999'; c.style.pointerEvents = 'none';
+c.style.animation = 'flicker 2s infinite alternate';
+document.body.appendChild(c);
+if(!document.getElementById('candleStyle')) {
+    var s = document.createElement('style'); s.id = 'candleStyle';
+    s.innerHTML = '@keyframes flicker { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } 100% { opacity: 1; transform: scale(0.95); } }';
+    document.head.appendChild(s);
+}
+document.addEventListener('celebrationChange', function() { c.remove(); });`
     };
+
+    document.querySelectorAll('.html-effect-selector').forEach(select => {
+        select.addEventListener('change', function() {
+            if (this.value && htmlTemplates[this.value]) {
+                const targetTextarea = document.getElementById(this.getAttribute('data-target'));
+                if (targetTextarea.value) targetTextarea.value += '\n\n' + htmlTemplates[this.value];
+                else targetTextarea.value = htmlTemplates[this.value];
+                this.value = ''; 
+            }
+        });
+    });
+
+    document.querySelectorAll('.css-effect-selector').forEach(select => {
+        select.addEventListener('change', function() {
+            if (this.value && cssTemplates[this.value]) {
+                const targetTextarea = document.getElementById(this.getAttribute('data-target'));
+                if (targetTextarea.value) targetTextarea.value += '\n\n' + cssTemplates[this.value];
+                else targetTextarea.value = cssTemplates[this.value];
+                this.value = ''; 
+            }
+        });
+    });
 
     document.querySelectorAll('.js-effect-selector').forEach(select => {
         select.addEventListener('change', function() {
             if (this.value && jsEffects[this.value]) {
-                const targetId = this.getAttribute('data-target');
-                const targetTextarea = document.getElementById(targetId);
+                const targetTextarea = document.getElementById(this.getAttribute('data-target'));
                 const currentVal = targetTextarea.value;
                 if (currentVal) {
                     targetTextarea.value = currentVal + '\n\n' + jsEffects[this.value];
@@ -538,6 +571,52 @@ for(var i=0; i<15; i++) {
                     targetTextarea.value = jsEffects[this.value];
                 }
                 this.value = ''; // reset
+            }
+        });
+    });
+
+    document.querySelectorAll('.toggle-celebration').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const id = this.getAttribute('data-id');
+            const value = this.checked ? 1 : 0;
+            
+            const formData = new FormData();
+            formData.append('action', 'toggle');
+            formData.append('id', id);
+            formData.append('is_active', value);
+            
+            fetch('celebrations.php', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.json())
+              .then(data => {
+                  if(!data.success) {
+                      alert('Error al actualizar el estado.');
+                      this.checked = !this.checked; // revert
+                  }
+              });
+        });
+    });
+
+    document.querySelectorAll('.recurrence-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const form = this.closest('form');
+            const manualDates = form.querySelector('.manual-dates-container');
+            const eventDate = form.querySelector('.event-date-field');
+            const easterOffset = form.querySelector('.easter-offset-field');
+            
+            if (this.value === 'none') {
+                if(manualDates) manualDates.style.setProperty('display', 'flex', 'important');
+                if(eventDate) eventDate.style.setProperty('display', 'none', 'important');
+                if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
+            } else if (this.value === 'easter') {
+                if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
+                if(eventDate) eventDate.style.setProperty('display', 'none', 'important');
+                if(easterOffset) easterOffset.style.setProperty('display', 'block', 'important');
+            } else {
+                if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
+                if(eventDate) eventDate.style.setProperty('display', 'block', 'important');
+                if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
             }
         });
     });
