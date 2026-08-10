@@ -363,10 +363,33 @@ adminHeader("Manual de Usuario Avanzado");
         </div>
     </div>
 
-    <!-- 6. Accesos Externos -->
+    <!-- 6. Acontecimientos -->
+    <div class="manual-card manual-section">
+        <div class="manual-card-icon"><i class="fas fa-calendar-check"></i></div>
+        <h2>6. Acontecimientos y Efemérides</h2>
+        <p>Gestión de fechas señaladas, celebraciones y efectos visuales temporales que inundan la web de espíritu festivo o solemne.</p>
+        
+        <h3><i class="fas fa-magic"></i> Plantillas y Efectos Visuales</h3>
+        <div class="field-desc">
+            <strong>Plantillas Modulares (HTML, CSS y JS):</strong> Dispones de 3 selectores independientes para inyectar banners informativos (HTML), estilos visuales (CSS) y efectos especiales animados (JS). Puedes combinarlos o usarlos por separado, ¡incluso en eventos que ya estuvieran creados!
+        </div>
+        <div class="field-desc">
+            <strong>Nuevos Efectos Visuales:</strong> Convierte la navegación en una experiencia interactiva añadiendo Nieve para Navidad, Confeti o Cohetes para Fiestas, Notas Musicales para Conciertos, Velas para Procesiones o Rayos para alertas.
+        </div>
+        
+        <h3><i class="fas fa-clock"></i> Rotación y Programación Inteligente</h3>
+        <div class="field-desc">
+            <strong>Repetición Variable:</strong> Además de poder fijar eventos fijos anuales (ej. Año Nuevo), puedes programar eventos vinculados a la Semana Santa (ej. -3 días para el Jueves Santo), y el sistema calculará la fecha correcta cada año automáticamente.
+        </div>
+        <div class="field-desc">
+            <strong>Carrusel de Acontecimientos:</strong> Si coinciden 2 o más eventos el mismo día (ej. un aniversario y un festival), el sistema no se colapsará. Automáticamente rotará entre los distintos banners y efectos de cada evento cada 5 segundos para que todos tengan su momento de protagonismo.
+        </div>
+    </div>
+
+    <!-- 7. Accesos Externos -->
     <div class="manual-card manual-section">
         <div class="manual-card-icon"><i class="fas fa-external-link-alt"></i></div>
-        <h2>6. Accesos Externos y Resto</h2>
+        <h2>7. Accesos Externos y Resto</h2>
         <p>Gestión de contenido satélite y bases de datos locales.</p>
         
         <h3><i class="fas fa-link"></i> Curiosidades / Enlaces</h3>
@@ -381,10 +404,10 @@ adminHeader("Manual de Usuario Avanzado");
         </div>
     </div>
 
-    <!-- 7. Banner y Ajustes -->
+    <!-- 8. Banner y Ajustes -->
     <div class="manual-card manual-section">
         <div class="manual-card-icon"><i class="fas fa-sliders-h"></i></div>
-        <h2>7. Banners y Configuración</h2>
+        <h2>8. Banners y Configuración</h2>
         <p>El toque final para personalizar el comportamiento y la primera impresión.</p>
         
         <h3><i class="fas fa-images"></i> Banner Interactivo</h3>
@@ -398,10 +421,10 @@ adminHeader("Manual de Usuario Avanzado");
         </div>
     </div>
 
-    <!-- 8. Seguridad -->
+    <!-- 9. Seguridad -->
     <div class="manual-card manual-section">
         <div class="manual-card-icon"><i class="fas fa-shield-alt"></i></div>
-        <h2>8. Mantenimiento y Seguridad</h2>
+        <h2>9. Mantenimiento y Seguridad</h2>
         <p>Protege todo el esfuerzo invertido en tu portal cultural.</p>
         
         <h3><i class="fas fa-database"></i> Copias de Seguridad (Backup)</h3>
