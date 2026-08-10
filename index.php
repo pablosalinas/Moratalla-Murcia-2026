@@ -10,10 +10,12 @@ $globalVisits = $stmtGlobal->fetchColumn() ?: 0;
 <!-- CELEBRACIONES DINÁMICAS -->
 <?php
 try {
-    $stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('celebration_days_before', 'celebration_days_after')");
+    $stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('celebration_days_before', 'celebration_days_after', 'celebration_cycle_time', 'celebration_cycle_limit')");
     $settings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
     $daysBefore = isset($settings['celebration_days_before']) ? (int)$settings['celebration_days_before'] : 5;
     $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebration_days_after'] : 2;
+    $cycleTimeMs = isset($settings['celebration_cycle_time']) ? (int)$settings['celebration_cycle_time'] * 1000 : 5000;
+    $cycleLimit = isset($settings['celebration_cycle_limit']) ? (int)$settings['celebration_cycle_limit'] : 0;
 
     $stmtCeleb = $pdo->query("SELECT * FROM celebrations WHERE is_active = 1");
     $now = new DateTime();
@@ -112,17 +114,39 @@ try {
             echo "    };\n";
         }
         
-        echo "    if (items.length > 0) {\n";
-        echo "        celebFuncs[0]();\n";
-        echo "    }\n";
-        
-        echo "    if (items.length > 1) {\n";
-        echo "        setInterval(() => {\n";
-        echo "            items[celebIndex].style.display = 'none';\n";
-        echo "            celebIndex = (celebIndex + 1) % items.length;\n";
-        echo "            items[celebIndex].style.display = 'block';\n";
-        echo "            celebFuncs[celebIndex]();\n";
-        echo "        }, 5000);\n";
+        echo "    const cycleTimeMs = {$cycleTimeMs};\n";
+        echo "    const cycleLimit = {$cycleLimit};\n";
+        echo "    let cyclesCompleted = parseInt(sessionStorage.getItem('celebCyclesCompleted') || '0');\n";
+        echo "    if (cycleLimit > 0 && cyclesCompleted >= cycleLimit) {\n";
+        echo "        items.forEach(item => item.style.display = 'none');\n";
+        echo "    } else {\n";
+        echo "        if (items.length > 0) {\n";
+        echo "            celebFuncs[0]();\n";
+        echo "        }\n";
+        echo "        if (items.length > 1) {\n";
+        echo "            const intervalId = setInterval(() => {\n";
+        echo "                items[celebIndex].style.display = 'none';\n";
+        echo "                celebIndex = (celebIndex + 1) % items.length;\n";
+        echo "                items[celebIndex].style.display = 'block';\n";
+        echo "                celebFuncs[celebIndex]();\n";
+        echo "                if (celebIndex === 0) {\n";
+        echo "                    cyclesCompleted++;\n";
+        echo "                    sessionStorage.setItem('celebCyclesCompleted', cyclesCompleted);\n";
+        echo "                    if (cycleLimit > 0 && cyclesCompleted >= cycleLimit) {\n";
+        echo "                        clearInterval(intervalId);\n";
+        echo "                        document.dispatchEvent(new Event('celebrationChange'));\n";
+        echo "                        items.forEach(item => item.style.display = 'none');\n";
+        echo "                    }\n";
+        echo "                }\n";
+        echo "            }, cycleTimeMs);\n";
+        echo "        } else if (items.length === 1 && cycleLimit > 0) {\n";
+        echo "            setTimeout(() => {\n";
+        echo "                cyclesCompleted++;\n";
+        echo "                sessionStorage.setItem('celebCyclesCompleted', cyclesCompleted);\n";
+        echo "                document.dispatchEvent(new Event('celebrationChange'));\n";
+        echo "                items[0].style.display = 'none';\n";
+        echo "            }, cycleTimeMs * cycleLimit);\n";
+        echo "        }\n";
         echo "    }\n";
         echo "});\n";
         echo "</script>\n";

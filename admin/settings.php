@@ -19,6 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('celebration_days_before', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$daysBefore, $daysBefore]);
     $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('celebration_days_after', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$daysAfter, $daysAfter]);
     
+    $cycleTime = isset($_POST['celebration_cycle_time']) ? (int)$_POST['celebration_cycle_time'] : 5;
+    $cycleLimit = isset($_POST['celebration_cycle_limit']) ? (int)$_POST['celebration_cycle_limit'] : 0;
+    $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('celebration_cycle_time', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$cycleTime, $cycleTime]);
+    $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('celebration_cycle_limit', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$cycleLimit, $cycleLimit]);
+    
     if (!empty($adminEmail)) {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('admin_email', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$adminEmail, $adminEmail]);
     }
@@ -35,6 +40,8 @@ $currentSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : '
 $currentAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com';
 $currentDaysBefore = isset($settings['celebration_days_before']) ? $settings['celebration_days_before'] : '5';
 $currentDaysAfter = isset($settings['celebration_days_after']) ? $settings['celebration_days_after'] : '2';
+$currentCycleTime = isset($settings['celebration_cycle_time']) ? $settings['celebration_cycle_time'] : '5';
+$currentCycleLimit = isset($settings['celebration_cycle_limit']) ? $settings['celebration_cycle_limit'] : '0';
 
 adminHeader("Configuración General");
 ?>
@@ -80,6 +87,18 @@ adminHeader("Configuración General");
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Días después para Acontecimientos Recurrentes</label>
             <input type="number" name="celebration_days_after" min="0" value="<?php echo htmlspecialchars($currentDaysAfter); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
             <small style="color: #666; display: block; margin-top: 0.5rem;">Cuántos días después de la fecha principal se ocultará el banner automáticamente (por defecto: 2).</small>
+        </div>
+        
+        <div style="margin-bottom: 2.5rem; border-top: 1px solid #eee; padding-top: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Tiempo entre Acontecimientos (Segundos)</label>
+            <input type="number" name="celebration_cycle_time" min="1" value="<?php echo htmlspecialchars($currentCycleTime); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+            <small style="color: #666; display: block; margin-top: 0.5rem;">Si coinciden varios eventos a la vez, cada cuántos segundos rotará el carrusel para mostrar el siguiente (por defecto: 5).</small>
+        </div>
+        
+        <div style="margin-bottom: 2.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Límite de Ciclos del Carrusel (Por sesión)</label>
+            <input type="number" name="celebration_cycle_limit" min="0" value="<?php echo htmlspecialchars($currentCycleLimit); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+            <small style="color: #666; display: block; margin-top: 0.5rem;">Cuántas veces se repetirán los efectos visuales antes de desactivarse para no molestar a la lectura. Si marcas 0, el carrusel será infinito (por defecto: 0).</small>
         </div>
         
         <button type="submit" class="btn btn-primary">
