@@ -68,7 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <div class="login-card">
-        <h2>ADMIN LOGIN</h2>
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <img id="login-logo" src="../uploads/theme/logo.jpg" alt="Logo Moratalla" style="max-height: 90px; width: auto; border-radius: 8px; transition: opacity 0.5s;">
+            <h1 style="font-size: 1.4rem; color: var(--dark); margin-top: 0.8rem; margin-bottom: 0; font-weight: 700;">moratalla-murcia.com</h1>
+        </div>
+        <h2 style="font-size: 1.2rem; margin-bottom: 1.5rem; color: #666;">ADMIN LOGIN</h2>
         <?php if ($error): ?>
             <div class="error-msg"><?php echo $error; ?></div>
         <?php endif; ?>
@@ -87,5 +91,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="../index.php" style="color: inherit; text-decoration: none;"><i class="fas fa-arrow-left"></i> Volver a la web</a>
         </p>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const logo = document.getElementById('login-logo');
+            const logos = ['../uploads/theme/logo.jpg', '../uploads/theme/logo2.jpg'];
+            let currentLogo = 0;
+            setInterval(() => {
+                logo.style.opacity = '0';
+                setTimeout(() => {
+                    currentLogo = (currentLogo + 1) % logos.length;
+                    logo.src = logos[currentLogo];
+                    logo.style.opacity = '1';
+                }, 500); // Wait for fade out
+            }, 4000); // Alternate every 4 seconds
+        });
+    </script>
 </body>
 </html>

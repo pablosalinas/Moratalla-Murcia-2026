@@ -73,16 +73,59 @@ try {
         }
         
         if ($shouldShow) {
+            $activeCelebrations[] = $celeb;
+        }
+    }
+    
+    if (!empty($activeCelebrations)) {
+        echo "<div id='celebrations-container'>\n";
+        foreach ($activeCelebrations as $index => $celeb) {
+            $display = $index === 0 ? 'block' : 'none';
+            echo "<div class='celebration-item' id='celebration-item-{$index}' style='display: {$display};'>\n";
             if (!empty($celeb['html_content'])) {
                 echo $celeb['html_content'] . "\n";
             }
             if (!empty($celeb['css_content'])) {
                 echo "<style>\n" . $celeb['css_content'] . "\n</style>\n";
             }
-            if (!empty($celeb['js_content'])) {
-                echo "<script>\n" . $celeb['js_content'] . "\n</script>\n";
-            }
+            echo "</div>\n";
         }
+        echo "</div>\n";
+        
+        echo "<script>\n";
+        echo "document.addEventListener('DOMContentLoaded', function() {\n";
+        echo "    const items = document.querySelectorAll('.celebration-item');\n";
+        echo "    let celebIndex = 0;\n";
+        echo "    const celebFuncs = [];\n";
+        
+        foreach ($activeCelebrations as $index => $celeb) {
+            echo "    celebFuncs[{$index}] = function() {\n";
+            echo "        document.dispatchEvent(new Event('celebrationChange'));\n";
+            if (!empty($celeb['js_content'])) {
+                echo "        try {\n";
+                // We wrap in IIFE in case they have variable declarations to avoid collisions if eval'd
+                echo "            (function() {\n";
+                echo $celeb['js_content'] . "\n";
+                echo "            })();\n";
+                echo "        } catch(e) { console.error('Error running celebration JS', e); }\n";
+            }
+            echo "    };\n";
+        }
+        
+        echo "    if (items.length > 0) {\n";
+        echo "        celebFuncs[0]();\n";
+        echo "    }\n";
+        
+        echo "    if (items.length > 1) {\n";
+        echo "        setInterval(() => {\n";
+        echo "            items[celebIndex].style.display = 'none';\n";
+        echo "            celebIndex = (celebIndex + 1) % items.length;\n";
+        echo "            items[celebIndex].style.display = 'block';\n";
+        echo "            celebFuncs[celebIndex]();\n";
+        echo "        }, 5000);\n";
+        echo "    }\n";
+        echo "});\n";
+        echo "</script>\n";
     }
 } catch (Exception $e) {
     // Log or ignore silently

@@ -168,8 +168,19 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Código JS (Sin etiquetas &lt;script&gt;)</label>
-                <textarea name="js_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['js_content']); ?></textarea>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Código JS (Sin etiquetas &lt;script&gt;)</span>
+                    <select class="form-control js-effect-selector" data-target="jsFieldEdit" style="width: auto; padding: 0.2rem; font-size: 0.9rem;">
+                        <option value="">Añadir efecto visual...</option>
+                        <option value="confetti">Confeti</option>
+                        <option value="fireworks">Cohetes / Fuegos Artificiales</option>
+                        <option value="lightning">Rayos / Tormenta</option>
+                        <option value="rainbow">Arcoíris Flotante</option>
+                        <option value="snow">Nieve</option>
+                        <option value="balloons">Globos</option>
+                    </select>
+                </label>
+                <textarea id="jsFieldEdit" name="js_content" class="form-control" style="width: 100%; height: 150px; padding: 0.5rem; font-family: monospace;"><?php echo htmlspecialchars($editRow['js_content']); ?></textarea>
             </div>
             
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
@@ -254,7 +265,18 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
             </div>
             
             <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Código JS (Opcional - Sin etiquetas &lt;script&gt;)</label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Código JS (Opcional - Sin etiquetas &lt;script&gt;)</span>
+                    <select class="form-control js-effect-selector" data-target="jsField" style="width: auto; padding: 0.2rem; font-size: 0.9rem;">
+                        <option value="">Añadir efecto visual...</option>
+                        <option value="confetti">Confeti</option>
+                        <option value="fireworks">Cohetes / Fuegos Artificiales</option>
+                        <option value="lightning">Rayos / Tormenta</option>
+                        <option value="rainbow">Arcoíris Flotante</option>
+                        <option value="snow">Nieve</option>
+                        <option value="balloons">Globos</option>
+                    </select>
+                </label>
                 <textarea id="jsField" name="js_content" class="form-control" style="width: 100%; height: 100px; padding: 0.5rem; font-family: monospace;" placeholder="console.log('Navidad activa');"></textarea>
             </div>
             
@@ -282,13 +304,24 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
                         <?php echo htmlspecialchars($row['name']); ?>
                         <div style="font-size: 0.8rem; color: #6b7280; font-weight: normal; margin-top: 4px;">
                             <?php 
-                            if ($row['start_date'] || $row['end_date']) {
-                                echo "Rango: ";
-                                echo $row['start_date'] ? date('d/m/Y H:i', strtotime($row['start_date'])) : 'Siempre';
-                                echo " - ";
-                                echo $row['end_date'] ? date('d/m/Y H:i', strtotime($row['end_date'])) : 'Siempre';
+                            $recur = $row['recurrence'] ?? 'none';
+                            if ($recur === 'annual') {
+                                echo "Repetición Anual: " . ($row['event_date'] ? date('d/m', strtotime($row['event_date'])) : 'Sin fecha configurada');
+                            } elseif ($recur === 'monthly') {
+                                echo "Repetición Mensual: Día " . ($row['event_date'] ? date('d', strtotime($row['event_date'])) : 'Sin fecha configurada');
+                            } elseif ($recur === 'easter') {
+                                $offset = (int)$row['easter_offset'];
+                                $offsetText = $offset === 0 ? "Domingo de Resurrección" : ($offset > 0 ? "+{$offset} días" : "{$offset} días");
+                                echo "Repetición Variable: Semana Santa (" . $offsetText . ")";
                             } else {
-                                echo "Rango: Sin límite";
+                                if ($row['start_date'] || $row['end_date']) {
+                                    echo "Fechas: ";
+                                    echo $row['start_date'] ? date('d/m/Y H:i', strtotime($row['start_date'])) : 'Siempre';
+                                    echo " - ";
+                                    echo $row['end_date'] ? date('d/m/Y H:i', strtotime($row['end_date'])) : 'Siempre';
+                                } else {
+                                    echo "Fechas: Sin límite";
+                                }
                             }
                             ?>
                         </div>
@@ -404,6 +437,107 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
                 if(manualDates) manualDates.style.setProperty('display', 'none', 'important');
                 if(eventDate) eventDate.style.setProperty('display', 'block', 'important');
                 if(easterOffset) easterOffset.style.setProperty('display', 'none', 'important');
+            }
+        });
+    });
+    const jsEffects = {
+        'confetti': `if (typeof confetti === "undefined") {
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+    script.onload = function() { confetti({ particleCount: 150, spread: 180, origin: { y: 0.1 } }); };
+    document.head.appendChild(script);
+} else {
+    confetti({ particleCount: 150, spread: 180, origin: { y: 0.1 } });
+}`,
+        'fireworks': `if (typeof confetti === "undefined") {
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+    script.onload = function() { launchFireworks(); };
+    document.head.appendChild(script);
+} else {
+    launchFireworks();
+}
+function launchFireworks() {
+    var duration = 5 * 1000;
+    var animationEnd = Date.now() + duration;
+    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+    var interval = setInterval(function() {
+        var timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) { return clearInterval(interval); }
+        var particleCount = 50 * (timeLeft / duration);
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
+    }, 250);
+}`,
+        'lightning': `var flash = document.createElement('div');
+flash.style.position = 'fixed';
+flash.style.top = '0'; flash.style.left = '0'; flash.style.width = '100vw'; flash.style.height = '100vh';
+flash.style.backgroundColor = 'white'; flash.style.opacity = '0'; flash.style.pointerEvents = 'none';
+flash.style.zIndex = '99999';
+document.body.appendChild(flash);
+function strike() {
+    flash.style.opacity = '0.8';
+    setTimeout(() => flash.style.opacity = '0', 50);
+    setTimeout(() => { flash.style.opacity = '0.5'; setTimeout(() => flash.style.opacity = '0', 50); }, 150);
+}
+strike(); var lightningInt = setInterval(strike, 4000);
+document.addEventListener('celebrationChange', function() { clearInterval(lightningInt); flash.remove(); });`,
+        'rainbow': `var r = document.createElement('div');
+r.style.position = 'fixed'; r.style.top = '0'; r.style.left = '0'; r.style.width = '100vw'; r.style.height = '10px';
+r.style.background = 'linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)';
+r.style.zIndex = '99999'; r.style.animation = 'rainbowShift 2s linear infinite';
+document.body.appendChild(r);
+if(!document.getElementById('rainbowStyle')) {
+    var s = document.createElement('style'); s.id = 'rainbowStyle';
+    s.innerHTML = '@keyframes rainbowShift { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }';
+    document.head.appendChild(s);
+}
+document.addEventListener('celebrationChange', function() { r.remove(); });`,
+        'snow': `if (typeof confetti === "undefined") {
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+    script.onload = function() { launchSnow(); };
+    document.head.appendChild(script);
+} else {
+    launchSnow();
+}
+function launchSnow() {
+    var duration = 5 * 1000;
+    var animationEnd = Date.now() + duration;
+    var skew = 1;
+    function frame() {
+        var timeLeft = animationEnd - Date.now();
+        var ticks = Math.max(200, 500 * (timeLeft / duration));
+        skew = Math.max(0.8, skew - 0.001);
+        confetti({ particleCount: 1, startVelocity: 0, ticks: ticks, origin: { x: Math.random(), y: Math.random() * skew - 0.2 }, colors: ['#ffffff'], shapes: ['circle'], gravity: Math.random() * 0.4 + 0.6, scalar: Math.random() * 0.4 + 0.4, drift: Math.random() - 0.5, zIndex: 99999 });
+        if (timeLeft > 0) { requestAnimationFrame(frame); }
+    }
+    frame();
+}`,
+        'balloons': `var emojis = ['🎈','🎈','🎊','🎉'];
+for(var i=0; i<15; i++) {
+    let b = document.createElement('div');
+    b.innerText = emojis[Math.floor(Math.random()*emojis.length)];
+    b.style.position = 'fixed'; b.style.bottom = '-50px'; b.style.left = Math.random()*100 + 'vw';
+    b.style.fontSize = (Math.random()*2+2)+'rem'; b.style.zIndex = '99999'; b.style.pointerEvents = 'none';
+    b.style.transition = 'bottom 4s linear, transform 4s ease-in-out';
+    document.body.appendChild(b);
+    setTimeout(() => { b.style.bottom = '120vh'; b.style.transform = 'rotate('+(Math.random()*360-180)+'deg)'; }, 100);
+    setTimeout(() => b.remove(), 4100);
+}`
+    };
+
+    document.querySelectorAll('.js-effect-selector').forEach(select => {
+        select.addEventListener('change', function() {
+            if (this.value && jsEffects[this.value]) {
+                const targetId = this.getAttribute('data-target');
+                const targetTextarea = document.getElementById(targetId);
+                const currentVal = targetTextarea.value;
+                if (currentVal) {
+                    targetTextarea.value = currentVal + '\n\n' + jsEffects[this.value];
+                } else {
+                    targetTextarea.value = jsEffects[this.value];
+                }
+                this.value = ''; // reset
             }
         });
     });
