@@ -396,6 +396,7 @@ $daysAfter = isset($settings['celebration_days_after']) ? (int)$settings['celebr
             </tbody>
         </table>
     </div>
+<?php endif; ?>
 
     <script>
     const htmlTemplates = {
@@ -621,6 +622,5 @@ document.addEventListener('celebrationChange', function() { c.remove(); });`
         });
     });
     </script>
-<?php endif; ?>
 
 <?php adminFooter(); ?>
