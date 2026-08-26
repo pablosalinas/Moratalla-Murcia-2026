@@ -41,7 +41,7 @@ $stmtSub->execute([$id]);
 $subcategories = $stmtSub->fetchAll();
 
 // Buscamos páginas directas
-$stmtPage = $pdo->prepare("SELECT * FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+$stmtPage = $pdo->prepare("SELECT * FROM pages WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
 $stmtPage->execute([$id]);
 $pages = $stmtPage->fetchAll();
 
@@ -130,7 +130,7 @@ require_once 'inc/header.php';
 
         <!-- Noticias y Eventos de esta Categoría -->
         <?php
-        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE category_id = ? AND is_active_category = 1 ORDER BY sort_order ASC, event_date DESC, id DESC");
+        $stmtNews = $pdo->prepare("SELECT * FROM news_events WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_active_category = 1 ORDER BY sort_order ASC, event_date DESC, id DESC");
         $stmtNews->execute([$id]);
         $categoryNews = $stmtNews->fetchAll();
         

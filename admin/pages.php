@@ -47,13 +47,10 @@ if ($action == 'save') {
 
     $id = isset($_POST['id']) ? $_POST['id'] : '';
     $title = isset($_POST['title']) ? trim($_POST['title']) : '';
-    $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
+    $category_id = isset($_POST['category_id']) && $_POST['category_id'] !== '' ? $_POST['category_id'] : null;
+    $category_id_2 = isset($_POST['category_id_2']) && $_POST['category_id_2'] !== '' ? $_POST['category_id_2'] : null;
+    $category_id_3 = isset($_POST['category_id_3']) && $_POST['category_id_3'] !== '' ? $_POST['category_id_3'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
-    $icon = isset($_POST['icon']) ? trim($_POST['icon']) : 'far fa-file-alt';
-    $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
-    $is_visible = isset($_POST['is_visible']) ? 1 : 0;
-    
-    if (empty($category_id)) $category_id = null;
     
     if (empty($title)) {
         header("Location: pages.php?msg=" . urlencode("Error: El título es obligatorio."));
@@ -61,8 +58,8 @@ if ($action == 'save') {
     }
 
     if ($id) {
-        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, content=?, icon=?, sort_order=?, is_visible=? WHERE id=?");
-        $stmt->execute([$title, $category_id, $content, $icon, $sort_order, $is_visible, $id]);
+        $stmt = $pdo->prepare("UPDATE pages SET title=?, category_id=?, category_id_2=?, category_id_3=?, content=?, icon=?, sort_order=?, is_visible=? WHERE id=?");
+        $stmt->execute([$title, $category_id, $category_id_2, $category_id_3, $content, $icon, $sort_order, $is_visible, $id]);
         $msg = "Página actualizada.";
     } else {
         $slug = slugify($title);
@@ -72,9 +69,8 @@ if ($action == 'save') {
         if ($stmtCheck->fetchColumn() > 0) {
             $slug .= '-' . rand(100, 999);
         }
-        
-        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, content, original_file, icon, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $category_id, $content, 'nuevo_admin.html', $icon, $slug, $sort_order, $is_visible]);
+        $stmt = $pdo->prepare("INSERT INTO pages (title, category_id, category_id_2, category_id_3, content, original_file, icon, slug, sort_order, is_visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $category_id, $category_id_2, $category_id_3, $content, 'nuevo_admin.html', $icon, $slug, $sort_order, $is_visible]);
         $id = $pdo->lastInsertId();
         $msg = "Página creada.";
     }
@@ -227,7 +223,7 @@ if ($action == 'list') {
     </script>
     <?php
 } else if ($action == 'edit' || $action == 'add') {
-    $page = ['id' => '', 'title' => '', 'category_id' => '', 'content' => '', 'sort_order' => 0, 'is_visible' => 1];
+    $page = ['id' => '', 'title' => '', 'category_id' => '', 'category_id_2' => '', 'category_id_3' => '', 'content' => '', 'sort_order' => 0, 'is_visible' => 1];
     if ($action == 'edit') {
         $id = $_GET['id'];
         $stmt = $pdo->prepare("SELECT * FROM pages WHERE id = ?");
@@ -331,14 +327,34 @@ if ($action == 'list') {
                     <input type="text" name="title" required value="<?php echo htmlspecialchars($page['title']); ?>" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
                 </div>
                 
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Categoría padre</label>
-                    <select name="category_id" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
-                        <option value="">-- Sin Categoría --</option>
-                        <?php foreach($cats as $c): ?>
-                            <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $page['category_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Categoría Principal</label>
+                        <select name="category_id" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                            <option value="">-- Sin Categoría --</option>
+                            <?php foreach($cats as $c): ?>
+                                <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $page['category_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Categoría 2 (Opcional)</label>
+                        <select name="category_id_2" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                            <option value="">-- Ninguna --</option>
+                            <?php foreach($cats as $c): ?>
+                                <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $page['category_id_2'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Categoría 3 (Opcional)</label>
+                        <select name="category_id_3" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                            <option value="">-- Ninguna --</option>
+                            <?php foreach($cats as $c): ?>
+                                <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $page['category_id_3'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">

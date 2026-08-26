@@ -200,7 +200,7 @@ function renderHorizontalMenu($parentId = null) {
     $extLinks = [];
     $newsLinks = [];
     if ($parentId !== null) {
-        $stmtPages = $pdo->prepare("SELECT id, title, icon FROM pages WHERE category_id = ? AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+        $stmtPages = $pdo->prepare("SELECT id, title, icon FROM pages WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
         $stmtPages->execute([$parentId]);
         $pages = $stmtPages->fetchAll();
         
@@ -208,7 +208,7 @@ function renderHorizontalMenu($parentId = null) {
         $stmtExt->execute([$parentId]);
         $extLinks = $stmtExt->fetchAll();
         
-        $stmtNews = $pdo->prepare("SELECT id, title, icon FROM news_events WHERE category_id = ? AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY event_date DESC, title ASC");
+        $stmtNews = $pdo->prepare("SELECT id, title, icon FROM news_events WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY event_date DESC, title ASC");
         $stmtNews->execute([$parentId]);
         $newsLinks = $stmtNews->fetchAll();
     }
@@ -224,7 +224,7 @@ function renderHorizontalMenu($parentId = null) {
             $stmtChild->execute([$cat['id']]);
             $numCat = $stmtChild->fetchColumn();
             
-            $stmtP = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE category_id = ? AND is_visible = 1");
+            $stmtP = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_visible = 1");
             $stmtP->execute([$cat['id']]);
             $numP = $stmtP->fetchColumn();
             
@@ -232,7 +232,7 @@ function renderHorizontalMenu($parentId = null) {
             $stmtE->execute([$cat['id']]);
             $numE = $stmtE->fetchColumn();
             
-            $stmtN = $pdo->prepare("SELECT COUNT(*) FROM news_events WHERE category_id = ? AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())");
+            $stmtN = $pdo->prepare("SELECT COUNT(*) FROM news_events WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())");
             $stmtN->execute([$cat['id']]);
             $numN = $stmtN->fetchColumn();
             

@@ -115,6 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
         $category_id = $_POST['category_id'] ?? null;
+        $category_id_2 = $_POST['category_id_2'] ?? null;
+        $category_id_3 = $_POST['category_id_3'] ?? null;
         $is_active_category = isset($_POST['is_active_category']) ? 1 : 0;
         $sort_order_news = (int)($_POST['sort_order_news'] ?? 0);
         $icon = $_POST['icon'] ?? '📰';
@@ -130,6 +132,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (empty($category_id)) {
             $category_id = null;
+        }
+        if (empty($category_id_2)) {
+            $category_id_2 = null;
+        }
+        if (empty($category_id_3)) {
+            $category_id_3 = null;
         }
         
         if (empty($title) || empty($content)) {
@@ -185,9 +193,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'is_active_category', 'icon'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category, $icon];
+                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'category_id_2', 'category_id_3', 'is_active_category', 'icon'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
                 
                 if ($hasSortOrderColumn) {
                     $columns[] = 'sort_order';
@@ -210,8 +218,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'is_active_category = ?', 'icon = ?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $is_active_category, $icon];
+                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'category_id_2 = ?', 'category_id_3 = ?', 'is_active_category = ?', 'icon = ?'];
+                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
                 
                 if ($hasSortOrderColumn) {
                     $setCols[] = 'sort_order = ?';
@@ -418,6 +426,8 @@ adminHeader("Noticias y Eventos");
                                     <?php if($row['is_active_home']) echo '<input type="hidden" name="is_active_home" value="1">'; ?>
                                     <?php if($row['is_active_category']) echo '<input type="hidden" name="is_active_category" value="1">'; ?>
                                     <input type="hidden" name="category_id" value="<?php echo htmlspecialchars($row['category_id'] ?? ''); ?>">
+                                    <input type="hidden" name="category_id_2" value="<?php echo htmlspecialchars($row['category_id_2'] ?? ''); ?>">
+                                    <input type="hidden" name="category_id_3" value="<?php echo htmlspecialchars($row['category_id_3'] ?? ''); ?>">
                                     <input type="number" name="sort_order_news" value="<?php echo (int)($row['sort_order'] ?? 0); ?>"
                                            style="width:55px; padding:4px 6px; border:1px solid #ddd; border-radius:5px; text-align:center; font-size:0.85rem;"
                                            onchange="this.form.submit()" title="Cambiar orden (se aplica al perder el foco)">
@@ -496,7 +506,7 @@ adminHeader("Noticias y Eventos");
     </script>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
+    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'category_id_2' => '', 'category_id_3' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM news_events WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -664,14 +674,34 @@ adminHeader("Noticias y Eventos");
                 </div>
                 
                 <div style="border-top: 1px solid var(--gray-300); margin: 1rem 0; padding-top: 1rem;">
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Vincular con una Categoría / Sección (Opcional)</label>
-                        <select name="category_id" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                            <option value="">-- No vincular a ninguna categoría --</option>
-                            <?php foreach($cats as $c): ?>
-                                <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $news_data['category_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Vincular con una Categoría / Sección (Opcional)</label>
+                            <select name="category_id" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                                <option value="">-- No vincular a ninguna categoría --</option>
+                                <?php foreach($cats as $c): ?>
+                                    <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $news_data['category_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Categoría 2 (Opcional)</label>
+                            <select name="category_id_2" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                                <option value="">-- Ninguna --</option>
+                                <?php foreach($cats as $c): ?>
+                                    <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $news_data['category_id_2'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Categoría 3 (Opcional)</label>
+                            <select name="category_id_3" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                                <option value="">-- Ninguna --</option>
+                                <?php foreach($cats as $c): ?>
+                                    <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $news_data['category_id_3'] ? 'selected' : ''); ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
