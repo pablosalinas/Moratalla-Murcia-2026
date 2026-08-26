@@ -124,7 +124,7 @@ if ($isSinglePageCategory) {
         if (count($images) > 0): ?>
             <!-- DEBUG: ID PAGINA <?php echo $id; ?> | IMAGENES ENCONTRADAS: <?php echo count($images); ?> -->
             <div class="gallery-wrapper" style="margin-bottom: 3rem;">
-                <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 3px solid var(--accent); padding-left: 1rem;">Obras y Galería de Imágenes</h3>
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 3px solid var(--accent); padding-left: 1rem;">Galería de imágenes</h3>
                 <!-- Carrusel Animado (Swiper) -->
                 <div class="swiper page-gallery-swiper" style="padding-bottom: 3rem;">
                     <div class="swiper-wrapper">
