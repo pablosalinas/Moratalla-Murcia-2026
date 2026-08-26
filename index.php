@@ -437,4 +437,59 @@ if (count($externalLinks) > 0):
     </span>
 </div>
 
+<?php
+// Manejo automático de apertura de noticia por ID
+if (isset($_GET['action']) && $_GET['action'] == 'ver_noticia' && isset($_GET['id'])) {
+    $newsId = (int)$_GET['id'];
+    $stmtVerNoticia = $pdo->prepare("SELECT * FROM news_events WHERE id = ?");
+    $stmtVerNoticia->execute([$newsId]);
+    $newsVer = $stmtVerNoticia->fetch();
+    
+    if ($newsVer) {
+        $isEvent = !empty($newsVer['event_date']);
+        $dateText = $isEvent ? date('d/m/Y', strtotime($newsVer['event_date'])) : date('d/m/Y', strtotime($newsVer['created_at']));
+        
+        $stmtG = $pdo->prepare("SELECT id, image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
+        $stmtG->execute([$newsId]);
+        $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+        
+        $mainImagePath = $newsVer['image_path'];
+        $mainImageCaption = $newsVer['image_caption'] ?? '';
+        
+        if (!empty($newsVer['use_latest_gallery_image']) && !empty($gallery)) {
+            $latestImage = null;
+            $maxId = -1;
+            foreach ($gallery as $gImg) {
+                if ($gImg['id'] > $maxId) {
+                    $maxId = $gImg['id'];
+                    $latestImage = $gImg;
+                }
+            }
+            if ($latestImage) {
+                $mainImagePath = $latestImage['image_path'];
+                $mainImageCaption = $latestImage['caption'];
+            }
+        }
+        
+        $newsData = [
+            'title' => $newsVer['title'],
+            'date' => $dateText,
+            'isEvent' => $isEvent,
+            'image' => $mainImagePath ? $mainImagePath : '',
+            'image_caption' => $mainImageCaption,
+            'content' => $newsVer['content'],
+            'gallery' => $gallery
+        ];
+        
+        echo "<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof openNewsModal === 'function') {
+                openNewsModal(" . json_encode($newsData) . ");
+            }
+        });
+        </script>";
+    }
+}
+?>
+
 <?php require_once 'inc/footer.php'; ?>
