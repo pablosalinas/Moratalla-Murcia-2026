@@ -51,6 +51,9 @@ if ($action == 'save') {
     $category_id_2 = isset($_POST['category_id_2']) && $_POST['category_id_2'] !== '' ? $_POST['category_id_2'] : null;
     $category_id_3 = isset($_POST['category_id_3']) && $_POST['category_id_3'] !== '' ? $_POST['category_id_3'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
+    $icon = isset($_POST['icon']) ? $_POST['icon'] : null;
+    $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
+    $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     
     if (empty($title)) {
         header("Location: pages.php?msg=" . urlencode("Error: El título es obligatorio."));
