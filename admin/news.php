@@ -612,7 +612,7 @@ adminHeader("Noticias y Eventos");
             
             <div style="margin-bottom: 1.5rem;">
                 <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Contenido</label>
-                <textarea name="content" required style="width:100%; height: 200px; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; font-family: inherit;"><?php echo htmlspecialchars($news_data['content']); ?></textarea>
+                <textarea id="news_content" name="content" style="width:100%; height: 200px; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; font-family: inherit;"><?php echo htmlspecialchars($news_data['content']); ?></textarea>
             </div>
             
             <div style="margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -930,6 +930,29 @@ adminHeader("Noticias y Eventos");
         to { background: #ecfdf5; border-color: #10b981; }
     }
     </style>
+
+    <!-- TinyMCE Visual Editor -->
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        tinymce.init({
+            selector: '#news_content',
+            language: 'es',
+            plugins: 'code lists link image table media help wordcount fullscreen',
+            toolbar: 'undo redo | fontfamily fontsize blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | link image media table | fullscreen code',
+            height: 500,
+            menubar: false,
+            valid_elements: '*[*]',
+            extended_valid_elements: '*[*]',
+            valid_children: '+body[style],+div[style]',
+            cleanup: false,
+            verify_html: false,
+            entity_encoding: "raw",
+            promotion: false, // hide 'upgrade' button
+            branding: false // hide 'Powered by TinyMCE'
+        });
+    });
+    </script>
 <?php endif; ?>
 
 <?php adminFooter(); ?>
