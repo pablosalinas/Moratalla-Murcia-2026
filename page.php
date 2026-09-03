@@ -165,6 +165,79 @@ if ($isSinglePageCategory) {
             </div>
         <?php endif; ?>
 
+        <!-- Audio Player Section -->
+        <?php
+        $aStmt = $pdo->prepare("SELECT * FROM page_audios WHERE page_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC");
+        $aStmt->execute([$id]);
+        $audios = $aStmt->fetchAll();
+        if (count($audios) > 0): ?>
+            <div class="audio-player-wrapper" style="margin-bottom: 3rem; background: rgba(27,67,50,0.03); padding: 2rem; border-radius: 20px; border: 1px solid rgba(27,67,50,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.02);">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.3rem; border-left: 4px solid var(--accent); padding-left: 1rem; color: #1B4332; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-headphones" style="color: var(--accent);"></i> Audios de esta página</h3>
+                
+                <div class="audio-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <?php foreach ($audios as $aud): 
+                        $coverImg = $aud['cover_path'] ? $aud['cover_path'] : "uploads/theme/default_audio_cover.jpg";
+                    ?>
+                        <div class="audio-card" style="display: flex; gap: 1.5rem; background: white; padding: 1.5rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #f0f0f0; align-items: center;">
+                            <div class="audio-cover-wrapper" style="width: 100px; height: 100px; flex-shrink: 0; border-radius: 50%; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.15); position: relative; border: 4px solid #1B4332; background: #000;">
+                                <div class="audio-cover" style="width: 100%; height: 100%; transition: transform 0.3s ease;">
+                                    <img src="<?php echo htmlspecialchars($coverImg); ?>" onerror="this.src='https://via.placeholder.com/150/1B4332/FFFFFF?text=Audio'" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85;">
+                                </div>
+                                <div class="vinyl-hole" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px; background: white; border-radius: 50%; box-shadow: inset 0 2px 5px rgba(0,0,0,0.4), 0 0 0 4px #1B4332;"></div>
+                            </div>
+                            <div class="audio-info" style="flex: 1;">
+                                <?php if (!empty($aud['title'])): ?>
+                                    <h4 style="margin: 0 0 0.8rem 0; font-size: 1.15rem; font-weight: 700; color: #1B4332; text-transform: uppercase; letter-spacing: 0.5px;"><?php echo htmlspecialchars($aud['title']); ?></h4>
+                                <?php endif; ?>
+                                <audio controls preload="metadata" style="width: 100%; height: 45px; outline: none;" onplay="this.closest('.audio-card').classList.add('playing')" onpause="this.closest('.audio-card').classList.remove('playing')">
+                                    <source src="<?php echo htmlspecialchars($aud['audio_path']); ?>">
+                                    Tu navegador no soporta el elemento de audio.
+                                </audio>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            
+            <style>
+                .audio-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 15px 30px rgba(27,67,50,0.15) !important;
+                    border-color: rgba(27,67,50,0.3);
+                }
+                .audio-card.playing .audio-cover {
+                    animation: spinVinyl 4s linear infinite;
+                }
+                @keyframes spinVinyl {
+                    100% { transform: rotate(360deg); }
+                }
+                audio::-webkit-media-controls-panel {
+                    background-color: #f1f5f3;
+                    border-radius: 25px;
+                }
+                audio::-webkit-media-controls-play-button,
+                audio::-webkit-media-controls-mute-button {
+                    background-color: rgba(27,67,50,0.15);
+                    border-radius: 50%;
+                    transition: background-color 0.2s;
+                }
+                audio::-webkit-media-controls-play-button:hover,
+                audio::-webkit-media-controls-mute-button:hover {
+                    background-color: rgba(27,67,50,0.3);
+                }
+                audio::-webkit-media-controls-current-time-display,
+                audio::-webkit-media-controls-time-remaining-display {
+                    font-family: 'Inter', system-ui, sans-serif;
+                    color: #1B4332;
+                    font-weight: 600;
+                }
+                @media (max-width: 768px) {
+                    .audio-card { flex-direction: column; text-align: center; gap: 1rem; padding: 1.5rem 1rem; }
+                    .audio-card .audio-cover-wrapper { width: 120px; height: 120px; }
+                }
+            </style>
+        <?php endif; ?>
+
         <article class="html-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text);">
             <?php echo $page['content']; ?>
         </article>

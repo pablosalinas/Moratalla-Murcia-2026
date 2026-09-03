@@ -15,6 +15,22 @@ try {
     $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(50) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
 }
 
+// Auto-migración de tabla page_audios
+try {
+    $pdo->query("SELECT 1 FROM page_audios LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `page_audios` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `page_id` INT NOT NULL,
+        `audio_path` VARCHAR(255) NOT NULL,
+        `cover_path` VARCHAR(255) DEFAULT NULL,
+        `title` VARCHAR(255) DEFAULT NULL,
+        `sort_order` INT DEFAULT 0,
+        `is_visible` TINYINT(1) DEFAULT 1,
+        FOREIGN KEY (`page_id`) REFERENCES `pages`(`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+}
+
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 
 // Función para generar slugs limpios
@@ -107,6 +123,34 @@ if ($action == 'save') {
         }
     }
     
+    // Subida de Audio (si hay)
+    if (isset($_FILES['audio_file']) && $_FILES['audio_file']['error'] == UPLOAD_ERR_OK) {
+        $uploadDir = '../uploads/galerias/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        
+        $audioName = uniqid() . '_audio_' . basename($_FILES['audio_file']['name']);
+        $audioTarget = $uploadDir . $audioName;
+        
+        if (move_uploaded_file($_FILES['audio_file']['tmp_name'], $audioTarget)) {
+            $dbAudioPath = 'uploads/galerias/' . $audioName;
+            $dbCoverPath = null;
+            
+            // Subida de Carátula (si hay)
+            if (isset($_FILES['audio_cover']) && $_FILES['audio_cover']['error'] == UPLOAD_ERR_OK) {
+                $coverName = uniqid() . '_cover_' . basename($_FILES['audio_cover']['name']);
+                $coverTarget = $uploadDir . $coverName;
+                if (processUploadedImage($_FILES['audio_cover']['tmp_name'], $coverTarget, true, 800, 85)) {
+                    $dbCoverPath = 'uploads/galerias/' . $coverName;
+                }
+            }
+            
+            $audioTitle = isset($_POST['audio_title']) ? trim($_POST['audio_title']) : '';
+            
+            $stmtAud = $pdo->prepare("INSERT INTO page_audios (page_id, audio_path, cover_path, title) VALUES (?, ?, ?, ?)");
+            $stmtAud->execute([$id, $dbAudioPath, $dbCoverPath, $audioTitle]);
+        }
+    }
+    
     header("Location: pages.php?action=edit&id=$id&msg=" . urlencode($msg));
     exit;
 }
@@ -144,6 +188,40 @@ if ($action == 'delete_img') {
     exit;
 }
 
+if ($action == 'save_audios') {
+    $page_id = isset($_POST['page_id']) ? $_POST['page_id'] : null;
+    $audios_data = isset($_POST['audios']) ? $_POST['audios'] : [];
+    
+    if ($page_id) {
+        $stmtUpdate = $pdo->prepare("UPDATE page_audios SET title = ?, sort_order = ?, is_visible = ? WHERE id = ? AND page_id = ?");
+        foreach ($audios_data as $aud_id => $data) {
+            $title = isset($data['title']) ? $data['title'] : '';
+            $sort_order = (int)(isset($data['sort_order']) ? $data['sort_order'] : 0);
+            $is_visible = isset($data['is_visible']) ? 1 : 0;
+            $stmtUpdate->execute([$title, $sort_order, $is_visible, $aud_id, $page_id]);
+        }
+    }
+    header("Location: pages.php?action=edit&id=$page_id&msg=" . urlencode("Audios actualizados"));
+    exit;
+}
+
+if ($action == 'delete_audio') {
+    $aud_id = isset($_GET['aud_id']) ? $_GET['aud_id'] : null;
+    $page_id = isset($_GET['page_id']) ? $_GET['page_id'] : null;
+    if ($aud_id && $page_id) {
+        $stmt = $pdo->prepare("SELECT audio_path, cover_path FROM page_audios WHERE id=?");
+        $stmt->execute([$aud_id]);
+        $aud = $stmt->fetch();
+        if ($aud) {
+            if (!empty($aud['audio_path']) && is_file('../' . $aud['audio_path'])) @unlink('../' . $aud['audio_path']);
+            if (!empty($aud['cover_path']) && is_file('../' . $aud['cover_path'])) @unlink('../' . $aud['cover_path']);
+        }
+        $pdo->prepare("DELETE FROM page_audios WHERE id=?")->execute([$aud_id]);
+    }
+    header("Location: pages.php?action=edit&id=$page_id");
+    exit;
+}
+
 if ($action == 'delete') {
     $id = isset($_GET['id']) ? $_GET['id'] : null;
     if ($id) {
@@ -157,6 +235,16 @@ if ($action == 'delete') {
             }
         }
         $pdo->prepare("DELETE FROM page_images WHERE page_id=?")->execute([$id]);
+        
+        // Borrar audios físicos y de base de datos
+        $stmtAud = $pdo->prepare("SELECT audio_path, cover_path FROM page_audios WHERE page_id=?");
+        $stmtAud->execute([$id]);
+        $audios = $stmtAud->fetchAll();
+        foreach ($audios as $aud) {
+            if (!empty($aud['audio_path']) && is_file('../' . $aud['audio_path'])) @unlink('../' . $aud['audio_path']);
+            if (!empty($aud['cover_path']) && is_file('../' . $aud['cover_path'])) @unlink('../' . $aud['cover_path']);
+        }
+        $pdo->prepare("DELETE FROM page_audios WHERE page_id=?")->execute([$id]);
         
         // Borrar página
         $pdo->prepare("DELETE FROM pages WHERE id=?")->execute([$id]);
@@ -408,6 +496,25 @@ if ($action == 'list') {
                     <input type="file" name="gallery_images[]" accept="image/*,video/*" multiple style="padding: 0.5rem;">
                 </div>
 
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 2rem 0;">
+                
+                <h4><i class="fas fa-music"></i> Añadir Pista de Audio</h4>
+                <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Sube un archivo de audio (MP3, WAV, etc.) con su carátula opcional.</p>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Archivo de Audio</label>
+                        <input type="file" name="audio_file" accept="audio/*" style="padding: 0.5rem; width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Carátula (Opcional, Imagen)</label>
+                        <input type="file" name="audio_cover" accept="image/*" style="padding: 0.5rem; width: 100%;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Título del Audio (Opcional)</label>
+                        <input type="text" name="audio_title" placeholder="Ej: Entrevista a Juan, Himno..." style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;"><i class="fas fa-save"></i> Guardar Todo</button>
                 <a href="pages.php<?php echo !empty($page['id']) ? '#row-'.$page['id'] : ''; ?>" class="btn" style="background: var(--gray-200);">Volver</a>
             </form>
@@ -475,6 +582,68 @@ if ($action == 'list') {
                     </div>
                     <?php if (count($images) > 0): ?>
                         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; background: #10b981; border: none;"><i class="fas fa-save"></i> Guardar Cambios de Galería</button>
+                    <?php endif; ?>
+                </form>
+            </div>
+            
+            <!-- Audios Existentes -->
+            <div class="card" style="flex: 1; min-width: 400px; background: #fdfbf7; margin-top: 2rem;">
+                <h3><i class="fas fa-headphones"></i> Pistas de Audio Actuales</h3>
+                
+                <form method="POST" action="?action=save_audios">
+                    <input type="hidden" name="page_id" value="<?php echo $id; ?>">
+                    <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                        <?php
+                        $aStmt = $pdo->prepare("SELECT * FROM page_audios WHERE page_id = ? ORDER BY sort_order ASC, id ASC");
+                        $aStmt->execute([$id]);
+                        $audios = $aStmt->fetchAll();
+                        
+                        if (count($audios) == 0) {
+                            echo "<p style='color: #888; font-style: italic;'>No hay audios subidos.</p>";
+                        }
+                        
+                        foreach ($audios as $aud) {
+                            $isVisible = $aud['is_visible'] ? 'checked' : '';
+                            // Si no hay cover, usar un placeholder o gradiente. Usaremos algo por defecto.
+                            $coverImg = $aud['cover_path'] ? "../" . htmlspecialchars($aud['cover_path']) : "https://via.placeholder.com/80/1B4332/FFFFFF?text=Audio";
+                            ?>
+                            <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; gap: 1rem;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; max-width: 80px; flex-shrink: 0;">
+                                        <img src="<?php echo $coverImg; ?>" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                    </div>
+                                    <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <div>
+                                            <audio src="../<?php echo htmlspecialchars($aud['audio_path']); ?>" controls style="width: 100%; height: 35px;"></audio>
+                                        </div>
+                                        <div style="display: flex; gap: 1rem; align-items: center;">
+                                            <div style="flex: 1;">
+                                                <label style="font-size: 0.8rem; font-weight: 600; display: block;">Orden</label>
+                                                <input type="number" name="audios[<?php echo $aud['id']; ?>][sort_order]" value="<?php echo $aud['sort_order']; ?>" style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px;">
+                                            </div>
+                                            <div style="flex: 1; text-align: center;">
+                                                <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.2rem;">Visible</label>
+                                                <input type="checkbox" name="audios[<?php echo $aud['id']; ?>][is_visible]" value="1" <?php echo $isVisible; ?> style="transform: scale(1.5);">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.8rem; font-weight: 600; display: block;">Título / Descripción</label>
+                                    <input type="text" name="audios[<?php echo $aud['id']; ?>][title]" value="<?php echo htmlspecialchars(isset($aud['title']) ? $aud['title'] : ''); ?>" style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px;">
+                                </div>
+                                <div style="text-align: right; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; margin-top: 0.5rem;">
+                                    <a href="?action=delete_audio&aud_id=<?php echo $aud['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar este audio y su carátula?');" style="color: #d32f2f; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+                                        <i class="fas fa-trash"></i> Eliminar Audio
+                                    </a>
+                                </div>
+                            </div>
+                            <?php
+                        }
+                        ?>
+                    </div>
+                    <?php if (count($audios) > 0): ?>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; background: #10b981; border: none;"><i class="fas fa-save"></i> Guardar Cambios de Audios</button>
                     <?php endif; ?>
                 </form>
             </div>
