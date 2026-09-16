@@ -1,6 +1,8 @@
 # Uploads de usuarios (imágenes subidas desde admin)
-uploads/
+uploads/*
 !uploads/theme/
+!uploads/icons/
+!uploads/icons/.gitkeep
 
 # Archivos de entorno con credenciales reales
 .env

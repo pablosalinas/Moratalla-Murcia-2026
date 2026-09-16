@@ -2,6 +2,7 @@
 // admin/external_links.php
 require_once 'inc/auth.php';
 require_once 'inc/layout.php';
+require_once 'inc/icon_helper.php';
 require_once '../config.php';
 
 $pdo = getDB();
@@ -16,7 +17,7 @@ try { $pdo->query("SELECT show_in_category FROM external_links LIMIT 1"); }
 catch (PDOException $e) { $pdo->exec("ALTER TABLE external_links ADD COLUMN show_in_category TINYINT(1) DEFAULT 0"); }
 
 try { $pdo->query("SELECT icon FROM external_links LIMIT 1"); } 
-catch (PDOException $e) { $pdo->exec("ALTER TABLE external_links ADD COLUMN icon VARCHAR(50) NULL DEFAULT '🔗' AFTER show_in_category"); }
+catch (PDOException $e) { $pdo->exec("ALTER TABLE external_links ADD COLUMN icon VARCHAR(255) NULL DEFAULT '🔗' AFTER show_in_category"); }
 
 // ─── Acciones POST ───────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,6 +32,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
         $show_in_category = isset($_POST['show_in_category']) ? 1 : 0;
         $icon = $_POST['icon'] ?? '🔗';
+
+        $uploadError = null;
+        $uploadedIconName = handleIconUpload('icon_file', $uploadError);
+        if ($uploadedIconName) {
+            $icon = $uploadedIconName;
+        } elseif ($uploadError) {
+            $message = $uploadError;
+            $messageType = 'error';
+        }
 
         if (empty($title) || empty($url)) {
             $message     = 'El título y la URL son obligatorios.';
@@ -80,64 +90,7 @@ $cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchA
 
 // ─── Iconos ──────────────────────────────────────────────────────────────────
 $usedIcons = $pdo->query("SELECT DISTINCT icon FROM external_links WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
-$defaultIcons = [
-    '📄' => '📄 Página genérica',
-    'ℹ️' => 'ℹ️ Información',
-    '🏛️' => '🏛️ Patrimonio / Historia',
-    '🌳' => '🌳 Naturaleza',
-    '📷' => '📷 Fotografía',
-    '🎵' => '🎵 Música',
-    '⚽' => '⚽ Deportes',
-    '⛪' => '⛪ Iglesia',
-    '✝️' => '✝️ Religión',
-    '📰' => '📰 Noticias',
-    '👥' => '👥 Asociaciones',
-    '📖' => '📖 Cultura / Lectura',
-    '🕰️' => '🕰️ Historia (Reloj)',
-    '🎥' => '🎥 Vídeo',
-    '🖼️' => '🖼️ Galería',
-    '🗺️' => '🗺️ Mapa / Rutas',
-    '⭐' => '⭐ Destacado',
-    '❤️' => '❤️ Favorito',
-    '🍽️' => '🍽️ Gastronomía',
-    '🛏️' => '🛏️ Alojamiento',
-    '🏀' => '🏀 Baloncesto',
-    '🏺' => '🏺 Artesanía',
-    '🧺' => '🧺 Esparto',
-    '🎨' => '🎨 Pintura',
-    '🚴' => '🚴 Ciclismo',
-    '🚗' => '🚗 Automóvil',
-    '🏫' => '🏫 Escuelas',
-    '🎒' => '🎒 Colegios',
-    '🎓' => '🎓 Institutos',
-    '🏢' => '🏢 Servicios Municipales',
-    '✉️' => '✉️ Contacto',
-    '🧳' => '🧳 Turismo',
-    '🍻' => '🍻 Bares y Restaurantes',
-    '🏰' => '🏰 Castillo',
-    '🪨' => '🪨 Arte Rupestre',
-    '⛰️' => '⛰️ Montes y Montañas',
-    '🛤️' => '🛤️ Rutas',
-    '🥁' => '🥁 Tambor',
-    '🐂' => '🐂 Tauromaquia',
-    '🎉' => '🎉 Fiestas / Celebraciones',
-    '🔗' => '🔗 Enlace Externo'
-];
-$allIconsOptions = $defaultIcons;
-foreach ($usedIcons as $uIcon) {
-    if (!isset($allIconsOptions[$uIcon])) {
-        $allIconsOptions[$uIcon] = $uIcon;
-    }
-}
-uasort($allIconsOptions, function($a, $b) {
-    $textA = trim(mb_substr($a, mb_strpos($a, ' ') !== false ? mb_strpos($a, ' ') : 0));
-    $textB = trim(mb_substr($b, mb_strpos($b, ' ') !== false ? mb_strpos($b, ' ') : 0));
-    $search  = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
-    $replace = ['A','E','I','O','U','a','e','i','o','u'];
-    $textA = str_replace($search, $replace, $textA);
-    $textB = str_replace($search, $replace, $textB);
-    return strcasecmp($textA, $textB);
-});
+$allIconsOptions = getConsolidatedIconOptions($pdo, $usedIcons);
 
 adminHeader("Accesos Externos / Curiosidades");
 ?>
@@ -312,7 +265,19 @@ adminHeader("Accesos Externos / Curiosidades");
                 <tr>
                     <td style="color: #aaa; font-weight: 600;"><?php echo $link['id']; ?></td>
                     <td>
-                        <span style="margin-right: 5px; font-size: 1.1rem;"><?php echo htmlspecialchars($link['icon'] ?? '🔗'); ?></span>
+                        <?php 
+                        $lIcon = !empty($link['icon']) ? $link['icon'] : '🔗';
+                        $isImg = preg_match('/\.(svg|png|jpg|jpeg|webp|gif)$/i', $lIcon);
+                        if ($isImg) {
+                            $src = (strpos($lIcon, 'uploads/') === 0) ? '../' . $lIcon : '../uploads/icons/' . $lIcon;
+                            echo "<img src='" . htmlspecialchars($src) . "' style='width: 18px; height: 18px; object-fit: contain; vertical-align: middle; margin-right: 6px;'>";
+                        } elseif (strpos($lIcon, 'fa-') !== false) {
+                            $pfx = (strpos($lIcon, 'fas ') === false && strpos($lIcon, 'far ') === false && strpos($lIcon, 'fab ') === false) ? 'fas ' : '';
+                            echo "<i class='{$pfx}" . htmlspecialchars($lIcon) . "' style='margin-right: 6px; color: #d4af37;'></i>";
+                        } else {
+                            echo "<span style='margin-right: 6px; font-size: 1.1rem; vertical-align: middle;'>" . htmlspecialchars($lIcon) . "</span>";
+                        }
+                        ?>
                         <strong><?php echo htmlspecialchars($link['title']); ?></strong>
                     </td>
                     <td style="color: #666; font-size: 0.88rem;"><?php echo htmlspecialchars(mb_strimwidth($link['description'] ?? '', 0, 80, '...')); ?></td>
@@ -383,7 +348,7 @@ adminHeader("Accesos Externos / Curiosidades");
             <?php echo $editItem ? 'Editar Acceso Externo' : 'Nuevo Acceso Externo'; ?>
         </h3>
 
-        <form method="POST" id="el-form">
+        <form method="POST" id="el-form" enctype="multipart/form-data">
             <input type="hidden" name="action" value="<?php echo $editItem ? 'update' : 'create'; ?>">
             <?php if ($editItem): ?>
                 <input type="hidden" name="id" value="<?php echo $editItem['id']; ?>">
@@ -417,32 +382,7 @@ adminHeader("Accesos Externos / Curiosidades");
                 
                 <div class="form-group full">
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Icono para el Menú</label>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                        <?php $currentIcon = !empty($editItem['icon']) ? $editItem['icon'] : '🔗'; ?>
-                        <input type="hidden" name="icon" id="elIconInput" value="<?php echo htmlspecialchars($currentIcon); ?>">
-                        
-                        <div style="flex: 1; min-width: 250px;">
-                            <select id="iconSelect" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white; cursor: pointer;">
-                                <?php
-                                $iconFound = false;
-                                foreach ($allIconsOptions as $iconVal => $iconLabel) {
-                                    $selected = ($currentIcon === $iconVal) ? 'selected' : '';
-                                    if ($selected) $iconFound = true;
-                                    echo "<option value=\"" . htmlspecialchars($iconVal) . "\" {$selected}>" . htmlspecialchars($iconLabel) . "</option>";
-                                }
-                                if (!$iconFound && !empty($currentIcon)) {
-                                    echo "<option value=\"" . htmlspecialchars($currentIcon) . "\" selected>" . htmlspecialchars($currentIcon) . " (Actual)</option>";
-                                }
-                                ?>
-                                <option value="_custom_">✏️ Escribir Emoji / Icono Manual...</option>
-                            </select>
-                        </div>
-                        
-                        <div id="customIconDiv" style="display: none; flex: 1; min-width: 200px; display: flex; align-items: center; gap: 5px;">
-                            <input type="text" id="customIconInput" placeholder="Ej: 🍕 o fas fa-star" value="<?php echo htmlspecialchars($currentIcon); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                            <button type="button" id="applyCustomIcon" class="btn" style="background: var(--primary); color: white; padding: 0.8rem; border-radius: 8px;"><i class="fas fa-check"></i></button>
-                        </div>
-                    </div>
+                    <?php renderIconPickerField($editItem['icon'] ?? '🔗', $allIconsOptions, 'icon', 'elIconInput', 'Selecciona un emoji/icono predefinido, escribe uno manual o sube directamente un archivo .svg o .png.'); ?>
                 </div>
 
                 <div class="form-group" style="background: #f8f9fa; padding: 1.2rem; border-radius: 8px; border: 1px solid #e9ecef; display: flex; flex-direction: column; justify-content: center;">
@@ -499,49 +439,6 @@ const lbl = document.getElementById('vis-label');
 if (chk && lbl) {
     chk.addEventListener('change', () => {
         lbl.textContent = chk.checked ? 'Visible en la web pública' : 'Oculto (no aparece en la web)';
-    });
-}
-
-// Icon logic
-const iconSelect = document.getElementById('iconSelect');
-const customIconDiv = document.getElementById('customIconDiv');
-const elIconInput = document.getElementById('elIconInput');
-const customIconInput = document.getElementById('customIconInput');
-const applyCustomIcon = document.getElementById('applyCustomIcon');
-
-if(iconSelect && customIconDiv && elIconInput) {
-    iconSelect.addEventListener('change', function() {
-        if (iconSelect.value === '_custom_') {
-            customIconDiv.style.display = 'flex';
-            customIconInput.focus();
-        } else {
-            customIconDiv.style.display = 'none';
-            elIconInput.value = iconSelect.value;
-        }
-    });
-    if (iconSelect.value === '_custom_') customIconDiv.style.display = 'flex';
-    
-    applyCustomIcon.addEventListener('click', function() {
-        const val = customIconInput.value.trim();
-        if (val) {
-            elIconInput.value = val;
-            let exists = false;
-            for (let i = 0; i < iconSelect.options.length; i++) {
-                if (iconSelect.options[i].value === val) {
-                    iconSelect.selectedIndex = i;
-                    exists = true;
-                    break;
-                }
-            }
-            if (!exists) {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.text = val;
-                iconSelect.insertBefore(opt, iconSelect.options[iconSelect.options.length - 1]);
-                iconSelect.value = val;
-            }
-            customIconDiv.style.display = 'none';
-        }
     });
 }
 

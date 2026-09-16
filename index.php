@@ -291,7 +291,11 @@ if (count($externalLinks) > 0):
                 <div class="curiosidad-icon" style="background:<?php echo $p['bg']; ?>; color:<?php echo $p['color']; ?>;">
                     <?php
                     $cardIcon = !empty($el['icon']) ? htmlspecialchars($el['icon']) : $p['icon'];
-                    if (strpos($cardIcon, 'fa-') !== false) {
+                    $lowerCard = strtolower($cardIcon);
+                    if (preg_match('/\.(svg|png|jpg|jpeg|webp|gif)$/i', $lowerCard)) {
+                        $src = (strpos($cardIcon, 'uploads/') === 0 || strpos($cardIcon, 'http') === 0) ? $cardIcon : 'uploads/icons/' . $cardIcon;
+                        echo '<img src="' . htmlspecialchars($src) . '" alt="Icon" style="width: 24px; height: 24px; object-fit: contain;">';
+                    } elseif (strpos($cardIcon, 'fa-') !== false) {
                         echo '<i class="' . (strpos($cardIcon, 'fas ') === false && strpos($cardIcon, 'far ') === false && strpos($cardIcon, 'fab ') === false ? 'fas ' : '') . $cardIcon . '"></i>';
                     } else {
                         echo '<span style="font-size: 1.2em;">' . $cardIcon . '</span>';

@@ -4,6 +4,7 @@ require_once 'inc/auth.php';
 checkAuth();
 require_once '../config.php';
 require_once 'inc/layout.php';
+require_once 'inc/icon_helper.php';
 
 $pdo = getDB();
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
@@ -46,6 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hint_text = isset($_POST['hint_text']) ? trim($_POST['hint_text']) : null;
         $show_hint = isset($_POST['show_hint']) ? 1 : 0;
         $icon = $_POST['icon'] ?? '📁';
+
+        // Si se ha subido un archivo de icono (.svg o .png)
+        $uploadError = null;
+        $uploadedIconName = handleIconUpload('icon_file', $uploadError);
+        if ($uploadedIconName) {
+            $icon = $uploadedIconName;
+        } elseif ($uploadError) {
+            $error = $uploadError;
+        }
         
         if (empty($parent_id)) {
             $parent_id = null;
@@ -121,7 +131,19 @@ function renderCategoryTree($parentId = null, $depth = 0) {
                 <?php if ($depth > 0): ?>
                     <span style="color: var(--gray-300); font-weight: bold;">&mdash;</span>
                 <?php endif; ?>
-                <i class="fas fa-folder" style="color: var(--accent); font-size: 1.1rem;"></i>
+                <?php 
+                $cIcon = !empty($cat['icon']) ? $cat['icon'] : '📁';
+                $isImg = preg_match('/\.(svg|png|jpg|jpeg|webp|gif)$/i', $cIcon);
+                if ($isImg) {
+                    $src = (strpos($cIcon, 'uploads/') === 0) ? '../' . $cIcon : '../uploads/icons/' . $cIcon;
+                    echo "<img src='" . htmlspecialchars($src) . "' style='width: 18px; height: 18px; object-fit: contain; vertical-align: middle;'>";
+                } elseif (strpos($cIcon, 'fa-') !== false) {
+                    $pfx = (strpos($cIcon, 'fas ') === false && strpos($cIcon, 'far ') === false && strpos($cIcon, 'fab ') === false) ? 'fas ' : '';
+                    echo "<i class='{$pfx}" . htmlspecialchars($cIcon) . "' style='color: var(--accent); font-size: 1.1rem;'></i>";
+                } else {
+                    echo "<span style='font-size: 1.1rem;'>" . htmlspecialchars($cIcon) . "</span>";
+                }
+                ?>
                 <strong style="color: var(--primary);"><?php echo htmlspecialchars($cat['name']); ?></strong>
                 <small style="color: #7f8c8d; font-family: monospace;">(<?php echo htmlspecialchars($cat['slug']); ?>)</small>
                 <span class="badge badge-info" style="font-size: 0.7rem; background: var(--gray-100);">Orden: <?php echo $cat['sort_order']; ?></span>
@@ -239,68 +261,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
     
     // Obtener iconos ya usados en categorías
     $usedIcons = $pdo->query("SELECT DISTINCT icon FROM categories WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
-    $defaultIcons = [
-        '📄' => '📄 Página genérica',
-        'ℹ️' => 'ℹ️ Información',
-        '🏛️' => '🏛️ Patrimonio / Historia',
-        '🌳' => '🌳 Naturaleza',
-        '📷' => '📷 Fotografía',
-        '🎵' => '🎵 Música',
-        '⚽' => '⚽ Deportes',
-        '⛪' => '⛪ Iglesia',
-        '✝️' => '✝️ Religión',
-        '📰' => '📰 Noticias',
-        '👥' => '👥 Asociaciones',
-        '📖' => '📖 Cultura / Lectura',
-        '🕰️' => '🕰️ Historia (Reloj)',
-        '🎥' => '🎥 Vídeo',
-        '🖼️' => '🖼️ Galería',
-        '🗺️' => '🗺️ Mapa / Rutas',
-        '⭐' => '⭐ Destacado',
-        '❤️' => '❤️ Favorito',
-        '🍽️' => '🍽️ Gastronomía',
-        '🛏️' => '🛏️ Alojamiento',
-        '🏀' => '🏀 Baloncesto',
-        '🏺' => '🏺 Artesanía',
-        '🧺' => '🧺 Esparto',
-        '🎨' => '🎨 Pintura',
-        '🚴' => '🚴 Ciclismo',
-        '🚗' => '🚗 Automóvil',
-        '🏫' => '🏫 Escuelas',
-        '🎒' => '🎒 Colegios',
-        '🎓' => '🎓 Institutos',
-        '🏢' => '🏢 Servicios Municipales',
-        '✉️' => '✉️ Contacto',
-        '🧳' => '🧳 Turismo',
-        '🍻' => '🍻 Bares y Restaurantes',
-        '🏰' => '🏰 Castillo',
-        '🪨' => '🪨 Arte Rupestre',
-        '⛰️' => '⛰️ Montes y Montañas',
-        '🛤️' => '🛤️ Rutas',
-        '🥁' => '🥁 Tambor',
-        '🐂' => '🐂 Tauromaquia',
-        '🎉' => '🎉 Fiestas / Celebraciones'
-    ];
-    
-    // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
-    $allIconsOptions = $defaultIcons;
-    foreach ($usedIcons as $uIcon) {
-        if (!isset($allIconsOptions[$uIcon])) {
-            $allIconsOptions[$uIcon] = $uIcon; // Si es un "fas fa-star", se muestra tal cual
-        }
-    }
-    // Ordenar alfabéticamente por el nombre (valor) ignorando el emoji inicial
-    uasort($allIconsOptions, function($a, $b) {
-        $textA = trim(mb_substr($a, mb_strpos($a, ' ') !== false ? mb_strpos($a, ' ') : 0));
-        $textB = trim(mb_substr($b, mb_strpos($b, ' ') !== false ? mb_strpos($b, ' ') : 0));
-        
-        $search  = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
-        $replace = ['A','E','I','O','U','a','e','i','o','u'];
-        $textA = str_replace($search, $replace, $textA);
-        $textB = str_replace($search, $replace, $textB);
-        
-        return strcasecmp($textA, $textB);
-    });
+    $allIconsOptions = getConsolidatedIconOptions($pdo, $usedIcons);
 ?>
     <div class="card" style="max-width: 600px; margin: 0 auto;">
         <h3 style="color: var(--primary); margin-bottom: 0.5rem;">
@@ -308,7 +269,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
         </h3>
         <p style="color: #666; font-size: 0.85rem; margin-bottom: 2rem;">Rellena los datos para configurar la categoría del sistema.</p>
         
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($cat_data['id']); ?>">
             
             <div style="margin-bottom: 1.5rem;">
@@ -333,88 +294,7 @@ function renderCategoryOptions($excludeId = null, $parentId = null, $depth = 0, 
             
             <div style="margin-bottom: 1.5rem;">
                 <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Icono para el Menú (Aparecerá junto al título en el desplegable)</label>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                    <?php $currentIcon = !empty($cat_data['icon']) ? $cat_data['icon'] : '📁'; ?>
-                    <input type="hidden" name="icon" id="catIconInput" value="<?php echo htmlspecialchars($currentIcon); ?>">
-                    
-                    <!-- Select inteligente -->
-                    <div style="flex: 1; min-width: 250px;">
-                        <select id="iconSelect" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white; cursor: pointer;">
-                            <?php
-                            $iconFound = false;
-                            foreach ($allIconsOptions as $iconVal => $iconLabel) {
-                                $selected = ($currentIcon === $iconVal) ? 'selected' : '';
-                                if ($selected) $iconFound = true;
-                                echo "<option value=\"" . htmlspecialchars($iconVal) . "\" {$selected}>" . htmlspecialchars($iconLabel) . "</option>";
-                            }
-                            
-                            // Si tiene un icono raro (ej antiguo fontawesome) no listado
-                            if (!$iconFound && !empty($currentIcon)) {
-                                echo "<option value=\"" . htmlspecialchars($currentIcon) . "\" selected>" . htmlspecialchars($currentIcon) . " (Actual)</option>";
-                            }
-                            ?>
-                            <option value="_custom_">✏️ Escribir Emoji / Icono Manual...</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Input manual oculto por defecto -->
-                    <div id="customIconDiv" style="display: none; flex: 1; min-width: 200px; display: flex; align-items: center; gap: 5px;">
-                        <input type="text" id="customIconInput" placeholder="Ej: 🍕 o fas fa-star" value="<?php echo htmlspecialchars($currentIcon); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                        <button type="button" id="applyCustomIcon" class="btn" style="background: var(--primary); color: white; padding: 0.8rem; border-radius: 8px;"><i class="fas fa-check"></i></button>
-                    </div>
-                </div>
-                <small style="color: #666; display: block; margin-top: 0.4rem;">Los iconos de categoría solo se muestran visualmente cuando la categoría es una subcategoría de otra (es decir, cuando aparece dentro de un menú desplegable).</small>
-                
-                <script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    const iconSelect = document.getElementById('iconSelect');
-                    const customIconDiv = document.getElementById('customIconDiv');
-                    const catIconInput = document.getElementById('catIconInput');
-                    const customIconInput = document.getElementById('customIconInput');
-                    const applyCustomIcon = document.getElementById('applyCustomIcon');
-                    
-                    if(iconSelect && customIconDiv && catIconInput && customIconInput && applyCustomIcon) {
-                        function toggleCustom() {
-                            if (iconSelect.value === '_custom_') {
-                                customIconDiv.style.display = 'flex';
-                                customIconInput.focus();
-                            } else {
-                                customIconDiv.style.display = 'none';
-                                catIconInput.value = iconSelect.value;
-                            }
-                        }
-                        
-                        iconSelect.addEventListener('change', toggleCustom);
-                        
-                        if (iconSelect.value === '_custom_') {
-                            customIconDiv.style.display = 'flex';
-                        }
-                        
-                        applyCustomIcon.addEventListener('click', function() {
-                            const val = customIconInput.value.trim();
-                            if (val) {
-                                catIconInput.value = val;
-                                
-                                let exists = false;
-                                for (let i = 0; i < iconSelect.options.length; i++) {
-                                    if (iconSelect.options[i].value === val) {
-                                        iconSelect.selectedIndex = i;
-                                        exists = true;
-                                        break;
-                                    }
-                                }
-                                
-                                if (!exists) {
-                                    const newOption = new Option(val + ' (Personalizado)', val, true, true);
-                                    iconSelect.insertBefore(newOption, iconSelect.options[iconSelect.options.length - 1]);
-                                }
-                                
-                                customIconDiv.style.display = 'none';
-                            }
-                        });
-                    }
-                });
-                </script>
+                <?php renderIconPickerField($cat_data['icon'] ?? '📁', $allIconsOptions, 'icon', 'catIconInput', 'Selecciona un emoji/icono predefinido, escribe uno manual o sube directamente un archivo .svg o .png.'); ?>
             </div>
             
             <div style="margin-bottom: 1.5rem;">

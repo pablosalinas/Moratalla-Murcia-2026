@@ -37,6 +37,8 @@ if (!$isLoginPage) {
                 <li><a href="categories.php">Menú y Submenús</a></li>
                 <li><a href="images.php">Galería de Imágenes</a></li>
                 <li><a href="news.php">Noticias y Eventos</a></li>
+                <li><a href="external_links.php">Accesos Externos</a></li>
+                <li><a href="icons.php">Gestor de Iconos</a></li>
                 <li><a href="users.php">Usuarios</a></li>
                 <br>
                 <li style="padding-left: 1rem; color: rgba(255,255,255,0.4); font-size: 0.7rem; text-transform: uppercase;">Ajustes</li>

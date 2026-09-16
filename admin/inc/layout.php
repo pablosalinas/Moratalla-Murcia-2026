@@ -55,6 +55,7 @@ function adminHeader($title = "Admin Panel") {
                 <a href="restaurantes.php" class="nav-link"><i class="fas fa-utensils"></i> Bares y Restaurantes</a>
                 <a href="alojamientos.php" class="nav-link"><i class="fas fa-hotel"></i> Alojamientos</a>
                 <a href="external_links.php" class="nav-link"><i class="fas fa-external-link-alt"></i> Accesos Externos</a>
+                <a href="icons.php" class="nav-link"><i class="fas fa-icons"></i> Gestor de Iconos</a>
                 <a href="users.php" class="nav-link"><i class="fas fa-users-cog"></i> Usuarios</a>
                 <div class="nav-divider"></div>
                 <a href="manual.php" class="nav-link"><i class="fas fa-book"></i> Manual de Usuario</a>

@@ -121,7 +121,7 @@ require_once 'inc/header.php';
             <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 4rem;">
                 <?php foreach ($subcategories as $sub): ?>
                     <a href="category.php?id=<?php echo $sub['id']; ?>" class="btn-creative">
-                        <i class="<?php echo getCategoryIcon($sub['name']); ?>"></i>
+                        <?php echo renderItemIcon($sub['icon'] ?? getCategoryIcon($sub['name']), '📁'); ?>
                         <span><?php echo htmlspecialchars($sub['name']); ?></span>
                     </a>
                 <?php endforeach; ?>
@@ -200,14 +200,14 @@ require_once 'inc/header.php';
             <div class="grid-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
                 <?php foreach ($pages as $p): ?>
                     <a href="page.php?id=<?php echo $p['id']; ?>" class="btn-creative" style="border-left: 6px solid var(--primary);">
-                        <i class="far fa-file-alt" style="color: var(--primary);"></i>
+                        <?php echo renderItemIcon($p['icon'] ?? '', '📄'); ?>
                         <span><?php echo htmlspecialchars($p['title']); ?></span>
                     </a>
                 <?php endforeach; ?>
                 
                 <?php foreach ($externalLinks as $el): ?>
                     <a href="<?php echo htmlspecialchars($el['url']); ?>" target="_blank" rel="noopener" class="btn-creative" style="border-left: 6px solid #d4af37; background: #fffcf2;">
-                        <i class="fas fa-external-link-alt" style="color: #d4af37;"></i>
+                        <?php echo renderItemIcon($el['icon'] ?? '', '🔗', 'color: #d4af37;'); ?>
                         <span><?php echo htmlspecialchars($el['title']); ?></span>
                     </a>
                 <?php endforeach; ?>

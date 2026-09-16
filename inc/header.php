@@ -13,29 +13,41 @@ try {
     // Auto-migración global: asegurar que existe la columna icon en pages
     try {
         $pdo->query("SELECT icon FROM pages LIMIT 1");
+        $pdo->exec("ALTER TABLE pages MODIFY COLUMN icon VARCHAR(255) NULL DEFAULT 'far fa-file-alt'");
     } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(50) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
+        try {
+            $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(255) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
+        } catch (PDOException $ex) {}
     }
 
     // Auto-migración global: asegurar que existe la columna icon en news_events
     try {
         $pdo->query("SELECT icon FROM news_events LIMIT 1");
+        $pdo->exec("ALTER TABLE news_events MODIFY COLUMN icon VARCHAR(255) NULL DEFAULT '📰'");
     } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE news_events ADD COLUMN icon VARCHAR(50) NULL DEFAULT '📰' AFTER category_id");
+        try {
+            $pdo->exec("ALTER TABLE news_events ADD COLUMN icon VARCHAR(255) NULL DEFAULT '📰' AFTER category_id");
+        } catch (PDOException $ex) {}
     }
 
     // Auto-migración global: asegurar que existe la columna icon en categories
     try {
         $pdo->query("SELECT icon FROM categories LIMIT 1");
+        $pdo->exec("ALTER TABLE categories MODIFY COLUMN icon VARCHAR(255) NULL DEFAULT '📁'");
     } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL DEFAULT '📁' AFTER parent_id");
+        try {
+            $pdo->exec("ALTER TABLE categories ADD COLUMN icon VARCHAR(255) NULL DEFAULT '📁' AFTER parent_id");
+        } catch (PDOException $ex) {}
     }
 
     // Auto-migración global: asegurar que existe la columna icon en external_links
     try {
         $pdo->query("SELECT icon FROM external_links LIMIT 1");
+        $pdo->exec("ALTER TABLE external_links MODIFY COLUMN icon VARCHAR(255) NULL DEFAULT '🔗'");
     } catch (PDOException $e) {
-        $pdo->exec("ALTER TABLE external_links ADD COLUMN icon VARCHAR(50) NULL DEFAULT '🔗' AFTER show_in_category");
+        try {
+            $pdo->exec("ALTER TABLE external_links ADD COLUMN icon VARCHAR(255) NULL DEFAULT '🔗' AFTER show_in_category");
+        } catch (PDOException $ex) {}
     }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
@@ -184,6 +196,26 @@ function getCategoryIcon($name) {
     
     return 'fas fa-folder-open';
 }
+
+function renderItemIcon($iconVal, $default = '📄', $extraStyle = '') {
+    $icon = !empty($iconVal) ? trim($iconVal) : $default;
+    $lower = strtolower($icon);
+    
+    // Si es un archivo de imagen (SVG, PNG, JPG, WEBP, GIF)
+    if (preg_match('/\.(svg|png|jpg|jpeg|webp|gif)$/i', $lower)) {
+        $src = (strpos($icon, 'uploads/') === 0 || strpos($icon, 'http') === 0) ? $icon : 'uploads/icons/' . $icon;
+        return "<img src='" . htmlspecialchars($src) . "' alt='Icon' class='menu-custom-icon' style='width: 18px; height: 18px; object-fit: contain; vertical-align: middle; margin-right: 8px; display: inline-block; {$extraStyle}'>";
+    }
+    
+    // Si es FontAwesome
+    if (strpos($icon, 'fa-') !== false) {
+        $prefix = (strpos($icon, 'fas ') === false && strpos($icon, 'far ') === false && strpos($icon, 'fab ') === false) ? 'fas ' : '';
+        return "<i class='{$prefix}" . htmlspecialchars($icon) . "' style='margin-right:8px; opacity:0.75; width: 16px; text-align: center; display: inline-block; {$extraStyle}'></i>";
+    }
+    
+    // Si es Emoji o texto
+    return "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center; vertical-align: middle; {$extraStyle}'>" . htmlspecialchars($icon) . "</span>";
+}
 $tickerSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : "30";
 $bannerSpeed = isset($settings['banner_speed']) ? $settings['banner_speed'] : "5000";
 if ((int)$bannerSpeed < 3000) $bannerSpeed = 3000; // Seguridad para evitar parpadeos
@@ -253,12 +285,7 @@ function renderHorizontalMenu($parentId = null) {
             
             // Si es una subcategoría, mostramos su icono
             if ($parentId !== null) {
-                $catIcon = !empty($cat['icon']) ? htmlspecialchars($cat['icon']) : '📁';
-                if (strpos($catIcon, 'fa-') !== false) {
-                    echo "<i class='{$catIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
-                } else {
-                    echo "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$catIcon}</span>";
-                }
+                echo renderItemIcon($cat['icon'] ?? '', '📁');
             }
             
             echo htmlspecialchars($cat['name']);
@@ -275,34 +302,19 @@ function renderHorizontalMenu($parentId = null) {
         
         // Render Páginas
         foreach ($pages as $p) {
-            $pageIcon = !empty($p['icon']) ? htmlspecialchars($p['icon']) : '📄';
-            if (strpos($pageIcon, 'fa-') !== false) {
-                $iconHtml = "<i class='{$pageIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
-            } else {
-                $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$pageIcon}</span>";
-            }
+            $iconHtml = renderItemIcon($p['icon'] ?? '', '📄');
             echo "<li><a href='page.php?id={$p['id']}'>{$iconHtml}" . htmlspecialchars($p['title']) . "</a></li>";
         }
         
         // Render Noticias
         foreach ($newsLinks as $n) {
-            $newsIcon = !empty($n['icon']) ? htmlspecialchars($n['icon']) : '📰';
-            if (strpos($newsIcon, 'fa-') !== false) {
-                $iconHtml = "<i class='{$newsIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center;'></i>";
-            } else {
-                $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$newsIcon}</span>";
-            }
+            $iconHtml = renderItemIcon($n['icon'] ?? '', '📰');
             echo "<li><a href='index.php?action=ver_noticia&id={$n['id']}'>{$iconHtml}" . htmlspecialchars($n['title']) . "</a></li>";
         }
         
         // Render Enlaces Externos
         foreach ($extLinks as $e) {
-            $extIcon = !empty($e['icon']) ? htmlspecialchars($e['icon']) : '🔗';
-            if (strpos($extIcon, 'fa-') !== false) {
-                $iconHtml = "<i class='{$extIcon}' style='margin-right:8px; opacity:0.6; width: 16px; text-align: center; color:#d4af37;'></i>";
-            } else {
-                $iconHtml = "<span style='margin-right:8px; display:inline-block; width: 16px; text-align: center;'>{$extIcon}</span>";
-            }
+            $iconHtml = renderItemIcon($e['icon'] ?? '', '🔗', 'color:#d4af37;');
             echo "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'>{$iconHtml}" . htmlspecialchars($e['title']) . "</a></li>";
         }
         

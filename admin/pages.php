@@ -5,6 +5,7 @@ checkAuth();
 require_once '../config.php';
 require_once 'inc/layout.php';
 require_once 'inc/image_helper.php';
+require_once 'inc/icon_helper.php';
 
 $pdo = getDB();
 
@@ -12,7 +13,7 @@ $pdo = getDB();
 try {
     $pdo->query("SELECT icon FROM pages LIMIT 1");
 } catch (PDOException $e) {
-    $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(50) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
+    $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(255) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
 }
 
 // Auto-migración de tabla page_audios
@@ -68,6 +69,11 @@ if ($action == 'save') {
     $category_id_3 = isset($_POST['category_id_3']) && $_POST['category_id_3'] !== '' ? $_POST['category_id_3'] : null;
     $content = isset($_POST['content']) ? $_POST['content'] : '';
     $icon = isset($_POST['icon']) ? $_POST['icon'] : null;
+    $uploadError = null;
+    $uploadedIconName = handleIconUpload('icon_file', $uploadError);
+    if ($uploadedIconName) {
+        $icon = $uploadedIconName;
+    }
     $sort_order = isset($_POST['sort_order']) ? (int)$_POST['sort_order'] : 0;
     $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     
@@ -281,8 +287,21 @@ if ($action == 'list') {
                 $stmt = $pdo->query("SELECT p.*, c.name as cat_name FROM pages p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC, p.title ASC");
                 while ($row = $stmt->fetch()) {
                     $visBadge = $row['is_visible'] ? '<span class="badge" style="background: #e8f5e9; color: #2e7d32; font-size: 0.75rem;"><i class="fas fa-eye"></i> Visible</span>' : '<span class="badge" style="background: #ffebee; color: #c62828; font-size: 0.75rem;"><i class="fas fa-eye-slash"></i> Oculta</span>';
+                    
+                    $pIcon = !empty($row['icon']) ? $row['icon'] : '📄';
+                    $isImg = preg_match('/\.(svg|png|jpg|jpeg|webp|gif)$/i', $pIcon);
+                    if ($isImg) {
+                        $src = (strpos($pIcon, 'uploads/') === 0) ? '../' . $pIcon : '../uploads/icons/' . $pIcon;
+                        $iconVisual = "<img src='" . htmlspecialchars($src) . "' style='width: 18px; height: 18px; object-fit: contain; vertical-align: middle; margin-right: 6px;'>";
+                    } elseif (strpos($pIcon, 'fa-') !== false) {
+                        $pfx = (strpos($pIcon, 'fas ') === false && strpos($pIcon, 'far ') === false && strpos($pIcon, 'fab ') === false) ? 'fas ' : '';
+                        $iconVisual = "<i class='{$pfx}" . htmlspecialchars($pIcon) . "' style='margin-right: 6px; color: #64748b;'></i>";
+                    } else {
+                        $iconVisual = "<span style='margin-right: 6px; font-size: 1.1rem; vertical-align: middle;'>" . htmlspecialchars($pIcon) . "</span>";
+                    }
+
                     echo "<tr id='row-{$row['id']}' style='border-bottom: 1px solid var(--gray-100);'>";
-                    echo "<td style='padding: 1rem;'><strong>{$row['title']}</strong><br>{$visBadge}</td>";
+                    echo "<td style='padding: 1rem;'>{$iconVisual}<strong>" . htmlspecialchars($row['title']) . "</strong><br>{$visBadge}</td>";
                     echo "<td><span class='badge badge-info'>{$row['cat_name']}</span></td>";
                     echo "<td>" . number_format((int)$row['views'], 0, ',', '.') . "</td>";
                     echo "<td>
@@ -334,68 +353,7 @@ if ($action == 'list') {
     
     // Obtener iconos ya usados en páginas
     $usedIcons = $pdo->query("SELECT DISTINCT icon FROM pages WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
-    $defaultIcons = [
-        '📄' => '📄 Página genérica',
-        'ℹ️' => 'ℹ️ Información',
-        '🏛️' => '🏛️ Patrimonio / Historia',
-        '🌳' => '🌳 Naturaleza',
-        '📷' => '📷 Fotografía',
-        '🎵' => '🎵 Música',
-        '⚽' => '⚽ Deportes',
-        '⛪' => '⛪ Iglesia',
-        '✝️' => '✝️ Religión',
-        '📰' => '📰 Noticias',
-        '👥' => '👥 Asociaciones',
-        '📖' => '📖 Cultura / Lectura',
-        '🕰️' => '🕰️ Historia (Reloj)',
-        '🎥' => '🎥 Vídeo',
-        '🖼️' => '🖼️ Galería',
-        '🗺️' => '🗺️ Mapa / Rutas',
-        '⭐' => '⭐ Destacado',
-        '❤️' => '❤️ Favorito',
-        '🍽️' => '🍽️ Gastronomía',
-        '🛏️' => '🛏️ Alojamiento',
-        '🏀' => '🏀 Baloncesto',
-        '🏺' => '🏺 Artesanía',
-        '🧺' => '🧺 Esparto',
-        '🎨' => '🎨 Pintura',
-        '🚴' => '🚴 Ciclismo',
-        '🚗' => '🚗 Automóvil',
-        '🏫' => '🏫 Escuelas',
-        '🎒' => '🎒 Colegios',
-        '🎓' => '🎓 Institutos',
-        '🏢' => '🏢 Servicios Municipales',
-        '✉️' => '✉️ Contacto',
-        '🧳' => '🧳 Turismo',
-        '🍻' => '🍻 Bares y Restaurantes',
-        '🏰' => '🏰 Castillo',
-        '🪨' => '🪨 Arte Rupestre',
-        '⛰️' => '⛰️ Montes y Montañas',
-        '🛤️' => '🛤️ Rutas',
-        '🥁' => '🥁 Tambor',
-        '🐂' => '🐂 Tauromaquia',
-        '🎉' => '🎉 Fiestas / Celebraciones'
-    ];
-    
-    // Preparar lista final fusionando emojis por defecto y clases antiguas usadas
-    $allIconsOptions = $defaultIcons;
-    foreach ($usedIcons as $uIcon) {
-        if (!isset($allIconsOptions[$uIcon])) {
-            $allIconsOptions[$uIcon] = $uIcon; // Si es un "fas fa-star", se muestra tal cual
-        }
-    }
-    // Ordenar alfabéticamente por el nombre (valor) ignorando el emoji inicial
-    uasort($allIconsOptions, function($a, $b) {
-        $textA = trim(mb_substr($a, mb_strpos($a, ' ') !== false ? mb_strpos($a, ' ') : 0));
-        $textB = trim(mb_substr($b, mb_strpos($b, ' ') !== false ? mb_strpos($b, ' ') : 0));
-        
-        $search  = ['Á','É','Í','Ó','Ú','á','é','í','ó','ú'];
-        $replace = ['A','E','I','O','U','a','e','i','o','u'];
-        $textA = str_replace($search, $replace, $textA);
-        $textB = str_replace($search, $replace, $textB);
-        
-        return strcasecmp($textA, $textB);
-    });
+    $allIconsOptions = getConsolidatedIconOptions($pdo, $usedIcons);
     ?>
     
     <?php if (isset($_GET['msg'])): ?>
@@ -450,21 +408,7 @@ if ($action == 'list') {
 
                 <div style="margin-bottom: 1.5rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Icono (Menú)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <select id="iconSelect" onchange="if(this.value=='_other'){document.getElementById('iconInput').style.display='block'; document.getElementById('iconInput').value='';}else{document.getElementById('iconInput').style.display='none'; document.getElementById('iconInput').value=this.value;}" style="flex: 1; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;">
-                            <?php 
-                            $currentIcon = $page['icon'] ?? '📄';
-                            foreach($allIconsOptions as $val => $label): ?>
-                                <option value="<?php echo htmlspecialchars($val); ?>" <?php echo ($currentIcon == $val) ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
-                            <?php endforeach; ?>
-                            <?php if(!empty($currentIcon) && !isset($allIconsOptions[$currentIcon])): ?>
-                                <option value="<?php echo htmlspecialchars($currentIcon); ?>" selected><?php echo htmlspecialchars($currentIcon); ?></option>
-                            <?php endif; ?>
-                            <option value="_other">-- Otro (Pegar Emoji o escribir manual) --</option>
-                        </select>
-                        <input type="text" id="iconInput" name="icon" value="<?php echo htmlspecialchars($currentIcon); ?>" style="display: none; flex: 1; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 6px;" placeholder="Ej: fas fa-star">
-                    </div>
-                    <small style="color: #666; display: block; margin-top: 0.4rem;">Selecciona un icono existente de la lista, o elige "Otro" para escribir una nueva clase de FontAwesome manualmente.</small>
+                    <?php renderIconPickerField($page['icon'] ?? '📄', $allIconsOptions, 'icon', 'pageIconInput', 'Selecciona un icono existente de la lista, escribe uno manual o sube un archivo .svg o .png.'); ?>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
