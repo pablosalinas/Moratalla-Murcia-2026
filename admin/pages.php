@@ -23,6 +23,13 @@ try {
     // Ignorar si ya está aplicado o error de permisos
 }
 
+// Auto-corrección enlaces relativos página 441 -> 451
+try {
+    $pdo->exec("UPDATE pages SET content = REPLACE(content, 'href=\"../page.php?id=451\"', 'href=\"page.php?id=451\"') WHERE id = 441");
+} catch (PDOException $e) {
+    // Ignorar si falla
+}
+
 // Auto-migración de tabla page_audios
 try {
     $pdo->query("SELECT 1 FROM page_audios LIMIT 1");
