@@ -16,6 +16,13 @@ try {
     $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(255) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
 }
 
+// Auto-migración para asegurar que content sea LONGTEXT en producción
+try {
+    $pdo->exec("ALTER TABLE pages MODIFY COLUMN content LONGTEXT");
+} catch (PDOException $e) {
+    // Ignorar si ya está aplicado o error de permisos
+}
+
 // Auto-migración de tabla page_audios
 try {
     $pdo->query("SELECT 1 FROM page_audios LIMIT 1");

@@ -1,0 +1,2 @@
+ALTER TABLE `pages` MODIFY COLUMN `content` LONGTEXT;
+ALTER TABLE `news_events` MODIFY COLUMN `content` LONGTEXT;
