@@ -1,6 +1,8 @@
 <?php
-require_once "inc/layout.php";
+require_once "inc/auth.php";
+checkAuth();
 require_once "../config.php";
+require_once "inc/layout.php";
 adminHeader("Actualización Página 451 - Arte Rupestre");
 $pdo = getDB();
 
