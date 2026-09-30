@@ -1,16 +1,11 @@
 <?php
 /**
- * ejecutar-migraciones-secretas.php
- * 
- * Script seguro para restaurar categorías, verificar la integridad de la base de datos
- * y sincronizar campos y menú en producción.
+ * Script permanentemente DESACTIVADO por seguridad.
+ * Prohibida la ejecución de migraciones automáticas en producción.
  */
-require_once __DIR__ . '/config.php';
+http_response_code(403);
+die('Acceso denegado: este script ha sido deshabilitado permanentemente para proteger la base de datos de producción.');
 
-$pdo = getDB();
-$pdo->exec("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
-
-// 1. Asegurar tabla de control _migrations
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS `_migrations` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
