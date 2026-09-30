@@ -5,6 +5,9 @@ SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 # Sitemap
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
+# Migraciones secretas
+RewriteRule ^ejecutar-migraciones-secretas/?$ ejecutar-migraciones-secretas.php [L]
+
 # Si el archivo no existe (!-f) y el directorio no existe (!-d)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
