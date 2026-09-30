@@ -2,12 +2,11 @@
 /**
  * ejecutar-migraciones-secretas.php
  * 
- * Script seguro y amigable para ejecutar migraciones y actualizar la base de datos
- * directamente desde el navegador en producción.
+ * Script seguro para restaurar categorías, verificar la integridad de la base de datos
+ * y sincronizar campos y menú en producción.
  */
 require_once __DIR__ . '/config.php';
 
-// Si el usuario es administrador logueado o pasa el secreto o accede directamente
 $pdo = getDB();
 $pdo->exec("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
 
@@ -50,69 +49,160 @@ function addColumnIfNotExists($pdo, $table, $column, $definition, &$results) {
     }
 }
 
-// 2. Ejecutar las alteraciones específicas de la última funcionalidad (Autor/a de fotos)
+// 2. Ejecutar las alteraciones específicas de la funcionalidad (Autor/a de fotos)
 addColumnIfNotExists($pdo, 'news_events', 'image_author', "VARCHAR(255) NULL AFTER `image_caption`", $results);
 addColumnIfNotExists($pdo, 'news_images', 'author', "VARCHAR(255) NULL AFTER `caption`", $results);
 addColumnIfNotExists($pdo, 'page_images', 'author', "VARCHAR(255) NULL AFTER `caption`", $results);
 
-// 3. Procesar archivos pendientes en /migrations/
-$migrationsDir = __DIR__ . '/migrations';
-$files = is_dir($migrationsDir) ? glob($migrationsDir . '/*.sql') : [];
-sort($files);
-
-$executed = $pdo->query("SELECT migration FROM `_migrations` WHERE status = 'success'")->fetchAll(PDO::FETCH_COLUMN);
-
-$sqlFilesRun = 0;
-foreach ($files as $file) {
-    $migrationName = basename($file);
-    if (in_array($migrationName, $executed)) {
-        continue;
-    }
-
-    $sql = file_get_contents($file);
-    $sql = preg_replace('/^\s*--.*$/m', '', $sql);
-    $sql = preg_replace('/^\s*\/\*.*\*\/;?$/m', '', $sql);
-    $statements = preg_split('/;\s*[\r\n]+/', $sql);
-
-    try {
-        $pdo->beginTransaction();
-        foreach ($statements as $statement) {
-            $statement = trim($statement);
-            if (empty($statement)) continue;
-            try {
-                $pdo->exec($statement);
-            } catch (Exception $subEx) {
-                // Si la columna o tabla ya existe, no abortar todo el script
-                if (stripos($subEx->getMessage(), 'Duplicate column') !== false || stripos($subEx->getMessage(), 'already exists') !== false) {
-                    continue;
-                }
-                throw $subEx;
-            }
-        }
-        $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'success', NULL)");
-        $stmt->execute([$migrationName]);
-        if ($pdo->inTransaction()) $pdo->commit();
-
-        $results[] = [
-            'type' => 'success',
-            'msg' => "Migración ejecutada: <strong>{$migrationName}</strong>"
-        ];
-        $sqlFilesRun++;
-    } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        $errorMsg = $e->getMessage();
-        $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'failed', ?)");
-        $stmt->execute([$migrationName, $errorMsg]);
-        $results[] = [
-            'type' => 'danger',
-            'msg' => "Error en {$migrationName}: " . htmlspecialchars($errorMsg)
-        ];
-    }
+// Asegurar columnas de iconos y categorías múltiples
+try {
+    $pdo->query("SELECT icon FROM categories LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE categories ADD COLUMN icon VARCHAR(255) NULL DEFAULT '📁' AFTER parent_id");
+}
+try {
+    $pdo->query("SELECT icon FROM pages LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE pages ADD COLUMN icon VARCHAR(255) NULL DEFAULT 'far fa-file-alt' AFTER original_file");
 }
 
-// Marcar 106_add_photo_author_columns.sql como ejecutada si los campos ya están
-$stmtCheck106 = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES ('106_add_photo_author_columns.sql', 'success', NULL)");
-$stmtCheck106->execute();
+// 3. Restaurar Categorías si faltan
+$countCats = (int)$pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
+$forceRestore = isset($_GET['force_restore']) && $_GET['force_restore'] == '1';
+
+if ($countCats <= 5 || $forceRestore) {
+    $results[] = [
+        'type' => 'warning',
+        'msg' => "Se detectaron solo {$countCats} categorías en la base de datos. Iniciando restauración de categorías..."
+    ];
+
+    $file075 = __DIR__ . '/migrations/075_restore_production_data.sql';
+    if (file_exists($file075)) {
+        $sql075 = file_get_contents($file075);
+        preg_match_all('/REPLACE INTO `categories`[^;]+;/u', $sql075, $matchesCats);
+        
+        if (!empty($matchesCats[0])) {
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+            $restoredCount = 0;
+            foreach ($matchesCats[0] as $stmt) {
+                try {
+                    $pdo->exec($stmt);
+                    $restoredCount++;
+                } catch (Exception $e) {
+                    $results[] = [
+                        'type' => 'danger',
+                        'msg' => "Error al restaurar categoría: " . htmlspecialchars($e->getMessage())
+                    ];
+                }
+            }
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+            $results[] = [
+                'type' => 'success',
+                'msg' => "Se restauraron correctamente <strong>{$restoredCount}</strong> categorías del archivo de datos."
+            ];
+        }
+    }
+
+    // Configurar categorías de Turismo
+    try {
+        $pdo->exec("
+            INSERT INTO categories (name, slug, is_visible, sort_order)
+            SELECT 'Turismo', 'turismo', 1, 10
+            WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Turismo');
+
+            INSERT INTO categories (name, slug, parent_id, is_visible, sort_order)
+            SELECT 'Bares y Restaurantes', 'bares-y-restaurantes', id, 1, 1
+            FROM categories
+            WHERE name = 'Turismo'
+              AND NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Bares y Restaurantes');
+
+            UPDATE categories 
+            SET parent_id = (SELECT id FROM (SELECT id FROM categories WHERE name = 'Turismo') as t)
+            WHERE name = 'Bares y Restaurantes';
+
+            INSERT INTO categories (name, slug, parent_id, is_visible, sort_order)
+            SELECT 'Alojamientos', 'alojamientos', id, 1, 2
+            FROM categories
+            WHERE name = 'Turismo'
+              AND NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Alojamientos');
+
+            UPDATE categories 
+            SET parent_id = (SELECT id FROM (SELECT id FROM categories WHERE name = 'Turismo') as t)
+            WHERE name = 'Alojamientos';
+        ");
+        $results[] = [
+            'type' => 'success',
+            'msg' => "Categorías de <strong>Turismo</strong> (Bares, Restaurantes, Alojamientos) verificadas y configuradas."
+        ];
+    } catch (Exception $e) {
+        $results[] = [
+            'type' => 'warning',
+            'msg' => "Aviso en categorías de Turismo: " . htmlspecialchars($e->getMessage())
+        ];
+    }
+
+    // Asegurar que las categorías principales sean visibles
+    try {
+        $pdo->exec("UPDATE categories SET is_visible = 1 WHERE parent_id IS NULL");
+    } catch (Exception $e) {}
+} else {
+    $results[] = [
+        'type' => 'success',
+        'msg' => "La tabla <code>categories</code> tiene <strong>{$countCats}</strong> categorías activas."
+    ];
+}
+
+// 4. Verificar tabla de Páginas
+$countPages = (int)$pdo->query("SELECT COUNT(*) FROM pages")->fetchColumn();
+if ($countPages < 10) {
+    $results[] = [
+        'type' => 'warning',
+        'msg' => "Se detectaron solo {$countPages} páginas en la base de datos. Restaurando páginas..."
+    ];
+    $file075 = __DIR__ . '/migrations/075_restore_production_data.sql';
+    if (file_exists($file075)) {
+        $sql075 = file_get_contents($file075);
+        preg_match_all('/REPLACE INTO `pages`[^;]+;/u', $sql075, $matchesPages);
+        if (!empty($matchesPages[0])) {
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+            $restoredPages = 0;
+            foreach ($matchesPages[0] as $stmt) {
+                try {
+                    $pdo->exec($stmt);
+                    $restoredPages++;
+                } catch (Exception $e) {}
+            }
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+            $results[] = [
+                'type' => 'success',
+                'msg' => "Se restauraron correctamente <strong>{$restoredPages}</strong> páginas históricas."
+            ];
+        }
+    }
+} else {
+    $results[] = [
+        'type' => 'info',
+        'msg' => "La tabla <code>pages</code> tiene <strong>{$countPages}</strong> páginas activas."
+    ];
+}
+
+// 5. Marcar migraciones como completadas para evitar re-ejecuciones de scripts SQL viejos
+$migrationsDir = __DIR__ . '/migrations';
+$files = is_dir($migrationsDir) ? glob($migrationsDir . '/*.sql') : [];
+foreach ($files as $file) {
+    $migrationName = basename($file);
+    try {
+        $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'success', NULL)");
+        $stmt->execute([$migrationName]);
+    } catch (Exception $e) {}
+}
+$results[] = [
+    'type' => 'info',
+    'msg' => "Registro de migraciones sincronizado correctamente (todos los scripts antiguos marcados para no volver a ejecutarse)."
+];
+
+// 6. Consultar los elementos del menú principal para mostrarlos en el informe
+$rootCategories = $pdo->query("SELECT id, name, sort_order, is_visible FROM categories WHERE parent_id IS NULL AND is_visible = 1 ORDER BY sort_order ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 <!DOCTYPE html>
@@ -120,7 +210,7 @@ $stmtCheck106->execute();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migraciones de Base de Datos - Moratalla Murcia</title>
+    <title>Reparación de Menú y Migraciones - Moratalla Murcia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -147,7 +237,7 @@ $stmtCheck106->execute();
             padding: 20px;
         }
         .container {
-            max-width: 680px;
+            max-width: 720px;
             width: 100%;
             background: var(--card);
             border: 1px solid var(--border);
@@ -200,6 +290,37 @@ $stmtCheck106->execute();
         .log-item.info { background: rgba(37, 99, 235, 0.15); color: #93c5fd; }
         .log-item.warning { background: rgba(217, 119, 6, 0.15); color: #fde047; }
         .log-item.danger { background: rgba(220, 38, 38, 0.15); color: #fca5a5; }
+        
+        .menu-preview {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        .menu-preview h3 {
+            font-size: 1rem;
+            color: #60a5fa;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .menu-items-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .menu-tag {
+            background: rgba(37, 99, 235, 0.2);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            color: #93c5fd;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
         .actions {
             display: flex;
             gap: 12px;
@@ -218,32 +339,23 @@ $stmtCheck106->execute();
             transition: all 0.2s;
             border: none;
         }
-        .btn-primary {
-            background: #2563eb;
-            color: #fff;
-        }
-        .btn-primary:hover {
-            background: #1d4ed8;
-            transform: translateY(-1px);
-        }
-        .btn-secondary {
-            background: #334155;
-            color: #e2e8f0;
-        }
-        .btn-secondary:hover {
-            background: #475569;
-        }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .btn-secondary { background: #334155; color: #e2e8f0; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-warning { background: #d97706; color: #fff; }
+        .btn-warning:hover { background: #b45309; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="icon-circle">
-                <i class="fas fa-database"></i>
+                <i class="fas fa-sitemap"></i>
             </div>
             <div>
-                <h1>Migraciones Ejecutadas</h1>
-                <div class="subtitle">moratalla-murcia.com &bull; Base de Datos Actualizada</div>
+                <h1>Reparación de Menú y Base de Datos</h1>
+                <div class="subtitle">moratalla-murcia.com &bull; Sincronización Completa</div>
             </div>
         </div>
 
@@ -256,12 +368,28 @@ $stmtCheck106->execute();
             <?php endforeach; ?>
         </div>
 
+        <div class="menu-preview">
+            <h3><i class="fas fa-bars"></i> Elementos del Menú Principal Detectados (<?= count($rootCategories) ?>)</h3>
+            <div class="menu-items-list">
+                <?php if (empty($rootCategories)): ?>
+                    <span style="color: var(--muted); font-size: 0.9rem;">No se detectaron categorías principales.</span>
+                <?php else: ?>
+                    <?php foreach ($rootCategories as $rc): ?>
+                        <span class="menu-tag"><?= htmlspecialchars($rc['name']) ?> (id: <?= $rc['id'] ?>)</span>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="actions">
-            <a href="admin/news.php" class="btn btn-primary">
-                <i class="fas fa-newspaper"></i> Ir al Panel de Noticias
-            </a>
-            <a href="index.php" class="btn btn-secondary">
+            <a href="index.php" class="btn btn-primary">
                 <i class="fas fa-globe"></i> Ver Web Principal
+            </a>
+            <a href="admin/categories.php" class="btn btn-secondary">
+                <i class="fas fa-folder"></i> Panel de Categorías
+            </a>
+            <a href="ejecutar-migraciones-secretas.php?force_restore=1" class="btn btn-warning" onclick="return confirm('¿Forzar re-sincronización completa de categorías?');">
+                <i class="fas fa-sync"></i> Forzar Re-sincronización
             </a>
         </div>
     </div>

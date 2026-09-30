@@ -426,8 +426,8 @@ function renderHorizontalMenu($parentId = null) {
         /* CRITICAL INLINE CSS TO PREVENT FOUC / PARPADEO ON MOBILE */
         body { margin: 0; padding: 0; background-color: #f1f3f2; }
         .ticker-wrapper { height: 40px; background: #2d6a4f; overflow: hidden; display: flex; align-items: center; }
-        .main-header { height: 90px; background: rgba(255, 255, 255, 0.95); border-bottom: 2px solid #2d6a4f; box-sizing: border-box; }
-        .header-top { height: 100%; display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; padding: 0 4rem; box-sizing: border-box; }
+        .main-header { min-height: 90px; background: rgba(255, 255, 255, 0.95); border-bottom: 2px solid #2d6a4f; box-sizing: border-box; }
+        .header-top { height: 90px; display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; padding: 0 4rem; box-sizing: border-box; }
         .logo img.main-site-logo { height: 70px; width: auto; display: block; box-sizing: border-box; border: 3px solid #2d6a4f; padding: 3px; border-radius: 8px; }
         
         .banner-slider { width: 100%; overflow: hidden; background: white; }
