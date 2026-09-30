@@ -50,6 +50,33 @@ try {
         } catch (PDOException $ex) {}
     }
 
+    // Auto-migración global: asegurar is_visible en pages
+    try {
+        $pdo->query("SELECT is_visible FROM pages LIMIT 1");
+    } catch (PDOException $e) {
+        try {
+            $pdo->exec("ALTER TABLE pages ADD COLUMN is_visible TINYINT(1) DEFAULT 1 AFTER sort_order");
+        } catch (PDOException $ex) {}
+    }
+
+    // Auto-migración global: asegurar category_id_2 y category_id_3 en pages
+    try {
+        $pdo->query("SELECT category_id_2 FROM pages LIMIT 1");
+    } catch (PDOException $e) {
+        try {
+            $pdo->exec("ALTER TABLE pages ADD COLUMN category_id_2 INT DEFAULT NULL AFTER category_id, ADD COLUMN category_id_3 INT DEFAULT NULL AFTER category_id_2");
+        } catch (PDOException $ex) {}
+    }
+
+    // Auto-migración global: asegurar category_id_2 y category_id_3 en news_events
+    try {
+        $pdo->query("SELECT category_id_2 FROM news_events LIMIT 1");
+    } catch (PDOException $e) {
+        try {
+            $pdo->exec("ALTER TABLE news_events ADD COLUMN category_id_2 INT DEFAULT NULL AFTER category_id, ADD COLUMN category_id_3 INT DEFAULT NULL AFTER category_id_2");
+        } catch (PDOException $ex) {}
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `ip_address` VARCHAR(45) NOT NULL,
@@ -239,14 +266,26 @@ function renderHorizontalMenu() {
 
         // 2. Cargar páginas visibles agrupadas por categoría
         $pagesByCategory = [];
-        $stmtPages = $pdo->query("SELECT id, category_id, category_id_2, category_id_3, title, icon, sort_order FROM pages WHERE is_visible = 1 ORDER BY sort_order ASC, title ASC");
-        while ($page = $stmtPages->fetch(PDO::FETCH_ASSOC)) {
-            foreach (['category_id', 'category_id_2', 'category_id_3'] as $col) {
-                if (!empty($page[$col])) {
-                    $catId = (int)$page[$col];
-                    $pagesByCategory[$catId][$page['id']] = $page;
+        try {
+            $stmtPages = $pdo->query("SELECT id, category_id, category_id_2, category_id_3, title, icon, sort_order FROM pages WHERE is_visible = 1 ORDER BY sort_order ASC, title ASC");
+            while ($page = $stmtPages->fetch(PDO::FETCH_ASSOC)) {
+                foreach (['category_id', 'category_id_2', 'category_id_3'] as $col) {
+                    if (!empty($page[$col])) {
+                        $catId = (int)$page[$col];
+                        $pagesByCategory[$catId][$page['id']] = $page;
+                    }
                 }
             }
+        } catch (\Throwable $exP) {
+            try {
+                $stmtPages = $pdo->query("SELECT id, category_id, title, icon, sort_order FROM pages ORDER BY sort_order ASC, title ASC");
+                while ($page = $stmtPages->fetch(PDO::FETCH_ASSOC)) {
+                    if (!empty($page['category_id'])) {
+                        $catId = (int)$page['category_id'];
+                        $pagesByCategory[$catId][$page['id']] = $page;
+                    }
+                }
+            } catch (\Throwable $exP2) {}
         }
 
         // 3. Cargar enlaces externos
@@ -257,7 +296,7 @@ function renderHorizontalMenu() {
                 $catId = (int)$link['category_id'];
                 $extLinksByCategory[$catId][] = $link;
             }
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {}
 
         // 4. Cargar noticias activas vinculadas a categorías
         $newsByCategory = [];
@@ -271,7 +310,17 @@ function renderHorizontalMenu() {
                     }
                 }
             }
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {
+            try {
+                $stmtNews = $pdo->query("SELECT id, category_id, title, icon FROM news_events WHERE (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY event_date DESC, title ASC");
+                while ($news = $stmtNews->fetch(PDO::FETCH_ASSOC)) {
+                    if (!empty($news['category_id'])) {
+                        $catId = (int)$news['category_id'];
+                        $newsByCategory[$catId][$news['id']] = $news;
+                    }
+                }
+            } catch (\Throwable $e2) {}
+        }
 
         // 5. Función constructora del árbol HTML en memoria con protección de recursión (profundidad máxima 4)
         $buildTree = function($parentId, $depth = 0) use (&$buildTree, &$categoriesByParent, &$pagesByCategory, &$extLinksByCategory, &$newsByCategory) {
@@ -342,7 +391,8 @@ function renderHorizontalMenu() {
 
         $menuRenderedHtml = $buildTree(0, 0);
         echo $menuRenderedHtml;
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
+        file_put_contents(__DIR__ . '/../error_menu.log', date('Y-m-d H:i:s') . ' ' . $e->getMessage() . PHP_EOL, FILE_APPEND);
         echo '<ul class="nav-menu container" id="main-nav"><li><a href="index.php">Inicio</a></li><li><a href="category.php?id=1">Asociaciones</a></li></ul>';
     }
 }
