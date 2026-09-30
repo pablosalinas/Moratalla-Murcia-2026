@@ -220,105 +220,130 @@ $tickerSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : "3
 $bannerSpeed = isset($settings['banner_speed']) ? $settings['banner_speed'] : "5000";
 if ((int)$bannerSpeed < 3000) $bannerSpeed = 3000; // Seguridad para evitar parpadeos
 
-function renderHorizontalMenu($parentId = null) {
+function renderHorizontalMenu() {
     global $pdo;
-    $stmt = $pdo->prepare("SELECT * FROM categories WHERE is_visible = 1 AND " . ($parentId === null ? "parent_id IS NULL" : "parent_id = ?") . " ORDER BY sort_order ASC, name ASC");
-    if ($parentId === null) $stmt->execute();
-    else $stmt->execute([$parentId]);
-    
-    $categories = $stmt->fetchAll();
-    
-    $pages = [];
-    $extLinks = [];
-    $newsLinks = [];
-    if ($parentId !== null) {
-        $stmtPages = $pdo->prepare("SELECT id, title, icon FROM pages WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
-        $stmtPages->execute([$parentId]);
-        $pages = $stmtPages->fetchAll();
-        
-        $stmtExt = $pdo->prepare("SELECT title, url, icon FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
-        $stmtExt->execute([$parentId]);
-        $extLinks = $stmtExt->fetchAll();
-        
-        $stmtNews = $pdo->prepare("SELECT id, title, icon FROM news_events WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY event_date DESC, title ASC");
-        $stmtNews->execute([$parentId]);
-        $newsLinks = $stmtNews->fetchAll();
+    static $menuRenderedHtml = null;
+    if ($menuRenderedHtml !== null) {
+        echo $menuRenderedHtml;
+        return;
     }
-    
-    $totalItems = count($categories) + count($pages) + count($extLinks) + count($newsLinks);
-    
-    if ($totalItems > 0) {
-        echo $parentId === null ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
-        
-        // Render Subcategorías
-        foreach ($categories as $cat) {
-            $stmtChild = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ? AND is_visible = 1");
-            $stmtChild->execute([$cat['id']]);
-            $numCat = $stmtChild->fetchColumn();
-            
-            $stmtP = $pdo->prepare("SELECT COUNT(*) FROM pages WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_visible = 1");
-            $stmtP->execute([$cat['id']]);
-            $numP = $stmtP->fetchColumn();
-            
-            $stmtE = $pdo->prepare("SELECT COUNT(*) FROM external_links WHERE category_id = ? AND show_in_category = 1 AND is_visible = 1");
-            $stmtE->execute([$cat['id']]);
-            $numE = $stmtE->fetchColumn();
-            
-            $stmtN = $pdo->prepare("SELECT COUNT(*) FROM news_events WHERE (? IN (category_id, category_id_2, category_id_3)) AND is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())");
-            $stmtN->execute([$cat['id']]);
-            $numN = $stmtN->fetchColumn();
-            
-            $hasChildren = ($numCat + $numP + $numE + $numN) > 0;
-            
-            $url = "category.php?id={$cat['id']}";
-            if (mb_strtolower(trim($cat['name']), 'UTF-8') === 'contacto') {
-                $url = "contacto.php";
+
+    try {
+        // 1. Cargar todas las categorías visibles agrupadas por parent_id
+        $categoriesByParent = [];
+        $stmt = $pdo->query("SELECT id, parent_id, name, slug, sort_order, is_visible, icon, show_hint, hint_text FROM categories WHERE is_visible = 1 ORDER BY sort_order ASC, name ASC");
+        while ($cat = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $pId = ($cat['parent_id'] !== null && $cat['parent_id'] !== '') ? (int)$cat['parent_id'] : 0;
+            $categoriesByParent[$pId][] = $cat;
+        }
+
+        // 2. Cargar páginas visibles agrupadas por categoría
+        $pagesByCategory = [];
+        $stmtPages = $pdo->query("SELECT id, category_id, category_id_2, category_id_3, title, icon, sort_order FROM pages WHERE is_visible = 1 ORDER BY sort_order ASC, title ASC");
+        while ($page = $stmtPages->fetch(PDO::FETCH_ASSOC)) {
+            foreach (['category_id', 'category_id_2', 'category_id_3'] as $col) {
+                if (!empty($page[$col])) {
+                    $catId = (int)$page[$col];
+                    $pagesByCategory[$catId][$page['id']] = $page;
+                }
             }
-            
-            $hintAttr = "";
-            if (!empty($cat['show_hint']) && !empty($cat['hint_text'])) {
-                $hintAttr = " data-hint='" . htmlspecialchars($cat['hint_text'], ENT_QUOTES) . "'";
+        }
+
+        // 3. Cargar enlaces externos
+        $extLinksByCategory = [];
+        try {
+            $stmtExt = $pdo->query("SELECT category_id, title, url, icon, sort_order FROM external_links WHERE show_in_category = 1 AND is_visible = 1 ORDER BY sort_order ASC, title ASC");
+            while ($link = $stmtExt->fetch(PDO::FETCH_ASSOC)) {
+                $catId = (int)$link['category_id'];
+                $extLinksByCategory[$catId][] = $link;
             }
-            
-            echo "<li>";
-            echo "<a href='{$url}'{$hintAttr}>";
-            
-            // Si es una subcategoría, mostramos su icono
-            if ($parentId !== null) {
-                echo renderItemIcon($cat['icon'] ?? '', '📁');
+        } catch (Exception $e) {}
+
+        // 4. Cargar noticias activas vinculadas a categorías
+        $newsByCategory = [];
+        try {
+            $stmtNews = $pdo->query("SELECT id, category_id, category_id_2, category_id_3, title, icon FROM news_events WHERE is_active_category = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY event_date DESC, title ASC");
+            while ($news = $stmtNews->fetch(PDO::FETCH_ASSOC)) {
+                foreach (['category_id', 'category_id_2', 'category_id_3'] as $col) {
+                    if (!empty($news[$col])) {
+                        $catId = (int)$news[$col];
+                        $newsByCategory[$catId][$news['id']] = $news;
+                    }
+                }
             }
-            
-            echo htmlspecialchars($cat['name']);
-            if ($hasChildren) echo " <i class='fas fa-angle-" . ($parentId === null ? 'down' : 'right') . "' style='margin-left: auto;'></i>";
-            echo "</a>";
-            renderHorizontalMenu($cat['id']);
-            echo "</li>";
-        }
-        
-        // Separador si hay tanto categorías como páginas/enlaces
-        if (count($categories) > 0 && (count($pages) > 0 || count($extLinks) > 0)) {
-            echo '<li style="height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;"></li>';
-        }
-        
-        // Render Páginas
-        foreach ($pages as $p) {
-            $iconHtml = renderItemIcon($p['icon'] ?? '', '📄');
-            echo "<li><a href='page.php?id={$p['id']}'>{$iconHtml}" . htmlspecialchars($p['title']) . "</a></li>";
-        }
-        
-        // Render Noticias
-        foreach ($newsLinks as $n) {
-            $iconHtml = renderItemIcon($n['icon'] ?? '', '📰');
-            echo "<li><a href='index.php?action=ver_noticia&id={$n['id']}'>{$iconHtml}" . htmlspecialchars($n['title']) . "</a></li>";
-        }
-        
-        // Render Enlaces Externos
-        foreach ($extLinks as $e) {
-            $iconHtml = renderItemIcon($e['icon'] ?? '', '🔗', 'color:#d4af37;');
-            echo "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'>{$iconHtml}" . htmlspecialchars($e['title']) . "</a></li>";
-        }
-        
-        echo "</ul>";
+        } catch (Exception $e) {}
+
+        // 5. Función constructora del árbol HTML en memoria con protección de recursión (profundidad máxima 4)
+        $buildTree = function($parentId, $depth = 0) use (&$buildTree, &$categoriesByParent, &$pagesByCategory, &$extLinksByCategory, &$newsByCategory) {
+            if ($depth > 4) return '';
+            $cats = $categoriesByParent[$parentId] ?? [];
+            $pages = $parentId > 0 ? array_values($pagesByCategory[$parentId] ?? []) : [];
+            $extLinks = $parentId > 0 ? ($extLinksByCategory[$parentId] ?? []) : [];
+            $newsLinks = $parentId > 0 ? array_values($newsByCategory[$parentId] ?? []) : [];
+
+            $totalItems = count($cats) + count($pages) + count($extLinks) + count($newsLinks);
+            if ($totalItems === 0) return '';
+
+            $html = ($parentId === 0) ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
+
+            foreach ($cats as $cat) {
+                $catId = (int)$cat['id'];
+                $childSubmenu = $buildTree($catId, $depth + 1);
+                $hasChildren = !empty($childSubmenu);
+
+                $url = "category.php?id={$catId}";
+                if (mb_strtolower(trim($cat['name']), 'UTF-8') === 'contacto') {
+                    $url = "contacto.php";
+                }
+
+                $hintAttr = "";
+                if (!empty($cat['show_hint']) && !empty($cat['hint_text'])) {
+                    $hintAttr = " data-hint='" . htmlspecialchars($cat['hint_text'], ENT_QUOTES) . "'";
+                }
+
+                $html .= "<li>";
+                $html .= "<a href='{$url}'{$hintAttr}>";
+                if ($parentId !== 0) {
+                    $html .= renderItemIcon($cat['icon'] ?? '', '📁');
+                }
+                $html .= htmlspecialchars($cat['name']);
+                if ($hasChildren) {
+                    $html .= " <i class='fas fa-angle-" . ($parentId === 0 ? 'down' : 'right') . "' style='margin-left: auto;'></i>";
+                }
+                $html .= "</a>";
+                if ($hasChildren) {
+                    $html .= $childSubmenu;
+                }
+                $html .= "</li>";
+            }
+
+            if (count($cats) > 0 && (count($pages) > 0 || count($extLinks) > 0)) {
+                $html .= '<li style="height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;"></li>';
+            }
+
+            foreach ($pages as $p) {
+                $iconHtml = renderItemIcon($p['icon'] ?? '', '📄');
+                $html .= "<li><a href='page.php?id={$p['id']}'>{$iconHtml}" . htmlspecialchars($p['title']) . "</a></li>";
+            }
+
+            foreach ($newsLinks as $n) {
+                $iconHtml = renderItemIcon($n['icon'] ?? '', '📰');
+                $html .= "<li><a href='index.php?action=ver_noticia&id={$n['id']}'>{$iconHtml}" . htmlspecialchars($n['title']) . "</a></li>";
+            }
+
+            foreach ($extLinks as $e) {
+                $iconHtml = renderItemIcon($e['icon'] ?? '', '🔗', 'color:#d4af37;');
+                $html .= "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'>{$iconHtml}" . htmlspecialchars($e['title']) . "</a></li>";
+            }
+
+            $html .= "</ul>";
+            return $html;
+        };
+
+        $menuRenderedHtml = $buildTree(0, 0);
+        echo $menuRenderedHtml;
+    } catch (Exception $e) {
+        echo '<ul class="nav-menu container" id="main-nav"><li><a href="index.php">Inicio</a></li><li><a href="category.php?id=1">Asociaciones</a></li></ul>';
     }
 }
 ?>

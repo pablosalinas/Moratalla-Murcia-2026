@@ -154,19 +154,39 @@ if ($countCats <= 5 || $forceRestore) {
 
 // 4. Verificar tabla de Páginas
 $countPages = (int)$pdo->query("SELECT COUNT(*) FROM pages")->fetchColumn();
-if ($countPages < 10) {
-    $results[] = [
-        'type' => 'warning',
-        'msg' => "Se detectaron solo {$countPages} páginas en la base de datos. Restaurando páginas..."
-    ];
+if ($countPages < 300) {
     $file075 = __DIR__ . '/migrations/075_restore_production_data.sql';
     if (file_exists($file075)) {
-        $sql075 = file_get_contents($file075);
-        preg_match_all('/REPLACE INTO `pages`[^;]+;/u', $sql075, $matchesPages);
-        if (!empty($matchesPages[0])) {
+        $lines = file($file075);
+        $pageStmts = [];
+        $current = '';
+        $inPages = false;
+        foreach ($lines as $line) {
+            if (strpos($line, 'DELETE FROM `pages`') !== false) {
+                $inPages = true;
+                continue;
+            }
+            if ($inPages) {
+                if (strpos($line, 'REPLACE INTO `pages`') === 0) {
+                    if ($current !== '') $pageStmts[] = $current;
+                    $current = $line;
+                } elseif ($current !== '') {
+                    if (strpos($line, 'REPLACE INTO `settings`') === 0 || strpos($line, 'REPLACE INTO `page_images`') === 0 || strpos($line, '-- Restaurar') === 0) {
+                        $pageStmts[] = $current;
+                        $current = '';
+                        if (strpos($line, 'page_images') !== false) break;
+                    } else {
+                        $current .= "\n" . $line;
+                    }
+                }
+            }
+        }
+        if ($current !== '') $pageStmts[] = $current;
+
+        if (!empty($pageStmts)) {
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
             $restoredPages = 0;
-            foreach ($matchesPages[0] as $stmt) {
+            foreach ($pageStmts as $stmt) {
                 try {
                     $pdo->exec($stmt);
                     $restoredPages++;
@@ -183,6 +203,36 @@ if ($countPages < 10) {
     $results[] = [
         'type' => 'info',
         'msg' => "La tabla <code>pages</code> tiene <strong>{$countPages}</strong> páginas activas."
+    ];
+}
+
+// 4.1 Verificar tabla de Imágenes de Páginas
+$countImages = (int)$pdo->query("SELECT COUNT(*) FROM page_images")->fetchColumn();
+if ($countImages < 50) {
+    $file075 = __DIR__ . '/migrations/075_restore_production_data.sql';
+    if (file_exists($file075)) {
+        $sql075 = file_get_contents($file075);
+        preg_match_all('/REPLACE INTO `page_images`[^;]+;/u', $sql075, $matchesImages);
+        if (!empty($matchesImages[0])) {
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+            $restoredImages = 0;
+            foreach ($matchesImages[0] as $stmt) {
+                try {
+                    $pdo->exec($stmt);
+                    $restoredImages++;
+                } catch (Exception $e) {}
+            }
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+            $results[] = [
+                'type' => 'success',
+                'msg' => "Se restauraron correctamente <strong>{$restoredImages}</strong> imágenes de páginas."
+            ];
+        }
+    }
+} else {
+    $results[] = [
+        'type' => 'info',
+        'msg' => "La tabla <code>page_images</code> tiene <strong>{$countImages}</strong> imágenes registradas."
     ];
 }
 
