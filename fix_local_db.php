@@ -50,7 +50,12 @@ addColumnIfMissing($pdo, 'pages', 'views',       'INT DEFAULT 0', $log);
 addColumnIfMissing($pdo, 'page_images', 'is_visible',  'TINYINT(1) DEFAULT 1', $log);
 addColumnIfMissing($pdo, 'page_images', 'sort_order',  'INT DEFAULT 0', $log);
 addColumnIfMissing($pdo, 'page_images', 'caption',     'TEXT DEFAULT NULL', $log);
+addColumnIfMissing($pdo, 'page_images', 'author',      'VARCHAR(255) DEFAULT NULL', $log);
 addColumnIfMissing($pdo, 'page_images', 'is_cover',    'TINYINT(1) DEFAULT 0', $log);
+
+// ─── news_events y news_images ──────────────────────────────────────────────
+addColumnIfMissing($pdo, 'news_events', 'image_author', 'VARCHAR(255) DEFAULT NULL', $log);
+addColumnIfMissing($pdo, 'news_images', 'author',       'VARCHAR(255) DEFAULT NULL', $log);
 
 // ─── external_links ───────────────────────────────────────────────────────
 createTableIfMissing($pdo, 'external_links', "

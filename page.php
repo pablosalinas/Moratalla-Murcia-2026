@@ -141,8 +141,9 @@ if ($isSinglePageCategory) {
                             
                             $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
                             $isVideo = (isset($img['is_video']) && $img['is_video'] == 1) || in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                            $authorVal = isset($img['author']) ? trim($img['author']) : '';
                         ?>
-                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-is-video="<?php echo $isVideo ? '1' : '0'; ?>" data-caption="<?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
+                            <a href="<?php echo $fullPath; ?>" class="swiper-slide lightbox-link" data-is-video="<?php echo $isVideo ? '1' : '0'; ?>" data-caption="<?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?>" data-author="<?php echo htmlspecialchars($authorVal); ?>" style="height: 350px; border-radius: 15px; overflow: hidden; display: block; border: 1px solid var(--gray-200); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s ease; background: #f0f0f0; text-align: center;">
                                 <?php if ($isVideo): ?>
                                     <video src="<?php echo $fullPath; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block; background: #000;" preload="metadata"></video>
                                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
@@ -151,7 +152,10 @@ if ($isSinglePageCategory) {
                                 <?php endif; ?>
                                 <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
                                     <?php if (!empty($img['caption'])): ?>
-                                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;"><?php echo htmlspecialchars($img['caption']); ?></strong>
+                                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.3rem;"><?php echo htmlspecialchars($img['caption']); ?></strong>
+                                    <?php endif; ?>
+                                    <?php if (!empty($authorVal)): ?>
+                                        <div style="font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem; opacity: 0.95;">Autor/a: <?php echo htmlspecialchars($authorVal); ?></div>
                                     <?php endif; ?>
                                     <i class="fas fa-search-plus"></i> <?php echo $isVideo ? 'Reproducir vídeo' : 'Ampliar obra'; ?>
                                 </div>
@@ -350,14 +354,27 @@ if ($isSinglePageCategory) {
     const prevBtn = document.getElementById('prev-img');
     const nextBtn = document.getElementById('next-img');
 
-    // Extraer todas las rutas de imágenes y descripciones
+    // Extraer todas las rutas de imágenes, descripciones y autores
     const galleryItems = Array.from(links).map(link => ({
         src: link.getAttribute('href'),
         caption: link.getAttribute('data-caption'),
+        author: link.getAttribute('data-author'),
         isVideo: link.getAttribute('data-is-video') === '1'
     }));
     let currentIndex = 0;
     let autoPlayInterval;
+
+    function formatLightboxCaption(item) {
+        let cap = item.caption ? item.caption.trim() : '';
+        let auth = item.author ? item.author.trim() : '';
+        if (cap && auth) {
+            return cap + ' • Autor/a: ' + auth;
+        } else if (auth) {
+            return 'Autor/a: ' + auth;
+        } else {
+            return cap;
+        }
+    }
 
     function showImage(index) {
         if (index < 0) index = galleryItems.length - 1;
@@ -388,7 +405,7 @@ if ($isSinglePageCategory) {
             }
             setTimeout(() => {
                 if (vid) vid.style.opacity = 1;
-                document.getElementById('lightbox-caption').textContent = item.caption;
+                document.getElementById('lightbox-caption').textContent = formatLightboxCaption(item);
             }, 150);
         } else {
             if (vid) {
@@ -404,7 +421,7 @@ if ($isSinglePageCategory) {
                     img.src = item.src;
                     img.style.opacity = 1;
                 }
-                document.getElementById('lightbox-caption').textContent = item.caption;
+                document.getElementById('lightbox-caption').textContent = formatLightboxCaption(item);
             }, 150);
         }
     }

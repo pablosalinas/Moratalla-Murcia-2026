@@ -173,12 +173,13 @@ try {
                 $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
                 
                 // Obtener imágenes adicionales de galería
-                $stmtG = $pdo->prepare("SELECT id, image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
+                $stmtG = $pdo->prepare("SELECT id, image_path, caption, author FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
                 $stmtG->execute([$news['id']]);
                 $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
                 
                 $mainImagePath = $news['image_path'];
                 $mainImageCaption = $news['image_caption'] ?? '';
+                $mainImageAuthor = $news['image_author'] ?? '';
                 
                 if (!empty($news['use_latest_gallery_image']) && !empty($gallery)) {
                     $latestImage = null;
@@ -192,6 +193,7 @@ try {
                     if ($latestImage) {
                         $mainImagePath = $latestImage['image_path'];
                         $mainImageCaption = $latestImage['caption'];
+                        $mainImageAuthor = $latestImage['author'] ?? '';
                     }
                 }
                 
@@ -204,6 +206,7 @@ try {
                     'isEvent' => $isEvent,
                     'image' => $mainImagePath ? $mainImagePath : '',
                     'image_caption' => $mainImageCaption,
+                    'image_author' => $mainImageAuthor,
                     'content' => $news['content'],
                     'gallery' => $gallery
                 ])); ?>)">
@@ -453,12 +456,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'ver_noticia' && isset($_GET['i
         $isEvent = !empty($newsVer['event_date']);
         $dateText = $isEvent ? date('d/m/Y', strtotime($newsVer['event_date'])) : date('d/m/Y', strtotime($newsVer['created_at']));
         
-        $stmtG = $pdo->prepare("SELECT id, image_path, caption FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
+        $stmtG = $pdo->prepare("SELECT id, image_path, caption, author FROM news_images WHERE news_id = ? ORDER BY sort_order ASC, id DESC");
         $stmtG->execute([$newsId]);
         $gallery = $stmtG->fetchAll(PDO::FETCH_ASSOC);
         
         $mainImagePath = $newsVer['image_path'];
         $mainImageCaption = $newsVer['image_caption'] ?? '';
+        $mainImageAuthor = $newsVer['image_author'] ?? '';
         
         if (!empty($newsVer['use_latest_gallery_image']) && !empty($gallery)) {
             $latestImage = null;
@@ -472,6 +476,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'ver_noticia' && isset($_GET['i
             if ($latestImage) {
                 $mainImagePath = $latestImage['image_path'];
                 $mainImageCaption = $latestImage['caption'];
+                $mainImageAuthor = $latestImage['author'] ?? '';
             }
         }
         
@@ -481,6 +486,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'ver_noticia' && isset($_GET['i
             'isEvent' => $isEvent,
             'image' => $mainImagePath ? $mainImagePath : '',
             'image_caption' => $mainImageCaption,
+            'image_author' => $mainImageAuthor,
             'content' => $newsVer['content'],
             'gallery' => $gallery
         ];

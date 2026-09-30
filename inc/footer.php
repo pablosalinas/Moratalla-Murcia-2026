@@ -405,10 +405,22 @@
             }
             modalImageContainer.style.display = 'block';
             
-            if (data.image_caption && data.image_caption.trim() !== '') {
-                modalImageCaption.textContent = data.image_caption;
+            const hasCaption = data.image_caption && data.image_caption.trim() !== '';
+            const hasAuthor = data.image_author && data.image_author.trim() !== '';
+            
+            if (hasCaption || hasAuthor) {
+                let captionHtml = '';
+                if (hasCaption) {
+                    captionHtml += '<span>' + data.image_caption + '</span>';
+                }
+                if (hasAuthor) {
+                    if (hasCaption) captionHtml += ' &bull; ';
+                    captionHtml += '<span style="font-weight: 600;">Autor/a: ' + data.image_author + '</span>';
+                }
+                modalImageCaption.innerHTML = captionHtml;
                 modalImageCaption.style.display = 'block';
             } else {
+                modalImageCaption.innerHTML = '';
                 modalImageCaption.style.display = 'none';
             }
         } else {
@@ -436,7 +448,13 @@
             const ext = data.image.split('.').pop().toLowerCase();
             const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
             const isPdf = data.image.toLowerCase().endsWith('.pdf');
-            currentCarouselImages.push({src: data.image, caption: data.image_caption || '', is_video: isVideo, is_pdf: isPdf});
+            currentCarouselImages.push({
+                src: data.image, 
+                caption: data.image_caption || '', 
+                author: data.image_author || '', 
+                is_video: isVideo, 
+                is_pdf: isPdf
+            });
             seenPathsCarousel.add(data.image);
         }
         
@@ -447,7 +465,13 @@
                 const ext = imgObj.image_path.split('.').pop().toLowerCase();
                 const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext) || imgObj.is_video == 1;
                 const isPdf = imgObj.image_path.toLowerCase().endsWith('.pdf');
-                currentCarouselImages.push({src: imgObj.image_path, caption: imgObj.caption || '', is_video: isVideo, is_pdf: isPdf});
+                currentCarouselImages.push({
+                    src: imgObj.image_path, 
+                    caption: imgObj.caption || '', 
+                    author: imgObj.author || '', 
+                    is_video: isVideo, 
+                    is_pdf: isPdf
+                });
                 seenPathsCarousel.add(imgObj.image_path);
             });
         }
@@ -471,13 +495,13 @@
             let allFiles = [];
             let seenPathsThumbs = new Set();
             if (data.image) {
-                allFiles.push({path: data.image, caption: data.image_caption || ''});
+                allFiles.push({path: data.image, caption: data.image_caption || '', author: data.image_author || ''});
                 seenPathsThumbs.add(data.image);
             }
             if (data.gallery) {
                 data.gallery.forEach(g => {
                     if (!seenPathsThumbs.has(g.image_path)) {
-                        allFiles.push({path: g.image_path, caption: g.caption || ''});
+                        allFiles.push({path: g.image_path, caption: g.caption || '', author: g.author || ''});
                         seenPathsThumbs.add(g.image_path);
                     }
                 });
@@ -487,16 +511,24 @@
                 const ext = file.path.split('.').pop().toLowerCase();
                 const isVideo = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp'].includes(ext);
                 let cIndex = currentCarouselImages.findIndex(img => img.src === file.path);
+                
+                let thumbLabel = '';
+                if (file.caption) thumbLabel += file.caption;
+                if (file.author) {
+                    if (thumbLabel) thumbLabel += ' • ';
+                    thumbLabel += 'Autor/a: ' + file.author;
+                }
+
                 if (file.path.toLowerCase().endsWith('.pdf')) {
-                    galleryHtml += '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; border-radius:8px; border: 1px solid #f87171; cursor:pointer;" onclick="openNewsCarousel(' + cIndex + ')"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">' + (file.caption ? file.caption : 'Ver PDF') + '</span></div>';
+                    galleryHtml += '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 1rem; background:#fee2e2; color:#b91c1c; border-radius:8px; border: 1px solid #f87171; cursor:pointer;" onclick="openNewsCarousel(' + cIndex + ')"><i class="fas fa-file-pdf fa-2x"></i><span style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">' + (thumbLabel ? thumbLabel : 'Ver PDF') + '</span></div>';
                 } else if (isVideo) {
                     galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px; position:relative;">' +
                         '<video class="news-gallery-thumb" src="' + file.path + '" style="background:#000; width:100%; height:80px; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="openNewsCarousel(' + cIndex + ')" preload="metadata"></video>' +
                         '<div style="position:absolute; top:30px; left:50%; transform:translateX(-50%); color:white; font-size:1.5rem; pointer-events:none; opacity:0.8; text-shadow:0 1px 4px rgba(0,0,0,0.6);"><i class="fas fa-play-circle"></i></div>' +
-                        (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') +
+                        (thumbLabel ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + thumbLabel.replace(/"/g, '&quot;') + '">' + thumbLabel + '</span>' : '') +
                         '</div>';
                 } else {
-                    galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px;"><img class="news-gallery-thumb" src="' + file.path + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">' + (file.caption ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + file.caption + '">' + file.caption + '</span>' : '') + '</div>';
+                    galleryHtml += '<div style="display:flex; flex-direction:column; gap:5px;"><img class="news-gallery-thumb" src="' + file.path + '" onclick="openNewsCarousel(' + cIndex + ')" alt="Imagen">' + (thumbLabel ? '<span style="font-size:0.75rem; color:var(--text-light); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + thumbLabel.replace(/"/g, '&quot;') + '">' + thumbLabel + '</span>' : '') + '</div>';
                 }
             });
             
@@ -587,7 +619,12 @@
             videoElement.style.opacity = 0;
             setTimeout(() => {
                 videoElement.style.opacity = 1;
-                captionElement.textContent = currentItem.caption;
+                let cap = currentItem.caption || '';
+                if (currentItem.author && currentItem.author.trim() !== '') {
+                    if (cap) cap += ' • ';
+                    cap += 'Autor/a: ' + currentItem.author;
+                }
+                captionElement.textContent = cap;
                 counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
             }, 150);
         } else if (isPdf) {
@@ -608,7 +645,12 @@
             pdfElement.style.opacity = 0;
             setTimeout(() => {
                 pdfElement.style.opacity = 1;
-                captionElement.textContent = currentItem.caption;
+                let cap = currentItem.caption || '';
+                if (currentItem.author && currentItem.author.trim() !== '') {
+                    if (cap) cap += ' • ';
+                    cap += 'Autor/a: ' + currentItem.author;
+                }
+                captionElement.textContent = cap;
                 counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
             }, 150);
         } else {
@@ -622,7 +664,12 @@
                 imgElement.style.opacity = 0;
                 setTimeout(() => {
                     imgElement.src = currentItem.src;
-                    captionElement.textContent = currentItem.caption;
+                    let cap = currentItem.caption || '';
+                    if (currentItem.author && currentItem.author.trim() !== '') {
+                        if (cap) cap += ' • ';
+                        cap += 'Autor/a: ' + currentItem.author;
+                    }
+                    captionElement.textContent = cap;
                     imgElement.style.opacity = 1;
                     counterElement.textContent = (currentCarouselIndex + 1) + ' / ' + currentCarouselImages.length;
                 }, 150);

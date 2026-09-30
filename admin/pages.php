@@ -23,6 +23,13 @@ try {
     // Ignorar si ya está aplicado o error de permisos
 }
 
+// Auto-migración columna author en page_images
+try {
+    $pdo->query("SELECT author FROM page_images LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("ALTER TABLE page_images ADD COLUMN author VARCHAR(255) NULL AFTER caption");
+}
+
 // Auto-corrección enlaces relativos página 441 -> 451
 try {
     $pdo->exec("UPDATE pages SET content = REPLACE(content, 'href=\"../page.php?id=451\"', 'href=\"page.php?id=451\"') WHERE id = 441");
@@ -180,12 +187,13 @@ if ($action == 'save_gallery') {
     $images_data = isset($_POST['images']) ? $_POST['images'] : [];
     
     if ($page_id) {
-        $stmtUpdate = $pdo->prepare("UPDATE page_images SET caption = ?, sort_order = ?, is_visible = ? WHERE id = ? AND page_id = ?");
+        $stmtUpdate = $pdo->prepare("UPDATE page_images SET caption = ?, author = ?, sort_order = ?, is_visible = ? WHERE id = ? AND page_id = ?");
         foreach ($images_data as $img_id => $data) {
             $caption = isset($data['caption']) ? $data['caption'] : '';
+            $author = isset($data['author']) ? trim($data['author']) : '';
             $sort_order = (int)(isset($data['sort_order']) ? $data['sort_order'] : 0);
             $is_visible = isset($data['is_visible']) ? 1 : 0;
-            $stmtUpdate->execute([$caption, $sort_order, $is_visible, $img_id, $page_id]);
+            $stmtUpdate->execute([$caption, $author, $sort_order, $is_visible, $img_id, $page_id]);
         }
     }
     header("Location: pages.php?action=edit&id=$page_id&msg=" . urlencode("Galería actualizada"));
@@ -526,7 +534,10 @@ if ($action == 'list') {
                                 </div>
                                 <div>
                                     <label style="font-size: 0.8rem; font-weight: 600; display: block;">Descripción / Pie de foto</label>
-                                    <textarea name="images[<?php echo $img['id']; ?>][caption]" style="width: 100%; height: 60px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem;"><?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?></textarea>
+                                    <textarea name="images[<?php echo $img['id']; ?>][caption]" style="width: 100%; height: 50px; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem; margin-bottom: 0.5rem;"><?php echo htmlspecialchars(isset($img['caption']) ? $img['caption'] : ''); ?></textarea>
+                                    
+                                    <label style="font-size: 0.8rem; font-weight: 600; display: block;">Autor/a de la foto</label>
+                                    <input type="text" name="images[<?php echo $img['id']; ?>][author]" value="<?php echo htmlspecialchars(isset($img['author']) ? $img['author'] : ''); ?>" placeholder="Autor/a (opcional)..." style="width: 100%; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
                                 </div>
                                 <div style="text-align: right; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; margin-top: 0.5rem;">
                                     <a href="?action=delete_img&img_id=<?php echo $img['id']; ?>&page_id=<?php echo $id; ?>" onclick="return confirm('¿Eliminar este archivo?');" style="color: #d32f2f; font-size: 0.85rem; text-decoration: none; font-weight: 600;">

@@ -35,6 +35,18 @@ try {
     $pdo->exec("ALTER TABLE news_events ADD COLUMN end_date DATETIME NULL AFTER start_date");
 }
 
+try {
+    $pdo->query("SELECT image_author FROM news_events LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("ALTER TABLE news_events ADD COLUMN image_author VARCHAR(255) NULL AFTER image_caption");
+}
+
+try {
+    $pdo->query("SELECT author FROM news_images LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("ALTER TABLE news_images ADD COLUMN author VARCHAR(255) NULL AFTER caption");
+}
+
 // PROCESAR AJAX UPLOAD
 if (isset($_POST['ajax_upload']) && isset($_POST['news_id'])) {
     $news_id = (int)$_POST['news_id'];
@@ -105,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = trim($_POST['title'] ?? '');
         $content = trim($_POST['content'] ?? '');
         $image_caption = trim($_POST['image_caption'] ?? '');
+        $image_author = trim($_POST['image_author'] ?? '');
         $event_date = $_POST['event_date'] ?? null;
         $start_date = $_POST['start_date'] ?? null;
         $end_date = $_POST['end_date'] ?? null;
@@ -202,9 +215,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if ($action == 'add') {
-                $columns = ['title', 'content', 'image_path', 'image_caption', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'category_id_2', 'category_id_3', 'is_active_category', 'icon'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
+                $columns = ['title', 'content', 'image_path', 'image_caption', 'image_author', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'category_id_2', 'category_id_3', 'is_active_category', 'icon'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
+                $params = [$title, $content, $image_path, $image_caption, $image_author, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
                 
                 if ($hasSortOrderColumn) {
                     $columns[] = 'sort_order';
@@ -227,8 +240,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $news_id = $pdo->lastInsertId();
                 $msg = "Noticia/Evento creado con éxito.";
             } else {
-                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'category_id_2 = ?', 'category_id_3 = ?', 'is_active_category = ?', 'icon = ?'];
-                $params = [$title, $content, $image_path, $image_caption, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
+                $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'image_author = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'category_id_2 = ?', 'category_id_3 = ?', 'is_active_category = ?', 'icon = ?'];
+                $params = [$title, $content, $image_path, $image_caption, $image_author, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
                 
                 if ($hasSortOrderColumn) {
                     $setCols[] = 'sort_order = ?';
@@ -296,14 +309,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Actualizar órdenes y descripciones de la galería existente
+            // Actualizar órdenes, descripciones y autores de la galería existente
             if (isset($_POST['sort_order']) && is_array($_POST['sort_order'])) {
                 foreach ($_POST['sort_order'] as $imgId => $orderVal) {
                     // Solo actualizar si no lo acabamos de borrar
                     if (!isset($_POST['delete_gallery']) || !in_array($imgId, $_POST['delete_gallery'])) {
                         $captionVal = isset($_POST['captions'][$imgId]) ? trim($_POST['captions'][$imgId]) : null;
-                        $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ?, caption = ? WHERE id = ?");
-                        $stmtOrder->execute([(int)$orderVal, $captionVal, (int)$imgId]);
+                        $authorVal = isset($_POST['authors'][$imgId]) ? trim($_POST['authors'][$imgId]) : null;
+                        $stmtOrder = $pdo->prepare("UPDATE news_images SET sort_order = ?, caption = ?, author = ? WHERE id = ?");
+                        $stmtOrder->execute([(int)$orderVal, $captionVal, $authorVal, (int)$imgId]);
                     }
                 }
             }
@@ -515,7 +529,7 @@ adminHeader("Noticias y Eventos");
     </script>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'category_id_2' => '', 'category_id_3' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
+    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'image_caption' => '', 'image_author' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'category_id_2' => '', 'category_id_3' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM news_events WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -593,6 +607,7 @@ adminHeader("Noticias y Eventos");
                         </div>
                     <?php endif; ?>
                     <input type="text" name="image_caption" value="<?php echo htmlspecialchars($news_data['image_caption'] ?? ''); ?>" placeholder="Descripción o pie de foto (opcional)" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 0.9rem; margin-top: 0.8rem; background: white;">
+                    <input type="text" name="image_author" value="<?php echo htmlspecialchars($news_data['image_author'] ?? ''); ?>" placeholder="Autor/a de la foto (opcional)" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 0.9rem; margin-top: 0.5rem; background: white;">
                 </div>
             </div>
 
@@ -699,7 +714,8 @@ adminHeader("Noticias y Eventos");
                                     <span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>
                                     <input type="number" name="sort_order[<?php echo $gimg['id']; ?>]" value="<?php echo (int)$gimg['sort_order']; ?>" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">
                                 </div>
-                                <input type="text" name="captions[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['caption'] ?? ''); ?>" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.5rem;">
+                                <input type="text" name="captions[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['caption'] ?? ''); ?>" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.3rem;">
+                                <input type="text" name="authors[<?php echo $gimg['id']; ?>]" value="<?php echo htmlspecialchars($gimg['author'] ?? ''); ?>" placeholder="Autor/a de la foto" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.5rem;">
                                 <label style="display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #e74c3c; cursor: pointer; justify-content: center; background: #fdf3f2; border: 1px solid #fbdad7; padding: 4px; border-radius: 4px;">
                                     <input type="checkbox" name="delete_gallery[]" value="<?php echo $gimg['id']; ?>"> <b>Borrar archivo</b>
                                 </label>
@@ -765,7 +781,8 @@ adminHeader("Noticias y Eventos");
                             '<span style="font-size: 0.75rem; color: var(--text-light);">Orden:</span>' +
                             '<input type="number" name="sort_order[' + file.id + ']" value="0" style="width: 50px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center;">' +
                             '</div>' +
-                            '<input type="text" name="captions[' + file.id + ']" value="" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.5rem;">' +
+                            '<input type="text" name="captions[' + file.id + ']" value="" placeholder="Descripción" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.3rem;">' +
+                            '<input type="text" name="authors[' + file.id + ']" value="" placeholder="Autor/a de la foto" style="width: 100%; padding: 4px; font-size: 0.75rem; border: 1px solid var(--gray-300); border-radius: 4px; text-align: center; margin-bottom: 0.5rem;">' +
                             '<label style="display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #e74c3c; cursor: pointer; justify-content: center; background: #fdf3f2; border: 1px solid #fbdad7; padding: 4px; border-radius: 4px;">' +
                             '<input type="checkbox" name="delete_gallery[]" value="' + file.id + '"> <b>Borrar archivo</b>' +
                             '</label>';

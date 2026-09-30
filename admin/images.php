@@ -7,10 +7,18 @@ require_once 'inc/layout.php';
 
 $pdo = getDB();
 
+// Auto-migración columna author
+try {
+    $pdo->query("SELECT author FROM page_images LIMIT 1");
+} catch (PDOException $e) {
+    $pdo->exec("ALTER TABLE page_images ADD COLUMN author VARCHAR(255) NULL AFTER caption");
+}
+
 // Procesar actualización de imagen
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_image') {
     $img_id = (int)$_POST['image_id'];
     $caption = isset($_POST['caption']) ? $_POST['caption'] : '';
+    $author = isset($_POST['author']) ? trim($_POST['author']) : '';
     $sort_order = (int)(isset($_POST['sort_order']) ? $_POST['sort_order'] : 0);
     $is_visible = isset($_POST['is_visible']) ? 1 : 0;
     $is_cover = isset($_POST['is_cover']) ? 1 : 0;
@@ -28,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    $stmt = $pdo->prepare("UPDATE page_images SET caption = ?, sort_order = ?, is_visible = ?, is_cover = ? WHERE id = ?");
-    $stmt->execute([$caption, $sort_order, $is_visible, $is_cover, $img_id]);
+    $stmt = $pdo->prepare("UPDATE page_images SET caption = ?, author = ?, sort_order = ?, is_visible = ?, is_cover = ? WHERE id = ?");
+    $stmt->execute([$caption, $author, $sort_order, $is_visible, $is_cover, $img_id]);
     
     header("Location: images.php?page=" . $current_page . "&msg=updated#img-" . $img_id);
     exit;
@@ -131,6 +139,11 @@ adminHeader("Galería General");
                     <div>
                         <label style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem; display: block;">Descripción (Pie de foto)</label>
                         <input type="text" name="caption" value="<?php echo htmlspecialchars(isset($row['caption']) ? $row['caption'] : ''); ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.9rem;" placeholder="Sin descripción...">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.2rem; display: block;">Autor/a de la foto</label>
+                        <input type="text" name="author" value="<?php echo htmlspecialchars(isset($row['author']) ? $row['author'] : ''); ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: 4px; font-size: 0.9rem;" placeholder="Autor/a (opcional)...">
                     </div>
 
                     <div style="display: flex; gap: 1rem; align-items: center;">

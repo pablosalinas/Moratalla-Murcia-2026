@@ -68,3 +68,6 @@ CREATE TABLE IF NOT EXISTS `celebrations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE news_events ADD COLUMN start_date DATETIME NULL AFTER event_date; ALTER TABLE news_events ADD COLUMN end_date DATETIME NULL AFTER start_date;
+ALTER TABLE news_events ADD COLUMN image_author VARCHAR(255) NULL AFTER image_caption;
+ALTER TABLE news_images ADD COLUMN author VARCHAR(255) NULL AFTER caption;
+ALTER TABLE page_images ADD COLUMN author VARCHAR(255) NULL AFTER caption;
