@@ -162,9 +162,10 @@ switch ($action) {
             echo json_encode(['success' => true, 'media' => $media]);
         } 
         elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Subir nuevo medio (soporta autor)
+            // Subir nuevo medio (soporta autor y descripción)
             $news_id = $_POST['news_id'] ?? 0;
             $author = trim($_POST['author'] ?? '');
+            $caption = trim($_POST['caption'] ?? '');
             if (!$news_id || !isset($_FILES['file'])) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Falta el ID de la noticia o el archivo']);
@@ -200,15 +201,15 @@ switch ($action) {
 
             if ($success) {
                 $dbPath = 'uploads/news/' . $filename;
-                $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order, is_video, author) VALUES (?, ?, ?, ?, ?)");
-                $stmtImg->execute([$news_id, $dbPath, 0, $isVid, $author ?: null]);
+                $stmtImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, sort_order, is_video, author, caption) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmtImg->execute([$news_id, $dbPath, 0, $isVid, $author ?: null, $caption ?: null]);
                 $newId = $pdo->lastInsertId();
                 
                 echo json_encode(['success' => true, 'media' => [
                     'id' => $newId,
                     'image_path' => $dbPath,
                     'is_video' => $isVid,
-                    'caption' => null,
+                    'caption' => $caption ?: null,
                     'author' => $author ?: null,
                     'sort_order' => 0
                 ]]);
@@ -254,6 +255,150 @@ switch ($action) {
                 }
                 
                 $stmt = $pdo->prepare("DELETE FROM news_images WHERE id = ?");
+                $stmt->execute([$media_id]);
+                echo json_encode(['success' => true]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'ID de medio requerido']);
+            }
+        }
+        break;
+
+    case 'pages':
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            // Obtener páginas con su categoría y primera imagen de portada si tiene
+            $stmt = $pdo->query("SELECT p.id, p.title, p.is_visible, p.category_id, c.name as category_name, 
+                                 (SELECT image_path FROM page_images WHERE page_id = p.id AND is_video = 0 ORDER BY is_cover DESC, sort_order ASC, id ASC LIMIT 1) as cover_image 
+                                 FROM pages p 
+                                 LEFT JOIN categories c ON p.category_id = c.id 
+                                 ORDER BY p.id DESC");
+            $pages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'pages' => $pages]);
+        }
+        break;
+
+    case 'toggle_page':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            $page_id = $data['id'] ?? $_POST['id'] ?? 0;
+            $is_visible = $data['is_visible'] ?? $_POST['is_visible'] ?? 0;
+            
+            if ($page_id) {
+                $stmt = $pdo->prepare("UPDATE pages SET is_visible = ? WHERE id = ?");
+                $stmt->execute([$is_visible, $page_id]);
+                echo json_encode(['success' => true]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'ID de página requerido']);
+            }
+        }
+        break;
+
+    case 'page_media':
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $page_id = $_GET['page_id'] ?? 0;
+            $stmt = $pdo->prepare("SELECT id, page_id, image_path, is_video, is_cover, caption, author, sort_order, is_visible FROM page_images WHERE page_id = ? ORDER BY sort_order ASC, id ASC");
+            $stmt->execute([$page_id]);
+            $media = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'media' => $media]);
+        }
+        elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $page_id = $_POST['page_id'] ?? 0;
+            $author = trim($_POST['author'] ?? '');
+            $caption = trim($_POST['caption'] ?? '');
+            if (!$page_id || !isset($_FILES['file'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Falta el ID de la página o el archivo']);
+                exit;
+            }
+
+            require_once 'admin/inc/image_helper.php';
+
+            $file = $_FILES['file'];
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Error al subir el archivo al servidor']);
+                exit;
+            }
+
+            $uploadDir = 'uploads/galerias/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+            $filename = uniqid('pageg_api_') . '_' . basename($file['name']);
+            $targetFile = $uploadDir . $filename;
+            
+            $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $isVid = in_array($fileExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']) ? 1 : 0;
+            
+            $success = false;
+            if ($fileExt === 'pdf') {
+                $success = move_uploaded_file($file['tmp_name'], $targetFile);
+            } elseif ($isVid) {
+                $success = processUploadedVideo($file['tmp_name'], $targetFile, true);
+            } else {
+                $success = processUploadedImage($file['tmp_name'], $targetFile, true, 1200, 85);
+            }
+
+            if ($success) {
+                $dbPath = 'uploads/galerias/' . $filename;
+                $stmtOrder = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM page_images WHERE page_id = ?");
+                $stmtOrder->execute([$page_id]);
+                $nextOrder = (int)$stmtOrder->fetchColumn();
+
+                $stmtImg = $pdo->prepare("INSERT INTO page_images (page_id, image_path, is_cover, is_video, caption, author, sort_order, is_visible) VALUES (?, ?, 0, ?, ?, ?, ?, 1)");
+                $stmtImg->execute([$page_id, $dbPath, $isVid, $caption ?: null, $author ?: null, $nextOrder]);
+                $newId = $pdo->lastInsertId();
+                
+                echo json_encode(['success' => true, 'media' => [
+                    'id' => $newId,
+                    'page_id' => (int)$page_id,
+                    'image_path' => $dbPath,
+                    'is_video' => $isVid,
+                    'caption' => $caption ?: null,
+                    'author' => $author ?: null,
+                    'sort_order' => $nextOrder,
+                    'is_visible' => 1
+                ]]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Error al procesar el archivo']);
+            }
+        }
+        elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            $media_id = $data['id'] ?? 0;
+            $caption = $data['caption'] ?? null;
+            $author = isset($data['author']) ? trim($data['author']) : null;
+            
+            if ($media_id) {
+                if ($author !== null && $caption !== null) {
+                    $stmt = $pdo->prepare("UPDATE page_images SET caption = ?, author = ? WHERE id = ?");
+                    $stmt->execute([$caption, $author ?: null, $media_id]);
+                } elseif ($author !== null) {
+                    $stmt = $pdo->prepare("UPDATE page_images SET author = ? WHERE id = ?");
+                    $stmt->execute([$author ?: null, $media_id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE page_images SET caption = ? WHERE id = ?");
+                    $stmt->execute([$caption ?? '', $media_id]);
+                }
+                echo json_encode(['success' => true]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'ID de medio requerido']);
+            }
+        }
+        elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $media_id = $_GET['id'] ?? 0;
+            if ($media_id) {
+                $stmt = $pdo->prepare("SELECT image_path FROM page_images WHERE id = ?");
+                $stmt->execute([$media_id]);
+                $path = $stmt->fetchColumn();
+                
+                if (!empty($path) && is_file($path)) {
+                    @unlink($path);
+                }
+                
+                $stmt = $pdo->prepare("DELETE FROM page_images WHERE id = ?");
                 $stmt->execute([$media_id]);
                 echo json_encode(['success' => true]);
             } else {
