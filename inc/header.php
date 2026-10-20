@@ -357,7 +357,7 @@ function renderHorizontalMenu() {
                 }
                 $html .= htmlspecialchars($cat['name']);
                 if ($hasChildren) {
-                    $html .= " <i class='fas fa-angle-" . ($parentId === 0 ? 'down' : 'right') . "' style='margin-left: auto;'></i>";
+                    $html .= " <i class='fas fa-angle-" . ($parentId === 0 ? 'down' : 'right') . " nav-arrow'></i>";
                 }
                 $html .= "</a>";
                 if ($hasChildren) {

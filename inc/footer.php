@@ -123,27 +123,38 @@
             });
         }
         
-        // Mobile Submenu Accordion Logic
-        const menuItemsWithDropdown = document.querySelectorAll('.nav-menu > li');
+        // Mobile Submenu Accordion Logic (+ / - circular button)
+        const menuItemsWithDropdown = document.querySelectorAll('.nav-menu li');
         menuItemsWithDropdown.forEach(li => {
-            const dropdown = li.querySelector('.dropdown');
+            const dropdown = Array.from(li.children).find(el => el.classList && el.classList.contains('dropdown'));
             if (dropdown) {
+                li.classList.add('has-submenu');
                 const toggleBtn = document.createElement('div');
                 toggleBtn.className = 'mobile-submenu-toggle';
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                toggleBtn.setAttribute('aria-label', 'Desplegar submenú');
+                toggleBtn.innerHTML = '<i class="fas fa-plus"></i>';
                 li.appendChild(toggleBtn);
                 
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    // Close other open submenus
-                    menuItemsWithDropdown.forEach(otherLi => {
-                        if (otherLi !== li && otherLi.classList.contains('active')) {
-                            otherLi.classList.remove('active');
-                        }
-                    });
+                    // Close sibling open submenus at the same level
+                    const parentUl = li.parentElement;
+                    if (parentUl) {
+                        Array.from(parentUl.children).forEach(siblingLi => {
+                            if (siblingLi !== li && siblingLi.classList.contains('active')) {
+                                siblingLi.classList.remove('active');
+                                const siblingIcon = siblingLi.querySelector(':scope > .mobile-submenu-toggle i');
+                                if (siblingIcon) siblingIcon.className = 'fas fa-plus';
+                            }
+                        });
+                    }
                     // Toggle current
-                    li.classList.toggle('active');
+                    const isActive = li.classList.toggle('active');
+                    const icon = toggleBtn.querySelector('i');
+                    if (icon) {
+                        icon.className = isActive ? 'fas fa-minus' : 'fas fa-plus';
+                    }
                 });
             }
         });
