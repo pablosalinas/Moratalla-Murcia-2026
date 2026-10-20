@@ -180,6 +180,11 @@ $finalDesc = isset($pageDescription) && !empty($pageDescription) ? $pageDescript
 // Obtener ajustes
 $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+if (empty($settings['smtp_pass_enc']) || empty($settings['admin_email']) || $settings['admin_email'] === 'pablosalinas@moratalla-murcia.com') {
+    require_once __DIR__ . '/mailer.php';
+    getMailConfig($pdo);
+    $settings['admin_email'] = 'info@moratalla-murcia.com';
+}
 
 $tickerText = isset($settings['ticker_text']) ? $settings['ticker_text'] : "Bienvenido a moratalla-murcia.com";
 

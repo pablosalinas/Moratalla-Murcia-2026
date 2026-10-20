@@ -3,14 +3,18 @@
 require_once 'inc/auth.php';
 require_once 'inc/layout.php';
 require_once '../config.php';
+require_once '../inc/mailer.php';
 
 $pdo = getDB();
+// Asegurar que la contraseña encriptada y el correo info@moratalla-murcia.com estén inicializados en la BD
+$mailConfig = getMailConfig($pdo);
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tickerText = isset($_POST['ticker_text']) ? $_POST['ticker_text'] : '';
     $tickerSpeed = isset($_POST['ticker_speed']) ? $_POST['ticker_speed'] : '30';
     $adminEmail = isset($_POST['admin_email']) ? trim($_POST['admin_email']) : '';
+    $adminEmailPass = isset($_POST['admin_email_pass']) ? $_POST['admin_email_pass'] : '';
     $daysBefore = isset($_POST['celebration_days_before']) ? (int)$_POST['celebration_days_before'] : 5;
     $daysAfter = isset($_POST['celebration_days_after']) ? (int)$_POST['celebration_days_after'] : 2;
     
@@ -26,6 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!empty($adminEmail)) {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('admin_email', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$adminEmail, $adminEmail]);
+        $encUser = encryptSecret($adminEmail);
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('smtp_user_enc', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$encUser, $encUser]);
+    }
+    
+    if ($adminEmailPass !== '') {
+        $encPass = encryptSecret($adminEmailPass);
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('smtp_pass_enc', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$encPass, $encPass]);
     }
     
     $message = "Configuración actualizada con éxito.";
@@ -37,7 +48,8 @@ $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $currentTicker = isset($settings['ticker_text']) ? $settings['ticker_text'] : '';
 $currentSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : '30';
-$currentAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com';
+$currentAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'info@moratalla-murcia.com';
+$hasEncryptedPass = !empty($settings['smtp_pass_enc']);
 $currentDaysBefore = isset($settings['celebration_days_before']) ? $settings['celebration_days_before'] : '5';
 $currentDaysAfter = isset($settings['celebration_days_after']) ? $settings['celebration_days_after'] : '2';
 $currentCycleTime = isset($settings['celebration_cycle_time']) ? $settings['celebration_cycle_time'] : '5';
@@ -56,11 +68,24 @@ adminHeader("Configuración General");
         </div>
     <?php endif; ?>
 
-    <form method="POST" style="margin-top: 2rem;">
+    <form method="POST" style="margin-top: 2rem;" autocomplete="off">
         <div style="margin-bottom: 2.5rem;">
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Correo Electrónico del Administrador</label>
-            <input type="email" name="admin_email" value="<?php echo htmlspecialchars($currentAdminEmail); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;" placeholder="admin@moratalla-murcia.com">
+            <input type="email" name="admin_email" value="<?php echo htmlspecialchars($currentAdminEmail); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;" placeholder="info@moratalla-murcia.com">
             <small style="color: #666; display: block; margin-top: 0.5rem;">Este es el correo donde se recibirán los mensajes de contacto y el que aparecerá en la política de privacidad.</small>
+        </div>
+
+        <div style="margin-bottom: 2.5rem;">
+            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; font-weight: 600;">
+                <span>Contraseña del Correo Electrónico (Ionos SMTP)</span>
+                <?php if ($hasEncryptedPass): ?>
+                    <span style="background: #d1fae5; color: #065f46; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+                        <i class="fas fa-lock"></i> Encriptada (AES-256)
+                    </span>
+                <?php endif; ?>
+            </label>
+            <input type="password" name="admin_email_pass" value="" autocomplete="new-password" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;" placeholder="<?php echo $hasEncryptedPass ? '•••••••••••••••••••••••• (Oculta y protegida en BD — escribe solo si deseas cambiarla)' : 'Introduce la contraseña del correo...'; ?>">
+            <small style="color: #666; display: block; margin-top: 0.5rem;">Por seguridad, la contraseña nunca se muestra en pantalla ni en el código fuente. Se almacena cifrada con AES-256 en la base de datos. Déjalo en blanco para mantener la contraseña actual.</small>
         </div>
 
         <div style="margin-bottom: 2.5rem;">

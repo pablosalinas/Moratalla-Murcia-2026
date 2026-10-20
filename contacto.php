@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once 'config.php';
+require_once 'inc/mailer.php';
 $pdo = getDB();
 
 $pageTitle = "Contacto";
@@ -29,43 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!isset($_SESSION['captcha_sum']) || (int)$captcha !== $_SESSION['captcha_sum']) {
         $mensajeError = "La respuesta a la suma de seguridad es incorrecta. Eres humano, ¿verdad?";
     } else {
-        // Enviar el correo
-        $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
-        $settings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
-        $adminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'pablosalinas@moratalla-murcia.com';
-        
-        $to = $adminEmail;
-        $subject = "Nuevo mensaje de contacto desde moratalla-murcia.com";
-        
-        $body = "Has recibido un nuevo mensaje desde el formulario de contacto de la web.\n\n";
-        $body .= "DATOS DEL REMITENTE:\n";
-        $body .= "Nombre: $nombre\n";
-        $body .= "Teléfono: " . ($telefono ?: 'No facilitado') . "\n";
-        $body .= "Correo: $email\n\n";
-        $body .= "MENSAJE:\n";
-        $body .= "$mensaje\n";
-        
-        $headers = "From: no-reply@moratalla-murcia.com\n";
-        $headers .= "Reply-To: " . $email . "\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\n";
-        
-        // 1. Guardar siempre en la base de datos (solución robusta)
+        // 1. Guardar siempre en la Bandeja de Mensajes de la base de datos
         try {
             $stmt = $pdo->prepare("INSERT INTO contact_messages (name, phone, email, message) VALUES (?, ?, ?, ?)");
             $stmt->execute([$nombre, $telefono, $email, $mensaje]);
             
-            $mensajeExito = "¡Gracias por contactar con nosotros, $nombre! Tu mensaje se ha guardado correctamente. Te responderemos lo antes posible a $email.";
+            // 2. Enviar el correo electrónico autenticado por SMTP (Ionos) a info@moratalla-murcia.com
+            $mailError = null;
+            sendContactEmail($pdo, $nombre, $telefono, $email, $mensaje, $mailError);
             
-            // 2. Intentar enviar el correo electrónico (ignorar el resultado si falla por restricciones del servidor)
-            @mail($to, $subject, $body, $headers, "-f no-reply@moratalla-murcia.com");
-            
-            // Simulación en local para depuración
-            $isLocalhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'], 'localhost') !== false;
-            if ($isLocalhost) {
-                $logFile = __DIR__ . '/scratch/local_mail_' . time() . '.txt';
-                if (!is_dir(__DIR__ . '/scratch')) @mkdir(__DIR__ . '/scratch', 0777, true);
-                @file_put_contents($logFile, "TO: $to\nSUBJECT: $subject\nHEADERS:\n$headers\nBODY:\n$body");
-            }
+            $mensajeExito = "¡Gracias por contactar con nosotros, $nombre! Tu mensaje ha sido enviado y registrado correctamente. Te responderemos lo antes posible a $email.";
             
             // Limpiar datos para evitar doble envío
             $nombre = $telefono = $email = $mensaje = "";
