@@ -18,6 +18,21 @@ function getUploadedCustomIcons() {
             if ($f === '.' || $f === '..') continue;
             $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
             if (in_array($ext, $allowed)) {
+                // Auto-actualizar si algún SVG previo fue generado con iniciales (<text...) para convertirlo en gráfico real
+                if ($ext === 'svg') {
+                    $fullSvgPath = $dir . '/' . $f;
+                    $svgContent = @file_get_contents($fullSvgPath);
+                    if ($svgContent && stripos($svgContent, '<text ') !== false && function_exists('findGraphicIconsForPrompt')) {
+                        $conceptFromName = str_replace(['_', '-'], ' ', pathinfo($f, PATHINFO_FILENAME));
+                        $cands = findGraphicIconsForPrompt($conceptFromName);
+                        if (!empty($cands[0])) {
+                            $newGraphicSvg = fetchAndBuildGraphicSvgFromIconify($cands[0]);
+                            if ($newGraphicSvg !== '') {
+                                @file_put_contents($fullSvgPath, $newGraphicSvg);
+                            }
+                        }
+                    }
+                }
                 $icons[] = $f;
             }
         }
@@ -181,12 +196,302 @@ function buildCleanIconFilename($text, $ext = 'svg') {
 }
 
 /**
- * Construye un icono vectorial SVG inteligente y colorido en local según el texto indicado (fallback si no hay clave Gemini)
+ * Traduce un concepto en español a términos visuales en inglés priorizando el sustantivo principal
+ */
+function translateSpanishConceptToQueries($spanishPrompt) {
+    require_once __DIR__ . '/ai_news_helper.php';
+
+    $normEs = strtr(mb_strtolower(trim($spanishPrompt), 'UTF-8'), [
+        'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ü'=>'u', 'ñ'=>'n',
+        'Á'=>'a', 'É'=>'e', 'Í'=>'i', 'Ó'=>'o', 'Ú'=>'u', 'Ü'=>'u', 'Ñ'=>'n'
+    ]);
+
+    $directMap = [
+        'bicicleta'   => ['mountain-bicyclist', 'bicycle', 'biking'],
+        'bici'        => ['bicycle', 'mountain-bicyclist'],
+        'ciclismo'    => ['mountain-bicyclist', 'bicycle'],
+        'castillo'    => ['castle', 'european-castle', 'fortress'],
+        'fortaleza'   => ['castle', 'shield'],
+        'torre'       => ['castle', 'tokyo-tower'],
+        'tambor'      => ['drum', 'long-drum'],
+        'semana santa'=> ['drum', 'church'],
+        'senderismo'  => ['hiking-boot', 'person-walking', 'mountain'],
+        'ruta'        => ['compass', 'world-map', 'hiking-boot'],
+        'mapa'        => ['world-map', 'compass'],
+        'cueva'       => ['mountain', 'rock', 'camping'],
+        'rupestre'    => ['artist-palette', 'rock', 'scroll'],
+        'arqueolog'   => ['amphora', 'scroll', 'classical-building'],
+        'historia'    => ['scroll', 'classical-building', 'hourglass-done'],
+        'patrimonio'  => ['classical-building', 'castle'],
+        'restaurante' => ['fork-and-knife-with-plate', 'pot-of-food'],
+        'gastronomia' => ['shallow-pan-of-food', 'fork-and-knife-with-plate', 'pot-of-food'],
+        'comida'      => ['pot-of-food', 'fork-and-knife-with-plate'],
+        'bar'         => ['clinking-beer-mugs', ' tropical-drink'],
+        'vino'        => ['wine-glass', 'bottle-with-popping-cork'],
+        'cafe'        => ['hot-beverage', 'croissant'],
+        'helad'       => ['soft-ice-cream', 'ice-cream'],
+        'dulce'       => ['cupcake', 'shortcake', 'pie'],
+        'mazapan'     => ['pie', 'croissant', 'cupcake'],
+        'pastel'      => ['birthday-cake', 'shortcake'],
+        'panaderia'   => ['baguette-bread', 'croissant'],
+        'ayuntamiento'=> ['classical-building', 'office-building'],
+        'iglesia'     => ['church', 'wedding'],
+        'ermita'      => ['church', 'place-of-worship'],
+        'parroquia'   => ['church', 'bell'],
+        'cruz'        => ['latin-cross', 'church'],
+        'toro'        => ['ox', 'bull', 'water-buffalo'],
+        'encierro'    => ['ox', 'bull', 'party-popper'],
+        'fiesta'      => ['party-popper', 'confetti-ball', 'ferris-wheel'],
+        'feria'       => ['ferris-wheel', 'carousel-horse', 'party-popper'],
+        'musica'      => ['musical-notes', 'guitar', 'violin'],
+        'concierto'   => ['microphone', 'musical-notes', 'guitar'],
+        'teatro'      => ['performing-arts', 'admission-tickets'],
+        'cultura'     => ['performing-arts', 'open-book', 'artist-palette'],
+        'museo'       => ['framed-picture', 'classical-building', 'amphora'],
+        'arte'        => ['artist-palette', 'framed-picture'],
+        'pintura'     => ['artist-palette', 'paintbrush'],
+        'libro'       => ['open-book', 'books'],
+        'biblioteca'  => ['books', 'open-book'],
+        'colegio'     => ['school', 'graduation-cap'],
+        'escuela'     => ['school', 'books'],
+        'naturaleza'  => ['evergreen-tree', 'deciduous-tree', 'national-park'],
+        'arbol'       => ['deciduous-tree', 'evergreen-tree'],
+        'pino'        => ['evergreen-tree', 'national-park'],
+        'bosque'      => ['evergreen-tree', 'deciduous-tree'],
+        'monte'       => ['mountain', 'snow-capped-mountain', 'evergreen-tree'],
+        'montana'     => ['snow-capped-mountain', 'mountain'],
+        'mirador'     => ['sunrise-over-mountains', 'binoculars', 'mountain'],
+        'rio'         => ['water-wave', 'national-park', 'canoe'],
+        'agua'        => ['droplet', 'water-wave', 'fountain'],
+        'poza'        => ['water-wave', 'swimmer'],
+        'piscina'     => ['person-swimming', 'water-wave'],
+        'hotel'       => ['hotel', 'bed'],
+        'casa'        => ['house-with-garden', 'house'],
+        'rural'       => ['house-with-garden', 'evergreen-tree'],
+        'alojamiento' => ['bed', 'hotel', 'house-with-garden'],
+        'camping'     => ['camping', 'tent'],
+        'deporte'     => ['trophy', 'sports-medal', 'soccer-ball'],
+        'futbol'      => ['soccer-ball', 'goal-net'],
+        'baloncesto'  => ['basketball', 'trophy'],
+        'tenis'       => ['tennis', 'racquet'],
+        'carrera'     => ['person-running', 'chequered-flag', 'trophy'],
+        'trofeo'      => ['trophy', '1st-place-medal'],
+        'parking'     => ['automobile', 'bus', 'motorway'],
+        'aparcamiento'=> ['automobile', 'bus'],
+        'coche'       => ['automobile', 'sport-utility-vehicle'],
+        'autobus'     => ['bus', 'minibus'],
+        'farmacia'    => ['pill', 'hospital', 'medical-symbol'],
+        'salud'       => ['hospital', 'stethoscope', 'ambulance'],
+        'hospital'    => ['hospital', 'ambulance'],
+        'medico'      => ['stethoscope', 'hospital'],
+        'ambulancia'  => ['ambulance', 'hospital'],
+        'policia'     => ['police-car', 'shield'],
+        'emergencia'  => ['police-car-light', 'fire-engine'],
+        'bombero'     => ['fire-engine', 'fire'],
+        'foto'        => ['camera-with-flash', 'camera'],
+        'camara'      => ['camera-with-flash', 'video-camera'],
+        'video'       => ['movie-camera', 'film-frames'],
+        'perro'       => ['dog', 'dog-face'],
+        'animal'      => ['deer', 'eagle', 'dog'],
+        'fauna'       => ['deer', 'eagle', 'butterfly'],
+        'flora'       => ['sunflower', 'hibiscus', 'blossom'],
+        'flor'        => ['sunflower', 'rose', 'blossom'],
+        'sol'         => ['sun', 'sun-behind-small-cloud'],
+        'tiempo'      => ['sun-behind-cloud', 'thermometer'],
+        'nieve'       => ['snowflake', 'snowman', 'snow-capped-mountain'],
+        'lluvia'      => ['umbrella-with-rain-drops', 'cloud-with-rain'],
+        'estrella'    => ['glowing-star', 'night-with-stars', 'telescope'],
+        'astronomia'  => ['telescope', 'milky-way', 'night-with-stars'],
+        'mercado'     => ['shopping-bags', 'basket'],
+        'comercio'    => ['shopping-bags', 'convenience-store'],
+        'artesania'   => ['amphora', 'yarn', 'basket'],
+        'esparto'     => ['basket', 'sheaf-of-rice'],
+        'agricultura' => ['tractor', 'sheaf-of-rice', 'olive'],
+        'olivo'       => ['olive', 'deciduous-tree'],
+        'aceite'      => ['olive', 'amphora'],
+        'telefono'    => ['telephone-receiver', 'mobile-phone'],
+        'contacto'    => ['envelope', 'telephone-receiver'],
+        'noticia'     => ['newspaper', 'rolled-up-newspaper'],
+        'calendario'  => ['spiral-calendar', 'calendar'],
+        'evento'      => ['spiral-calendar', 'party-popper'],
+        'familia'     => ['family', 'people-holding-hands'],
+        'asociacion'  => ['handshake', 'busts-in-silhouette']
+    ];
+
+    $queries = [];
+    $stopEs = ['de', 'del', 'la', 'el', 'los', 'las', 'en', 'con', 'para', 'por', 'un', 'una', 'y', 'o', 'a', 'moratalla', 'municipal', 'tradicional'];
+    $esWords = preg_split('/[^a-z0-9]+/', $normEs, -1, PREG_SPLIT_NO_EMPTY);
+    $esMainWords = array_values(array_diff($esWords, $stopEs));
+
+    // 1. Evaluar palabra por palabra en el orden en que el usuario las escribió (en español el sustantivo va primero)
+    foreach ($esMainWords as $w) {
+        foreach ($directMap as $k => $mappedList) {
+            if (strpos($w, $k) === 0 || strpos($k, $w) === 0) {
+                foreach ($mappedList as $mItem) {
+                    if (!in_array($mItem, $queries, true)) {
+                        $queries[] = $mItem;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Comprobar también coincidencias parciales en toda la frase
+    foreach ($directMap as $k => $mappedList) {
+        if (strpos($normEs, $k) !== false) {
+            foreach ($mappedList as $mItem) {
+                if (!in_array($mItem, $queries, true)) {
+                    $queries[] = $mItem;
+                }
+            }
+        }
+    }
+
+    // 3. Traducir sustantivos principales y frase completa al inglés con Google Translate para cualquier otro concepto libre
+    $translateFn = function ($txt) {
+        $url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q=' . urlencode($txt);
+        $raw = aiHttpGet($url, 6);
+        if (!empty($raw)) {
+            $data = @json_decode($raw, true);
+            if (!empty($data[0][0][0])) {
+                $clean = trim(preg_replace('/[^a-z0-9\s-]/', '', strtolower($data[0][0][0])));
+                return $clean;
+            }
+        }
+        return '';
+    };
+
+    if (!empty($esMainWords[0])) {
+        $enFirstNoun = $translateFn($esMainWords[0]);
+        if ($enFirstNoun !== '' && !in_array($enFirstNoun, $queries, true)) {
+            array_unshift($queries, $enFirstNoun);
+        }
+    }
+
+    $enFull = $translateFn($spanishPrompt);
+    if ($enFull !== '') {
+        if (!in_array($enFull, $queries, true)) {
+            $queries[] = $enFull;
+        }
+        $enParts = array_reverse(preg_split('/\s+/', $enFull, -1, PREG_SPLIT_NO_EMPTY));
+        foreach ($enParts as $ep) {
+            if (strlen($ep) > 2 && !in_array($ep, ['the', 'and', 'for', 'with', 'from'], true) && !in_array($ep, $queries, true)) {
+                $queries[] = $ep;
+            }
+        }
+    }
+
+    if (empty($queries)) {
+        $queries[] = 'sparkles';
+    }
+
+    return $queries;
+}
+
+/**
+ * Localiza iconos gráficos vectoriales reales (a todo color o siluetas ilustradas) en Iconify referentes al texto
+ */
+function findGraphicIconsForPrompt($spanishPrompt) {
+    require_once __DIR__ . '/ai_news_helper.php';
+
+    $queries = translateSpanishConceptToQueries($spanishPrompt);
+    $candidates = [];
+
+    // 1. Buscar primero en colecciones gráficas ilustradas a todo color
+    $colorPrefixes = 'fluent-emoji-flat,noto,twemoji,emojione,flat-color-icons,streamline-emojis,fxemoji';
+    foreach ($queries as $q) {
+        $searchUrl = 'https://api.iconify.design/search?query=' . urlencode($q) . '&prefixes=' . $colorPrefixes . '&limit=12';
+        $res = aiHttpGet($searchUrl, 7);
+        if (!empty($res)) {
+            $json = @json_decode($res, true);
+            if (!empty($json['icons']) && is_array($json['icons'])) {
+                foreach ($json['icons'] as $ic) {
+                    if (strpos($ic, 'flag-') !== false || strpos($ic, 'letter-') !== false || strpos($ic, 'regional-indicator') !== false) {
+                        continue;
+                    }
+                    if (!in_array($ic, $candidates, true)) {
+                        $candidates[] = $ic;
+                    }
+                }
+            }
+        }
+        if (count($candidates) >= 6) break;
+    }
+
+    // 2. Si no hubo suficientes en color, buscar en colecciones gráficas temáticas (game-icons, solar, tabler, mdi)
+    if (empty($candidates)) {
+        $monoPrefixes = 'game-icons,solar,tabler,mdi';
+        foreach ($queries as $q) {
+            $searchUrl = 'https://api.iconify.design/search?query=' . urlencode($q) . '&prefixes=' . $monoPrefixes . '&limit=10';
+            $res = aiHttpGet($searchUrl, 7);
+            if (!empty($res)) {
+                $json = @json_decode($res, true);
+                if (!empty($json['icons']) && is_array($json['icons'])) {
+                    foreach ($json['icons'] as $ic) {
+                        if (strpos($ic, 'alphabet') !== false || strpos($ic, 'letter') !== false) continue;
+                        if (!in_array($ic, $candidates, true)) {
+                            $candidates[] = $ic;
+                        }
+                    }
+                }
+            }
+            if (count($candidates) >= 4) break;
+        }
+    }
+
+    return $candidates;
+}
+
+/**
+ * Descarga un gráfico SVG desde Iconify y lo envuelve como un icono vectorial rico y vistoso
+ */
+function fetchAndBuildGraphicSvgFromIconify($iconId) {
+    require_once __DIR__ . '/ai_news_helper.php';
+
+    $parts = explode(':', $iconId, 2);
+    if (count($parts) !== 2) return '';
+    list($prefix, $name) = $parts;
+
+    $isMono = in_array($prefix, ['game-icons', 'solar', 'tabler', 'mdi'], true);
+    $svgUrl = 'https://api.iconify.design/' . rawurlencode($prefix) . '/' . rawurlencode($name) . '.svg?width=64&height=64' . ($isMono ? '&color=%23ffffff' : '');
+    $rawSvg = aiHttpGet($svgUrl, 8);
+
+    if (empty($rawSvg) || stripos($rawSvg, '<svg') === false) {
+        return '';
+    }
+
+    // Si es un icono monocromo, presentarlo sobre un escudo/tarjeta redondeada con degradado colorido
+    if ($isMono && preg_match('/<svg[^>]*>(.*)<\/svg>/is', $rawSvg, $m)) {
+        $innerPaths = $m[1];
+        $viewBox = '0 0 24 24';
+        if (preg_match('/viewBox="([^"]+)"/i', $rawSvg, $vbM)) {
+            $viewBox = $vbM[1];
+        }
+        return <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b4332"/>
+      <stop offset="100%" stop-color="#2d6a4f"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bgGrad)" stroke="#d4af37" stroke-width="2"/>
+  <svg x="12" y="12" width="40" height="40" viewBox="{$viewBox}">
+    {$innerPaths}
+  </svg>
+</svg>
+SVG;
+    }
+
+    return $rawSvg;
+}
+
+/**
+ * Construye un icono vectorial SVG gráfico en local según el texto indicado (NUNCA usa iniciales ni letras)
  */
 function buildSmartVectorSvgIcon($text) {
     $lower = mb_strtolower($text, 'UTF-8');
 
-    // Paletas y gráficos vectoriales según temática
     if (strpos($lower, 'castillo') !== false || strpos($lower, 'fortaleza') !== false || strpos($lower, 'torre') !== false || strpos($lower, 'patrimonio') !== false) {
         $bg1 = '#1b4332'; $bg2 = '#2d6a4f'; $acc = '#d4af37';
         $inner = '<path d="M16 48V24h6v4h4v-4h6v4h4v-4h6v4h4v-4h6v24H16z" fill="#f8f9fa" stroke="' . $acc . '" stroke-width="2"/>'
@@ -235,20 +540,13 @@ function buildSmartVectorSvgIcon($text) {
                . '<rect x="28" y="38" width="8" height="12" fill="#0f766e"/>'
                . '<rect x="21" y="34" width="5" height="5" fill="#99f6e4"/><rect x="38" y="34" width="5" height="5" fill="#99f6e4"/>';
     } else {
-        // Emblema personalizado con inicial o símbolo estilizado de Moratalla
+        // Gráfico paisajístico y monumental (montañas, sol y torre) sin letras ni iniciales
         $bg1 = '#1b4332'; $bg2 = '#2d6a4f'; $acc = '#d4af37';
-        $words = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY);
-        $initials = '';
-        foreach ($words as $w) {
-            if (mb_strlen($w) > 2 || count($words) === 1) {
-                $initials .= mb_strtoupper(mb_substr($w, 0, 1, 'UTF-8'), 'UTF-8');
-                if (mb_strlen($initials) >= 2) break;
-            }
-        }
-        if ($initials === '') $initials = 'M';
-        $safeInit = htmlspecialchars($initials, ENT_QUOTES, 'UTF-8');
-        $inner = '<circle cx="32" cy="32" r="21" fill="none" stroke="' . $acc . '" stroke-width="2" stroke-dasharray="4,2"/>'
-               . '<text x="32" y="39" text-anchor="middle" font-family="Outfit, Inter, Arial, sans-serif" font-size="20" font-weight="800" fill="#ffffff">' . $safeInit . '</text>';
+        $inner = '<circle cx="44" cy="18" r="5" fill="#fde047"/>'
+               . '<polygon points="10,48 26,24 40,48" fill="#a7f3d0" opacity="0.85"/>'
+               . '<polygon points="24,48 39,27 54,48" fill="#ffffff"/>'
+               . '<rect x="21" y="18" width="8" height="12" rx="1" fill="#fde68a" stroke="' . $acc . '" stroke-width="1.5"/>'
+               . '<path d="M12 51h40" stroke="' . $acc . '" stroke-width="3" stroke-linecap="round"/>';
     }
 
     return <<<SVG
@@ -266,8 +564,8 @@ SVG;
 }
 
 /**
- * Genera un icono a partir del texto indicado usando IA (Google Gemini para SVG vectorial o IA generativa para PNG)
- * y lo guarda directamente en `uploads/icons/` para incorporarlo a la relación de iconos de la web.
+ * Genera un icono gráfico o imagen referente al texto indicado (SVG vectorial ilustrado o PNG de alta resolución)
+ * y lo incorpora directamente a `uploads/icons/` para toda la web.
  */
 function generateAiIconForWeb(PDO $pdo, $promptText, $format = 'svg') {
     require_once __DIR__ . '/ai_news_helper.php';
@@ -284,21 +582,40 @@ function generateAiIconForWeb(PDO $pdo, $promptText, $format = 'svg') {
     }
 
     $apiKey = getGeminiApiKey($pdo);
+    $graphicCandidates = findGraphicIconsForPrompt($promptText);
 
-    // MODO 1: ICONO VECTORIAL SVG CON GOOGLE GEMINI (o generador vectorial inteligente)
+    // Determinar índice de variación si ya existen iconos previos con el mismo nombre base
+    $nextFilename = buildCleanIconFilename($promptText, $format);
+    $variationIdx = 0;
+    if (preg_match('/_(\d+)\.' . preg_quote($format, '/') . '$/', $nextFilename, $vMatch)) {
+        $variationIdx = max(0, ((int)$vMatch[1]) - 1);
+    }
+
+    // MODO 1: ICONO VECTORIAL GRÁFICO (.SVG)
     if ($format === 'svg') {
         $svgCode = '';
-        $engineUsed = 'Motor Vectorial Moratalla';
+        $engineUsed = 'Catálogo Gráfico Vectorial';
 
-        if (!empty($apiKey)) {
+        // 1A. Si hay candidatos gráficos ilustrados a todo color referentes al texto, usar el correspondiente
+        if (!empty($graphicCandidates)) {
+            $chosenIconId = $graphicCandidates[$variationIdx % count($graphicCandidates)];
+            $fetchedSvg = fetchAndBuildGraphicSvgFromIconify($chosenIconId);
+            if ($fetchedSvg !== '') {
+                $svgCode = $fetchedSvg;
+                $engineUsed = "Gráfico Vectorial ({$chosenIconId})";
+            }
+        }
+
+        // 1B. Si está configurada la clave de Google Gemini y aún no hay SVG (o el usuario pide variante extra), generar ilustración SVG con Gemini (sin texto ni iniciales)
+        if ($svgCode === '' && !empty($apiKey)) {
             $svgPrompt = <<<PROMPT
-Eres un diseñador experto en iconografía vectorial UI/UX para el portal turístico y municipal "moratalla-murcia.com".
-Crea un icono vectorial SVG moderno, colorido, limpio, expresivo y muy legible a tamaño pequeño (24px-64px) que represente exactamente: "{$promptText}".
+Eres un ilustrador experto en iconos vectoriales planos (Flat Vector Icon Illustration).
+Dibuja un icono vectorial SVG colorido, detallado y muy expresivo que represente VISUALMENTE este concepto: "{$promptText}".
 
-Requisitos técnicos obligatorios:
-1. Devuelve ÚNICAMENTE el código XML `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">...</svg>` sin bloques markdown ni explicaciones.
-2. Usa un fondo de tarjeta redondeada (`<rect x="4" y="4" width="56" height="56" rx="14" .../>`) con un degradado atractivo acorde a la temática (o los tonos corporativos verde bosque #1b4332 / dorado #d4af37 si encaja) y figuras centrales en alto contraste con sombras o detalles cuidados.
-3. No incluyas etiquetas `<script>` ni imágenes externas; usa exclusivamente `<path>`, `<circle>`, `<rect>`, `<polygon>`, `<ellipse>`, `<line>`, `<g>` y `<linearGradient>`.
+REGLAS ESTRICTAS:
+1. PROHIBIDO usar etiquetas `<text>` o poner letras/iniciales. Debe ser 100% un dibujo o representación gráfica reconocible del objeto, lugar, actividad o concepto "{$promptText}".
+2. Devuelve ÚNICAMENTE el código XML `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">...</svg>` sin bloques markdown ni explicaciones.
+3. Usa múltiples capas de formas (`<path>`, `<circle>`, `<rect>`, `<polygon>`, `<ellipse>`, `<g>`, `<linearGradient>`) con colores vivos y buen contraste para que la figura principal se reconozca claramente.
 PROMPT;
 
             $models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
@@ -309,7 +626,7 @@ PROMPT;
                         ['parts' => [['text' => $svgPrompt]]]
                     ],
                     'generationConfig' => [
-                        'temperature' => 0.4
+                        'temperature' => 0.45
                     ]
                 ]);
 
@@ -319,7 +636,7 @@ PROMPT;
                     CURLOPT_POST           => true,
                     CURLOPT_POSTFIELDS     => $payload,
                     CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-                    CURLOPT_TIMEOUT        => 22,
+                    CURLOPT_TIMEOUT        => 20,
                     CURLOPT_SSL_VERIFYPEER => false
                 ]);
                 $resp = curl_exec($ch);
@@ -331,14 +648,14 @@ PROMPT;
                     $rawText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
                     if (preg_match('/<svg\b[^>]*>.*?<\/svg>/is', $rawText, $m)) {
                         $candSvg = $m[0];
-                        // Sanitizar por seguridad
                         $candSvg = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $candSvg);
+                        $candSvg = preg_replace('/<text\b[^>]*>.*?<\/text>/is', '', $candSvg);
                         $candSvg = preg_replace('/\bon\w+\s*=\s*"[^"]*"/i', '', $candSvg);
                         if (stripos($candSvg, 'xmlns=') === false) {
                             $candSvg = preg_replace('/^<svg/i', '<svg xmlns="http://www.w3.org/2000/svg"', $candSvg);
                         }
                         $svgCode = $candSvg;
-                        $engineUsed = "Google Gemini SVG ($model)";
+                        $engineUsed = "Google Gemini Ilustración SVG ($model)";
                         break;
                     }
                 }
@@ -349,14 +666,13 @@ PROMPT;
             $svgCode = buildSmartVectorSvgIcon($promptText);
         }
 
-        $filename = buildCleanIconFilename($promptText, 'svg');
-        $fullPath = $iconsDir . '/' . $filename;
+        $fullPath = $iconsDir . '/' . $nextFilename;
         if (@file_put_contents($fullPath, $svgCode) !== false) {
-            $cleanLabel = str_replace(['_', '-'], ' ', pathinfo($filename, PATHINFO_FILENAME));
+            $cleanLabel = str_replace(['_', '-'], ' ', pathinfo($nextFilename, PATHINFO_FILENAME));
             return [
                 'success'      => true,
-                'filename'     => $filename,
-                'url'          => '../uploads/icons/' . $filename,
+                'filename'     => $nextFilename,
+                'url'          => '../uploads/icons/' . $nextFilename,
                 'option_label' => "🖼️ Archivo: {$cleanLabel} (svg)",
                 'engine'       => $engineUsed
             ];
@@ -365,14 +681,41 @@ PROMPT;
         return ['success' => false, 'error' => 'No se pudo guardar el archivo SVG en uploads/icons/.'];
     }
 
-    // MODO 2: ICONO ILUSTRADO PNG 3D/FLAT CON IA GENERATIVA
-    $seed = random_int(100, 999999);
-    $iconPrompt = "Flat vector app icon emblem of " . $promptText . ", centered icon badge, vibrant harmonious colors, clean sharp design, minimalist icon illustration, no text, high contrast";
-    $pollinationsUrl = 'https://image.pollinations.ai/prompt/' . rawurlencode($iconPrompt) . '?width=256&height=256&seed=' . $seed . '&nologo=true&model=flux';
+    // MODO 2: IMAGEN GRÁFICA ILUSTRADA (.PNG 128x128) REFERENTE AL TEXTO
+    $rawPngBytes = '';
+    $pngEngine = '';
 
-    $rawBytes = aiHttpGet($pollinationsUrl, 22);
-    if (!empty($rawBytes) && strlen($rawBytes) > 512) {
-        $srcImg = @imagecreatefromstring($rawBytes);
+    // 2A. Obtener imagen PNG de alta resolución a partir del gráfico ilustrado referente al texto
+    if (!empty($graphicCandidates)) {
+        $chosenIconId = $graphicCandidates[$variationIdx % count($graphicCandidates)];
+        $parts = explode(':', $chosenIconId, 2);
+        if (count($parts) === 2) {
+            $svgSourceUrl = 'https://api.iconify.design/' . rawurlencode($parts[0]) . '/' . rawurlencode($parts[1]) . '.svg?width=128&height=128';
+            $wsrvPngUrl = 'https://wsrv.nl/?url=' . urlencode($svgSourceUrl) . '&w=128&h=128&output=png';
+            $candBytes = aiHttpGet($wsrvPngUrl, 10);
+            if (!empty($candBytes) && strlen($candBytes) > 256 && @getimagesizefromstring($candBytes)) {
+                $rawPngBytes = $candBytes;
+                $pngEngine = "Imagen Gráfica PNG ({$chosenIconId})";
+            }
+        }
+    }
+
+    // 2B. Si no se obtuvo por vectorizador PNG o se prefiere imagen generativa IA (Pollinations Flux)
+    if ($rawPngBytes === '') {
+        $queries = translateSpanishConceptToQueries($promptText);
+        $enConcept = $queries[0] ?? $promptText;
+        $seed = random_int(100, 999999);
+        $iconPrompt = "3D flat app icon illustration of " . $enConcept . ", single centered graphic object, vibrant colors, clean icon design, no letters, no text";
+        $pollinationsUrl = 'https://image.pollinations.ai/prompt/' . rawurlencode($iconPrompt) . '?width=256&height=256&seed=' . $seed . '&nologo=true&model=flux';
+        $candBytes = aiHttpGet($pollinationsUrl, 12);
+        if (!empty($candBytes) && strlen($candBytes) > 512 && @getimagesizefromstring($candBytes)) {
+            $rawPngBytes = $candBytes;
+            $pngEngine = 'IA Generativa (PNG 128x128)';
+        }
+    }
+
+    if ($rawPngBytes !== '') {
+        $srcImg = @imagecreatefromstring($rawPngBytes);
         if ($srcImg) {
             $w = imagesx($srcImg);
             $h = imagesy($srcImg);
@@ -383,47 +726,26 @@ PROMPT;
             $trans = imagecolorallocatealpha($dstImg, 0, 0, 0, 127);
             imagefilledrectangle($dstImg, 0, 0, $iconSize, $iconSize, $trans);
 
-            // Redimensionar con bordes redondeados limpios para que luzca perfecto como icono en cualquier menú
-            $tempResized = imagecreatetruecolor($iconSize, $iconSize);
-            imagecopyresampled($tempResized, $srcImg, 0, 0, 0, 0, $iconSize, $iconSize, $w, $h);
+            imagecopyresampled($dstImg, $srcImg, 0, 0, 0, 0, $iconSize, $iconSize, $w, $h);
             imagedestroy($srcImg);
 
-            $radius = 24;
-            for ($x = 0; $x < $iconSize; $x++) {
-                for ($y = 0; $y < $iconSize; $y++) {
-                    $inCorner = false;
-                    $dx = 0; $dy = 0;
-                    if ($x < $radius && $y < $radius) { $dx = $radius - $x; $dy = $radius - $y; $inCorner = true; }
-                    elseif ($x >= $iconSize - $radius && $y < $radius) { $dx = $x - ($iconSize - $radius - 1); $dy = $radius - $y; $inCorner = true; }
-                    elseif ($x < $radius && $y >= $iconSize - $radius) { $dx = $radius - $x; $dy = $y - ($iconSize - $radius - 1); $inCorner = true; }
-                    elseif ($x >= $iconSize - $radius && $y >= $iconSize - $radius) { $dx = $x - ($iconSize - $radius - 1); $dy = $y - ($iconSize - $radius - 1); $inCorner = true; }
-
-                    if (!$inCorner || ($dx * $dx + $dy * $dy <= $radius * $radius)) {
-                        $rgb = imagecolorat($tempResized, $x, $y);
-                        imagesetpixel($dstImg, $x, $y, $rgb);
-                    }
-                }
-            }
-            imagedestroy($tempResized);
-
-            $filename = buildCleanIconFilename($promptText, 'png');
-            $fullPath = $iconsDir . '/' . $filename;
+            $fullPath = $iconsDir . '/' . $nextFilename;
             if (imagepng($dstImg, $fullPath, 6)) {
                 imagedestroy($dstImg);
-                $cleanLabel = str_replace(['_', '-'], ' ', pathinfo($filename, PATHINFO_FILENAME));
+                $cleanLabel = str_replace(['_', '-'], ' ', pathinfo($nextFilename, PATHINFO_FILENAME));
                 return [
                     'success'      => true,
-                    'filename'     => $filename,
-                    'url'          => '../uploads/icons/' . $filename,
+                    'filename'     => $nextFilename,
+                    'url'          => '../uploads/icons/' . $nextFilename,
                     'option_label' => "🖼️ Archivo: {$cleanLabel} (png)",
-                    'engine'       => 'IA Generativa (PNG 128x128)'
+                    'engine'       => $pngEngine
                 ];
             }
             imagedestroy($dstImg);
         }
     }
 
-    // Fallback instantáneo a SVG si el servicio externo PNG tardó demasiado
+    // Fallback a SVG gráfico
     return generateAiIconForWeb($pdo, $promptText, 'svg');
 }
 

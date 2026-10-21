@@ -208,7 +208,7 @@ $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
                 </strong>
                 <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #334155; cursor: pointer; font-weight: 600; background: #f1f5f9; padding: 4px 10px; border-radius: 6px;">
-                        <input type="checkbox" id="hideProcessedNewsChk" checked onchange="renderFoundNewsList()">
+                        <input type="checkbox" id="hideProcessedNewsChk" checked onchange="onToggleHideProcessedChk()">
                         <span>Ocultar ya publicadas o descartadas (Evitar redundancia)</span>
                     </label>
                 </div>
@@ -241,11 +241,24 @@ $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
                 </button>
             </div>
 
-            <!-- Contadores de control anti-duplicados -->
-            <div id="aiNewsStatsBar" style="display: none; margin-top: 0.9rem; padding: 0.55rem 0.8rem; background: #f8fafc; border-radius: 6px; font-size: 0.82rem; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; border: 1px solid #e2e8f0;">
-                <span id="statNewCount" style="color: #4f46e5; font-weight: 700;">🟢 0 Nuevas disponibles</span>
-                <span id="statPubCount" style="color: #059669; font-weight: 600;">🔵 0 Ya publicadas en la web</span>
-                <span id="statDiscCount" style="color: #64748b; font-weight: 600;">⚪ 0 Descartadas</span>
+            <!-- Botones interactivos de filtro y reconducción por estado (Disponibles, Publicadas, Descartadas) -->
+            <div id="aiNewsStatsBar" style="display: none; margin-top: 0.9rem; padding: 0.6rem 0.8rem; background: #f8fafc; border-radius: 8px; font-size: 0.82rem; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <span style="font-size: 0.78rem; color: #475569; font-weight: 700;"><i class="fas fa-filter"></i> Ver / Reconducir:</span>
+                    <button type="button" id="btnFilterNew" onclick="setNewsStatusFilter('new')" style="border: 2px solid #4f46e5; background: #eef2ff; color: #3730a3; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+                        <span id="statNewCount">🟢 0 Nuevas disponibles</span>
+                    </button>
+                    <button type="button" id="btnFilterPub" onclick="setNewsStatusFilter('published')" style="border: 1px solid #a7f3d0; background: #ffffff; color: #065f46; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+                        <span id="statPubCount">🔵 0 Ya publicadas en la web</span>
+                    </button>
+                    <button type="button" id="btnFilterDisc" onclick="setNewsStatusFilter('discarded')" style="border: 1px solid #cbd5e1; background: #ffffff; color: #475569; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+                        <span id="statDiscCount">⚪ 0 Descartadas</span>
+                    </button>
+                    <button type="button" id="btnFilterAll" onclick="setNewsStatusFilter('all')" style="border: 1px solid #ddd6fe; background: #ffffff; color: #5b21b6; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;">
+                        <span>📋 Ver todas</span>
+                    </button>
+                </div>
+                <span id="activeFilterHint" style="font-size: 0.76rem; color: #64748b; font-weight: 600;">Mostrando: Nuevas disponibles</span>
             </div>
 
             <!-- Estado de carga de búsqueda -->
@@ -436,9 +449,58 @@ function searchInternetNews() {
         });
 }
 
+let currentNewsStatusFilter = 'new'; // 'new' | 'published' | 'discarded' | 'all'
+
+function onToggleHideProcessedChk() {
+    const hide = document.getElementById('hideProcessedNewsChk').checked;
+    setNewsStatusFilter(hide ? 'new' : 'all');
+}
+
+function setNewsStatusFilter(filter) {
+    currentNewsStatusFilter = filter;
+    const chk = document.getElementById('hideProcessedNewsChk');
+    if (chk) {
+        chk.checked = (filter === 'new');
+    }
+
+    const btnNew  = document.getElementById('btnFilterNew');
+    const btnPub  = document.getElementById('btnFilterPub');
+    const btnDisc = document.getElementById('btnFilterDisc');
+    const btnAll  = document.getElementById('btnFilterAll');
+    const hint    = document.getElementById('activeFilterHint');
+
+    if (btnNew) {
+        btnNew.style.border = (filter === 'new') ? '2px solid #4f46e5' : '1px solid #c7d2fe';
+        btnNew.style.background = (filter === 'new') ? '#eef2ff' : '#ffffff';
+    }
+    if (btnPub) {
+        btnPub.style.border = (filter === 'published') ? '2px solid #059669' : '1px solid #a7f3d0';
+        btnPub.style.background = (filter === 'published') ? '#d1fae5' : '#ffffff';
+    }
+    if (btnDisc) {
+        btnDisc.style.border = (filter === 'discarded') ? '2px solid #475569' : '1px solid #cbd5e1';
+        btnDisc.style.background = (filter === 'discarded') ? '#e2e8f0' : '#ffffff';
+    }
+    if (btnAll) {
+        btnAll.style.border = (filter === 'all') ? '2px solid #6d28d9' : '1px solid #ddd6fe';
+        btnAll.style.background = (filter === 'all') ? '#ede9fe' : '#ffffff';
+    }
+
+    if (hint) {
+        const labels = {
+            'new': 'Mostrando: 🟢 Nuevas disponibles',
+            'published': 'Mostrando: 🔵 Ya publicadas en la web',
+            'discarded': 'Mostrando: ⚪ Descartadas (puedes recuperarlas aquí)',
+            'all': 'Mostrando: 📋 Todas las noticias'
+        };
+        hint.textContent = labels[filter] || '';
+    }
+
+    renderFoundNewsList();
+}
+
 function renderFoundNewsList() {
     const container = document.getElementById('aiFoundNewsContainer');
-    const hideProcessed = document.getElementById('hideProcessedNewsChk').checked;
 
     let countNew = 0, countPub = 0, countDisc = 0;
     foundInternetNews.forEach(it => {
@@ -455,15 +517,20 @@ function renderFoundNewsList() {
 
     const visibleItems = foundInternetNews.filter((it, idx) => {
         it._idx = idx;
-        if (hideProcessed && (it.process_status === 'published' || it.process_status === 'discarded')) {
-            return false;
-        }
+        const st = it.process_status || 'new';
+        if (currentNewsStatusFilter === 'new') return st === 'new';
+        if (currentNewsStatusFilter === 'published') return st === 'published';
+        if (currentNewsStatusFilter === 'discarded') return st === 'discarded';
         return true;
     });
 
     if (visibleItems.length === 0) {
-        if (foundInternetNews.length > 0 && hideProcessed) {
-            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">Todas las noticias encontradas para esta búsqueda ya han sido publicadas o descartadas. Desmarca la casilla superior si deseas ver el historial.</div>';
+        if (currentNewsStatusFilter === 'new' && (countPub > 0 || countDisc > 0)) {
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">No hay noticias nuevas pendientes en esta búsqueda. Pulsa en los botones <strong>🔵 Ya publicadas (' + countPub + ')</strong> o <strong>⚪ Descartadas (' + countDisc + ')</strong> de arriba para verlas o reconducirlas.</div>';
+        } else if (currentNewsStatusFilter === 'published') {
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f0fdf4; border-radius:8px;">No hay noticias marcadas como publicadas en este listado.</div>';
+        } else if (currentNewsStatusFilter === 'discarded') {
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">No hay noticias descartadas en este momento.</div>';
         } else {
             container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#64748b;">No se encontraron noticias para esa búsqueda. Prueba con otros términos.</div>';
         }
@@ -471,7 +538,7 @@ function renderFoundNewsList() {
     }
 
     container.innerHTML = visibleItems.map(it => {
-        let statusBadge = '<span class="ai-badge-pill" style="background:#e0e7ff; color:#3730a3;"><i class="fas fa-bolt"></i> NUEVA</span>';
+        let statusBadge = '<span class="ai-badge-pill" style="background:#e0e7ff; color:#3730a3;"><i class="fas fa-bolt"></i> DISPONIBLE</span>';
         let cardClass = 'ai-news-card';
         let extraStatusInfo = '';
 
@@ -479,11 +546,12 @@ function renderFoundNewsList() {
             cardClass += ' is-published';
             statusBadge = '<span class="ai-badge-pill" style="background:#d1fae5; color:#065f46;"><i class="fas fa-check-double"></i> YA PUBLICADA EN LA WEB</span>';
             if (it.matched_news_id) {
-                extraStatusInfo = '<div style="font-size:0.76rem; color:#047857; margin-top:4px;"><i class="fas fa-link"></i> Coincide con noticia existente: <a href="news.php?action=edit&id=' + it.matched_news_id + '" style="color:#065f46; font-weight:700; text-decoration:underline;">' + escapeHtml(it.matched_title || ('ID #' + it.matched_news_id)) + '</a></div>';
+                extraStatusInfo = '<div style="font-size:0.78rem; color:#047857; margin-top:5px;"><i class="fas fa-link"></i> Publicada en la web como: <a href="news.php?action=edit&id=' + it.matched_news_id + '" style="color:#065f46; font-weight:700; text-decoration:underline;">' + escapeHtml(it.matched_title || ('Noticia #' + it.matched_news_id)) + ' (Editar)</a></div>';
             }
         } else if (it.process_status === 'discarded') {
             cardClass += ' is-discarded';
             statusBadge = '<span class="ai-badge-pill" style="background:#e2e8f0; color:#475569;"><i class="fas fa-eye-slash"></i> DESCARTADA</span>';
+            extraStatusInfo = '<div style="font-size:0.76rem; color:#64748b; margin-top:4px;"><i class="fas fa-info-circle"></i> Puedes recuperarla a Disponibles o redactar directamente su borrador.</div>';
         }
 
         const thumbHtml = it.rss_image
@@ -492,16 +560,29 @@ function renderFoundNewsList() {
 
         let actionBtns = '';
         if (it.process_status === 'discarded') {
-            actionBtns = '<button type="button" onclick="restoreDiscardedNews(' + it._idx + ')" class="ai-mini-btn" style="background:#64748b; color:white; padding:6px 10px;"><i class="fas fa-undo"></i> Restaurar</button>';
+            actionBtns =
+                '<button type="button" onclick="changeNewsStatus(' + it._idx + ', \'new\')" class="ai-mini-btn" style="background:#059669; color:white; padding:6px 11px;" title="Devolver a noticias disponibles"><i class="fas fa-undo"></i> Recuperar a Disponible</button>' +
+                '<button type="button" onclick="recoverAndPrepareDraft(' + it._idx + ')" class="ai-mini-btn" style="background:#6d28d9; color:white; padding:6px 11px;" title="Recuperar y redactar borrador ahora"><i class="fas fa-wand-magic-sparkles"></i> Recuperar y Redactar</button>' +
+                '<button type="button" onclick="changeNewsStatus(' + it._idx + ', \'published\')" class="ai-mini-btn" style="background:#f1f5f9; color:#065f46; border:1px solid #a7f3d0; padding:5px 9px;" title="Marcar como ya publicada"><i class="fas fa-check"></i> Pasar a Publicada</button>';
+        } else if (it.process_status === 'published') {
+            actionBtns =
+                '<button type="button" onclick="prepareSupervisedDraft(' + it._idx + ')" class="ai-mini-btn" style="background:#6d28d9; color:white; padding:6px 11px; font-size:0.78rem;" title="Generar nuevo borrador a partir de esta noticia"><i class="fas fa-wand-magic-sparkles"></i> Volver a Redactar</button>' +
+                '<button type="button" onclick="changeNewsStatus(' + it._idx + ', \'new\')" class="ai-mini-btn" style="background:#4f46e5; color:white; padding:6px 10px;" title="Reconducir de nuevo a Disponibles"><i class="fas fa-exchange-alt"></i> Reconducir a Disponible</button>' +
+                '<button type="button" onclick="changeNewsStatus(' + it._idx + ', \'discarded\')" class="ai-mini-btn" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:5px 9px;" title="Mover a descartadas"><i class="fas fa-ban"></i> Pasar a Descartada</button>';
         } else {
             actionBtns =
                 '<button type="button" onclick="prepareSupervisedDraft(' + it._idx + ')" class="ai-mini-btn" style="background:#6d28d9; color:white; padding:7px 12px; font-size:0.8rem;">' +
-                '<i class="fas fa-wand-magic-sparkles"></i> ' + (it.process_status === 'published' ? 'Volver a Redactar' : 'Redactar Borrador') +
+                '<i class="fas fa-wand-magic-sparkles"></i> Redactar Borrador' +
                 '</button>' +
-                (it.process_status === 'new'
-                    ? '<button type="button" onclick="discardInternetNews(' + it._idx + ')" class="ai-mini-btn" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:6px 10px;" title="Marcar como descartada para no volver a mostrarla"><i class="fas fa-ban"></i> Descartar</button>'
-                    : '');
+                '<div style="display:flex; gap:4px;">' +
+                    '<button type="button" onclick="changeNewsStatus(' + it._idx + ', \'discarded\')" class="ai-mini-btn" style="flex:1; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:5px 8px;" title="Descartar esta noticia"><i class="fas fa-ban"></i> Descartar</button>' +
+                    '<button type="button" onclick="changeNewsStatus(' + it._idx + ', \'published\')" class="ai-mini-btn" style="flex:1; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:5px 8px;" title="Marcar como ya publicada"><i class="fas fa-check"></i> Publicada</button>' +
+                '</div>';
         }
+
+        const origLinkHtml = it.url
+            ? '<a href="' + escapeHtml(it.url) + '" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;"><i class="fas fa-external-link-alt"></i> Ver original</a>'
+            : '';
 
         return '<div class="' + cardClass + '">' +
             '<div style="display:flex; gap:12px; align-items:flex-start; flex:1; min-width:0;">' +
@@ -511,44 +592,29 @@ function renderFoundNewsList() {
                         statusBadge +
                         '<span style="font-size:0.76rem; font-weight:700; color:#6d28d9; background:#f3e8ff; padding:2px 8px; border-radius:4px;">' + escapeHtml(it.source) + '</span>' +
                         '<span style="font-size:0.75rem; color:#64748b;"><i class="far fa-clock"></i> ' + escapeHtml(it.pub_date) + '</span>' +
-                        '<a href="' + escapeHtml(it.url) + '" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;"><i class="fas fa-external-link-alt"></i> Ver original</a>' +
+                        origLinkHtml +
                     '</div>' +
                     '<div style="font-weight:700; color:#0f172a; font-size:0.94rem; line-height:1.3;">' + escapeHtml(it.title) + '</div>' +
                     (it.snippet && it.snippet !== it.title ? '<div style="font-size:0.8rem; color:#475569; margin-top:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">' + escapeHtml(it.snippet) + '</div>' : '') +
                     extraStatusInfo +
                 '</div>' +
             '</div>' +
-            '<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">' +
+            '<div style="display:flex; flex-direction:column; gap:5px; flex-shrink:0;">' +
                 actionBtns +
             '</div>' +
         '</div>';
     }).join('');
 }
 
-function discardInternetNews(idx) {
+function changeNewsStatus(idx, targetStatus, callback) {
     const it = foundInternetNews[idx];
     if (!it) return;
     const fd = new FormData();
-    fd.append('ajax_action', 'mark_discarded');
-    fd.append('url', it.url);
-    fd.append('title', it.title);
-    fd.append('source', it.source);
-
-    fetch('ai_news_ajax.php', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                it.process_status = 'discarded';
-                renderFoundNewsList();
-            }
-        });
-}
-
-function restoreDiscardedNews(idx) {
-    const it = foundInternetNews[idx];
-    if (!it) return;
-    const fd = new FormData();
-    fd.append('ajax_action', 'unmark_processed');
+    fd.append('ajax_action', 'change_news_status');
+    fd.append('target_status', targetStatus);
+    fd.append('url', it.url || '');
+    fd.append('title', it.title || '');
+    fd.append('source', it.source || '');
     fd.append('url_hash', it.url_hash || '');
     fd.append('record_id', it.processed_record_id || '');
 
@@ -556,10 +622,25 @@ function restoreDiscardedNews(idx) {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                it.process_status = 'new';
+                it.process_status = (targetStatus === 'available' ? 'new' : targetStatus);
                 renderFoundNewsList();
+                if (typeof callback === 'function') callback();
             }
         });
+}
+
+function recoverAndPrepareDraft(idx) {
+    changeNewsStatus(idx, 'new', function() {
+        prepareSupervisedDraft(idx);
+    });
+}
+
+function discardInternetNews(idx) {
+    changeNewsStatus(idx, 'discarded');
+}
+
+function restoreDiscardedNews(idx) {
+    changeNewsStatus(idx, 'new');
 }
 
 function generateFromDirectUrl() {

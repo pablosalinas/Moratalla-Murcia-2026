@@ -135,9 +135,43 @@ try {
     if ($action === 'unmark_processed') {
         $urlHash = trim($_POST['url_hash'] ?? '');
         $recordId = $_POST['record_id'] ?? '';
-        $ok = unmarkProcessedNews($pdo, $recordId ?: $urlHash);
+        $url = trim($_POST['url'] ?? '');
+        $title = trim($_POST['title'] ?? '');
+        $source = trim($_POST['source'] ?? '');
+        if ($url !== '' || $title !== '') {
+            $ok = markNewsAsProcessed($pdo, $url, $title, $source, 'available', null);
+        } else {
+            $ok = unmarkProcessedNews($pdo, $recordId ?: $urlHash);
+        }
         ob_clean();
         echo json_encode(['success' => (bool)$ok]);
+        exit;
+    }
+
+    if ($action === 'change_news_status') {
+        $targetStatus = trim($_POST['target_status'] ?? 'available');
+        $url = trim($_POST['url'] ?? '');
+        $title = trim($_POST['title'] ?? '');
+        $source = trim($_POST['source'] ?? '');
+        $recordId = $_POST['record_id'] ?? '';
+        $urlHash = trim($_POST['url_hash'] ?? '');
+
+        if ($targetStatus === 'new' || $targetStatus === 'available') {
+            if ($url !== '' || $title !== '') {
+                $ok = markNewsAsProcessed($pdo, $url, $title, $source, 'available', null);
+            } else {
+                $ok = unmarkProcessedNews($pdo, $recordId ?: $urlHash);
+            }
+        } elseif ($targetStatus === 'discarded') {
+            $ok = markNewsAsProcessed($pdo, $url, $title, $source, 'discarded', null);
+        } elseif ($targetStatus === 'published') {
+            $ok = markNewsAsProcessed($pdo, $url, $title, $source, 'published', null);
+        } else {
+            $ok = false;
+        }
+
+        ob_clean();
+        echo json_encode(['success' => (bool)$ok, 'status' => ($targetStatus === 'available' ? 'new' : $targetStatus)]);
         exit;
     }
 
