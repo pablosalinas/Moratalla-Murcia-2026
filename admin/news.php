@@ -6,8 +6,10 @@ require_once '../config.php';
 require_once 'inc/layout.php';
 require_once 'inc/image_helper.php';
 require_once 'inc/icon_helper.php';
+require_once 'inc/ai_news_helper.php';
 
 $pdo = getDB();
+ensureAiNewsTrackingSchema($pdo);
 $action = $_GET['action'] ?? 'list';
 $msg = "";
 $error = "";
@@ -183,13 +185,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $image_path = null;
             }
             
-            // Subida de imagen principal (o video)
+            // Si se seleccionó una imagen desde el Asistente IA (Opción A, B o C) y no se subió otra manual encima
+            $preselected_image_path = trim($_POST['preselected_image_path'] ?? '');
+            if ($preselected_image_path !== '' && strpos($preselected_image_path, 'uploads/') === 0 && is_file('../' . $preselected_image_path)) {
+                $image_path = $preselected_image_path;
+            }
+
+            // Subida de imagen principal (o video) manual
             if (isset($_FILES['news_image']) && $_FILES['news_image']['error'] == UPLOAD_ERR_OK) {
                 $uploadDir = '../uploads/news/';
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
                 
-                // Si ya había imagen, borrarla
-                if (!empty($image_path) && is_file('../' . $image_path)) {
+                // Si ya había imagen propia de news, borrarla
+                if (!empty($image_path) && strpos($image_path, 'uploads/news/') === 0 && is_file('../' . $image_path)) {
                     @unlink('../' . $image_path);
                 }
                 
@@ -213,11 +221,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
+
+            $source_url = trim($_POST['source_url'] ?? '') ?: null;
+            $ai_original_title = trim($_POST['ai_original_title'] ?? '');
+            $ai_source_name = trim($_POST['ai_source_name'] ?? '');
             
             if ($action == 'add') {
-                $columns = ['title', 'content', 'image_path', 'image_caption', 'image_author', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'category_id_2', 'category_id_3', 'is_active_category', 'icon'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
-                $params = [$title, $content, $image_path, $image_caption, $image_author, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
+                $columns = ['title', 'content', 'image_path', 'image_caption', 'image_author', 'event_date', 'start_date', 'end_date', 'is_active_home', 'category_id', 'category_id_2', 'category_id_3', 'is_active_category', 'icon', 'source_url'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
+                $params = [$title, $content, $image_path, $image_caption, $image_author, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon, $source_url];
                 
                 if ($hasSortOrderColumn) {
                     $columns[] = 'sort_order';
@@ -243,6 +255,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $setCols = ['title = ?', 'content = ?', 'image_path = ?', 'image_caption = ?', 'image_author = ?', 'event_date = ?', 'start_date = ?', 'end_date = ?', 'is_active_home = ?', 'category_id = ?', 'category_id_2 = ?', 'category_id_3 = ?', 'is_active_category = ?', 'icon = ?'];
                 $params = [$title, $content, $image_path, $image_caption, $image_author, $event_date, $start_date, $end_date, $is_active_home, $category_id, $category_id_2, $category_id_3, $is_active_category, $icon];
                 
+                if ($source_url !== null) {
+                    $setCols[] = 'source_url = ?';
+                    $params[] = $source_url;
+                }
+
                 if ($hasSortOrderColumn) {
                     $setCols[] = 'sort_order = ?';
                     $params[] = $sort_order_news;
@@ -261,6 +278,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $news_id = $id;
                 $msg = "Noticia/Evento actualizado con éxito.";
+            }
+
+            // Registrar la noticia en el control anti-redundancia (ai_processed_news) para no volver a ofrecerla como pendiente
+            if (!empty($source_url) || !empty($ai_original_title)) {
+                markNewsAsProcessed($pdo, $source_url ?: $title, $ai_original_title ?: $title, $ai_source_name, 'published', $news_id);
+            }
+
+            // Procesar imágenes preseleccionadas para la galería desde las Opciones A, B o C
+            if (!empty($_POST['preselected_gallery_paths']) && is_array($_POST['preselected_gallery_paths'])) {
+                $prePaths = $_POST['preselected_gallery_paths'];
+                $preCaps = $_POST['preselected_gallery_captions'] ?? [];
+                $preAuths = $_POST['preselected_gallery_authors'] ?? [];
+                $stmtPreImg = $pdo->prepare("INSERT INTO news_images (news_id, image_path, caption, author, sort_order, is_video) VALUES (?, ?, ?, ?, ?, 0)");
+                foreach ($prePaths as $idx => $pPath) {
+                    $pPath = trim($pPath);
+                    if ($pPath !== '' && strpos($pPath, 'uploads/') === 0 && is_file('../' . $pPath)) {
+                        $pCap = isset($preCaps[$idx]) ? trim($preCaps[$idx]) : null;
+                        $pAuth = isset($preAuths[$idx]) ? trim($preAuths[$idx]) : null;
+                        $stmtPreImg->execute([$news_id, $pPath, $pCap, $pAuth, $idx]);
+                    }
+                }
             }
 
             // Procesar imágenes adicionales de la galería (para add y edit)
@@ -404,7 +442,14 @@ adminHeader("Noticias y Eventos");
                 <h3>Gestor de Noticias y Eventos</h3>
                 <p style="color: #666; font-size: 0.9rem; margin-top: 0.3rem;">Administra las noticias y eventos que aparecen en la página de inicio o en las subsecciones.</p>
             </div>
-            <a href="?action=add" class="btn btn-primary" style="border: 2px solid var(--primary-dark);"><i class="fas fa-plus"></i> Nueva Noticia / Evento</a>
+            <div style="display: flex; gap: 0.7rem; flex-wrap: wrap;">
+                <a href="?action=add&open_ai=1" class="btn" style="background: linear-gradient(135deg, #6d28d9, #4f46e5); color: white; border: 2px solid #4c1d95; box-shadow: 0 3px 10px rgba(109, 40, 217, 0.25);">
+                    <i class="fas fa-magic"></i> Localizar Noticias en Internet (IA)
+                </a>
+                <a href="?action=add" class="btn btn-primary" style="border: 2px solid var(--primary-dark);">
+                    <i class="fas fa-plus"></i> Nueva Noticia / Evento
+                </a>
+            </div>
         </div>
 
         <div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
@@ -471,6 +516,13 @@ adminHeader("Noticias y Eventos");
                             </td>
                             <td style="padding: 1rem; font-weight: 600; color: var(--primary);">
                                 <?php echo htmlspecialchars($row['title']); ?>
+                                <?php if (!empty($row['source_url'])): ?>
+                                    <div style="margin-top: 4px;">
+                                        <a href="<?php echo htmlspecialchars($row['source_url']); ?>" target="_blank" style="font-size: 0.72rem; font-weight: 600; color: #6d28d9; background: #f3e8ff; padding: 2px 7px; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fas fa-robot"></i> Supervisada IA · Fuente original
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td style="padding: 1rem; color: var(--text-light); font-size: 0.9rem;">
                                 <?php echo $row['event_date'] ? date('d/m/Y', strtotime($row['event_date'])) : '<span style="color: var(--gray-400); font-style: italic;">No es evento</span>'; ?>
@@ -529,7 +581,7 @@ adminHeader("Noticias y Eventos");
     </script>
 
 <?php elseif ($action == 'add' || $action == 'edit'): 
-    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'image_caption' => '', 'image_author' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'category_id_2' => '', 'category_id_3' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0];
+    $news_data = ['id' => '', 'title' => '', 'content' => '', 'image_path' => '', 'image_caption' => '', 'image_author' => '', 'event_date' => '', 'start_date' => '', 'end_date' => '', 'is_active_home' => 1, 'category_id' => '', 'category_id_2' => '', 'category_id_3' => '', 'is_active_category' => 0, 'use_latest_gallery_image' => 0, 'source_url' => ''];
     if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $pdo->prepare("SELECT * FROM news_events WHERE id = ?");
         $stmt->execute([$_GET['id']]);
@@ -551,14 +603,22 @@ adminHeader("Noticias y Eventos");
     $usedIcons = $pdo->query("SELECT DISTINCT icon FROM news_events WHERE icon IS NOT NULL AND icon != ''")->fetchAll(PDO::FETCH_COLUMN);
     $allIconsOptions = getConsolidatedIconOptions($pdo, $usedIcons);
 ?>
-    <div class="card" style="max-width: 700px; margin: 0 auto;">
+    <div class="card" style="max-width: 920px; margin: 0 auto;">
         <h3 style="color: var(--primary); margin-bottom: 0.5rem;">
             <?php echo $action == 'add' ? '<i class="fas fa-plus-circle"></i> Añadir Nueva Noticia / Evento' : '<i class="fas fa-edit"></i> Modificar Noticia / Evento'; ?>
         </h3>
-        <p style="color: #666; font-size: 0.85rem; margin-bottom: 2rem;">Configura la información y dónde se mostrará este elemento.</p>
+        <p style="color: #666; font-size: 0.85rem; margin-bottom: 1.5rem;">Configura la información manualmente o utiliza el localizador supervisado con IA para buscar noticias de Moratalla y generar el borrador.</p>
+
+        <?php require_once 'inc/ai_news_panel.php'; ?>
+
+        <div id="supervisedDraftReadyBanner" style="display: none; background: #ecfdf5; border: 2px solid #10b981; color: #065f46; padding: 1rem 1.2rem; border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.92rem;"></div>
         
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($news_data['id']); ?>">
+            <input type="hidden" name="source_url" id="hiddenSourceUrl" value="<?php echo htmlspecialchars($news_data['source_url'] ?? ''); ?>">
+            <input type="hidden" name="ai_original_title" id="hiddenAiOriginalTitle" value="">
+            <input type="hidden" name="ai_source_name" id="hiddenAiSourceName" value="">
+            <input type="hidden" name="preselected_image_path" id="preselectedImagePathInput" value="">
             
             <div style="margin-bottom: 1.5rem; display:flex; gap:1rem; align-items:flex-end;">
                 <div style="flex:1;">
@@ -586,6 +646,19 @@ adminHeader("Noticias y Eventos");
                 <div>
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imagen Principal, Documento PDF o Vídeo</label>
                     <input type="file" name="news_image" accept="image/*,video/*,application/pdf" style="width:100%; padding:0.6rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    
+                    <!-- Vista previa de Imagen Principal Preseleccionada desde el Asistente IA (Opciones A, B o C) -->
+                    <div id="preselectedMainImagePreviewBox" style="display: none; margin-top: 0.6rem; padding: 0.6rem; background: #f5f3ff; border: 2px solid #8b5cf6; border-radius: 8px; align-items: center; gap: 10px;">
+                        <img id="preselectedMainImageThumb" src="" style="width: 90px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd6fe;">
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                            <span id="preselectedMainImageOriginBadge" style="font-size: 0.74rem; font-weight: 700; color: #5b21b6; background: #ede9fe; padding: 2px 8px; border-radius: 10px; align-self: flex-start;">Imagen IA</span>
+                            <small style="color: #4c1d95; font-size: 0.76rem;">Seleccionada como imagen principal (con marca de agua).</small>
+                            <button type="button" onclick="clearPreselectedMainImage()" style="align-self: flex-start; background: #fee2e2; color: #b91c1c; border: none; padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">
+                                <i class="fas fa-times"></i> Quitar selección
+                            </button>
+                        </div>
+                    </div>
+
                     <?php if ($news_data['image_path']): 
                         $curExt = strtolower(pathinfo($news_data['image_path'], PATHINFO_EXTENSION));
                         $curIsVid = in_array($curExt, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
@@ -683,6 +756,14 @@ adminHeader("Noticias y Eventos");
             <!-- Galería de Imágenes Adicionales -->
             <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--gray-200);">
                 <h4 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-images"></i> Galería de Imágenes Adicionales</h4>
+
+                <!-- Contenedor de imágenes combinadas desde las Opciones A, B y C -->
+                <div id="preselectedGalleryWrapper" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #faf5ff; border: 1px dashed #a855f7; border-radius: 8px;">
+                    <label style="display: block; margin-bottom: 0.6rem; font-weight: 700; color: #5b21b6; font-size: 0.9rem;">
+                        <i class="fas fa-layer-group"></i> Imágenes combinadas desde el Asistente IA (Opciones A / B / C) listas para añadir a la galería al Guardar:
+                    </label>
+                    <div id="preselectedGalleryItemsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 0.8rem;"></div>
+                </div>
                 
                 <div style="margin-bottom: 1.5rem;">
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Subir Imágenes, PDFs o Vídeos de Galería</label>

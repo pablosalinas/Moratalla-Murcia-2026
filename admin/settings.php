@@ -39,6 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('smtp_pass_enc', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$encPass, $encPass]);
     }
     
+    $geminiApiKey = isset($_POST['gemini_api_key']) ? trim($_POST['gemini_api_key']) : '';
+    if ($geminiApiKey !== '') {
+        $encGemini = encryptSecret($geminiApiKey);
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('gemini_api_key_enc', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$encGemini, $encGemini]);
+    }
+    
     $message = "Configuración actualizada con éxito.";
 }
 
@@ -50,6 +56,7 @@ $currentTicker = isset($settings['ticker_text']) ? $settings['ticker_text'] : ''
 $currentSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : '30';
 $currentAdminEmail = isset($settings['admin_email']) && !empty($settings['admin_email']) ? $settings['admin_email'] : 'info@moratalla-murcia.com';
 $hasEncryptedPass = !empty($settings['smtp_pass_enc']);
+$hasEncryptedGemini = !empty($settings['gemini_api_key_enc']);
 $currentDaysBefore = isset($settings['celebration_days_before']) ? $settings['celebration_days_before'] : '5';
 $currentDaysAfter = isset($settings['celebration_days_after']) ? $settings['celebration_days_after'] : '2';
 $currentCycleTime = isset($settings['celebration_cycle_time']) ? $settings['celebration_cycle_time'] : '5';
@@ -86,6 +93,25 @@ adminHeader("Configuración General");
             </label>
             <input type="password" name="admin_email_pass" value="" autocomplete="new-password" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;" placeholder="<?php echo $hasEncryptedPass ? '•••••••••••••••••••••••• (Oculta y protegida en BD — escribe solo si deseas cambiarla)' : 'Introduce la contraseña del correo...'; ?>">
             <small style="color: #666; display: block; margin-top: 0.5rem;">Por seguridad, la contraseña nunca se muestra en pantalla ni en el código fuente. Se almacena cifrada con AES-256 en la base de datos. Déjalo en blanco para mantener la contraseña actual.</small>
+        </div>
+
+        <div style="margin-bottom: 2.5rem; background: #f5f3ff; padding: 1.2rem; border-radius: 10px; border: 1px solid #ddd6fe;">
+            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; font-weight: 600; color: #4c1d95;">
+                <span><i class="fas fa-robot"></i> Clave API de Google Gemini (IA para Noticias Automáticas)</span>
+                <?php if ($hasEncryptedGemini): ?>
+                    <span style="background: #d1fae5; color: #065f46; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+                        <i class="fas fa-lock"></i> Configurada y Encriptada (AES-256)
+                    </span>
+                <?php else: ?>
+                    <span style="background: #fef3c7; color: #92400e; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+                        <i class="fas fa-info-circle"></i> Opcional (Recomendado)
+                    </span>
+                <?php endif; ?>
+            </label>
+            <input type="password" name="gemini_api_key" value="" autocomplete="new-password" style="width: 100%; padding: 1rem; border: 1px solid #c4b5fd; border-radius: 8px; font-size: 1rem; background: white;" placeholder="<?php echo $hasEncryptedGemini ? '•••••••••••••••••••••••• (Clave Gemini guardada y encriptada — escribe solo si deseas actualizarla)' : 'Pega aquí tu API Key de Google Gemini (AIzaSy...)'; ?>">
+            <small style="color: #5b21b6; display: block; margin-top: 0.5rem;">
+                Permite redactar noticias supervisadas con IA en la sección <strong>Noticias / Eventos</strong>. Puedes obtener una clave gratuita en <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #6d28d9; font-weight: 700; text-decoration: underline;">Google AI Studio</a>. Se guarda cifrada con AES-256.
+            </small>
         </div>
 
         <div style="margin-bottom: 2.5rem;">
