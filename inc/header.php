@@ -574,6 +574,9 @@ function renderHorizontalMenu() {
                 </div>
             </a>
             <div class="header-right">
+                <button type="button" onclick="if(typeof openGlobalSearchModal === 'function'){ openGlobalSearchModal(); } else { window.location.href='index.php?buscar='; }" title="Abrir Buscador Global (Ctrl+K)" style="background: var(--primary); border: 2px solid var(--primary); color: #ffffff; padding: 5px 12px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: flex; align-items: center; gap: 6px; font-weight: bold;">
+                    <i class="fas fa-search"></i> <span class="hide-mobile">Buscar</span>
+                </button>
                 <button id="tts-toggle" class="btn-tts" title="Activar/Desactivar lectura en voz alta" style="background: none; border: 2px solid var(--primary); color: var(--primary); padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-right: 15px; display: flex; align-items: center; gap: 5px; font-weight: bold;">
                     <i class="fas fa-volume-up"></i> <span class="hide-mobile">Leer Voz Alta</span>
                 </button>
