@@ -154,6 +154,16 @@ try {
         exit;
     }
 
+    if ($action === 'generate_ai_icon') {
+        require_once __DIR__ . '/inc/icon_helper.php';
+        $prompt = trim($_POST['prompt'] ?? '');
+        $format = trim($_POST['format'] ?? 'svg');
+        $res = generateAiIconForWeb($pdo, $prompt, $format);
+        ob_clean();
+        echo json_encode($res);
+        exit;
+    }
+
     ob_clean();
     echo json_encode(['success' => false, 'error' => 'Acción AJAX no reconocida.']);
 } catch (Exception $e) {
