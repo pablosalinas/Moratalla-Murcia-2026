@@ -584,14 +584,15 @@ if ($scope === 'internet' || $scope === 'both') {
             }
         }
 
-        // 8.4 Añadir siempre accesos directos a buscadores globales con el filtro OR/AND aplicado
+        // 8.4 Añadir siempre acceso directo a buscador global
+        $modeClarification = ($mode === 'AND') ? 'Contiene todas las palabras' : 'Contiene cualquiera de las palabras';
         $results[] = [
             'group'    => 'internet',
             'badge'    => 'Buscador Externo · Google',
             'icon'     => '🔍',
             'title'    => 'Ver todos los resultados en Google para «' . $rawQuery . '»',
-            'subtitle' => 'google.es · Modo ' . $mode,
-            'snippet'  => 'Abrir búsqueda global en Google (' . $engineQuery . ') en una nueva pestaña.',
+            'subtitle' => 'google.es · ' . $modeClarification,
+            'snippet'  => 'Abrir búsqueda global en Google para «' . $rawQuery . '» en una nueva pestaña.',
             'image'    => '',
             'url'      => 'https://www.google.es/search?q=' . urlencode($engineQuery),
             'external' => true

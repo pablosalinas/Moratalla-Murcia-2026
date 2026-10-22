@@ -944,5 +944,787 @@
         }
     });
     </script>
+
+    <!-- BOTÓN FLOTANTE DE ACCESO RÁPIDO AL BUSCADOR GLOBAL -->
+    <button type="button" id="floatingGlobalSearchBtn" class="gs-floating-trigger" onclick="openGlobalSearchModal()" title="Abrir Buscador Global (Ctrl+K)">
+        <i class="fas fa-search"></i>
+        <span>Buscador</span>
+    </button>
+
+    <!-- CUADRO DE DIÁLOGO MODAL DEL BUSCADOR GLOBAL -->
+    <div id="globalSearchModal" class="gs-modal-overlay" style="display: none;" onclick="if(event.target===this) closeGlobalSearchModal()">
+        <div class="gs-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="gsModalTitle">
+            <div class="gs-modal-header">
+                <div>
+                    <h3 id="gsModalTitle"><i class="fas fa-search-location" style="color: #d4af37;"></i> Buscador Global · moratalla-murcia.com</h3>
+                    <p>Localiza al instante noticias, eventos, asociaciones, artesanos, alojamientos, restauración, secciones, citas o información en Internet Global.</p>
+                </div>
+                <button type="button" class="gs-close-btn" onclick="closeGlobalSearchModal()" title="Cerrar (Esc)">&times;</button>
+            </div>
+
+            <div class="gs-modal-controls">
+                <div class="gs-dialog-input-row">
+                    <div class="gs-dialog-input-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="modalGlobalSearchInput" placeholder="Escribe aquí lo que buscas (ej: tambor castillo, casa rural, restaurante, cita...)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); executeGlobalSearch();}">
+                        <button type="button" id="gsClearBtn" onclick="clearGlobalSearchInput()" style="display:none;" title="Limpiar texto">&times;</button>
+                    </div>
+                    <button type="button" onclick="executeGlobalSearch()" class="gs-dialog-search-btn">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+
+                <!-- Selección de Ámbito y Filtro de Palabras (sin letreros OR/AND, solo las aclaraciones) -->
+                <div class="gs-dialog-filter-bar">
+                    <div class="gs-mode-box">
+                        <span class="gs-mode-title"><i class="fas fa-globe"></i> Dónde buscar:</span>
+                        <label class="gs-mode-option active" id="modalLblScopeWeb">
+                            <input type="radio" name="modal_search_scope" value="web" checked onchange="syncSearchScope('web'); executeGlobalSearch();">
+                            <span class="gs-check-mark">✓</span>
+                            <span>🌐 <strong>Web moratalla-murcia</strong> (Por defecto)</span>
+                        </label>
+                        <label class="gs-mode-option" id="modalLblScopeInternet">
+                            <input type="radio" name="modal_search_scope" value="internet" onchange="syncSearchScope('internet'); executeGlobalSearch();">
+                            <span class="gs-check-mark">✓</span>
+                            <span>🌍 <strong>Internet Global</strong></span>
+                        </label>
+                        <label class="gs-mode-option" id="modalLblScopeBoth">
+                            <input type="radio" name="modal_search_scope" value="both" onchange="syncSearchScope('both'); executeGlobalSearch();">
+                            <span class="gs-check-mark">✓</span>
+                            <span>🔄 <strong>Web + Internet</strong></span>
+                        </label>
+                    </div>
+
+                    <div class="gs-mode-box">
+                        <span class="gs-mode-title"><i class="fas fa-filter"></i> Filtro de palabras:</span>
+                        <label class="gs-mode-option active" id="modalLblModeOr">
+                            <input type="radio" name="modal_search_mode" value="OR" checked onchange="syncSearchMode('OR'); executeGlobalSearch();">
+                            <span class="gs-check-mark">✓</span>
+                            <span>Contiene <u>cualquiera</u> de las palabras (Por defecto)</span>
+                        </label>
+                        <label class="gs-mode-option" id="modalLblModeAnd">
+                            <input type="radio" name="modal_search_mode" value="AND" onchange="syncSearchMode('AND'); executeGlobalSearch();">
+                            <span class="gs-check-mark">✓</span>
+                            <span>Contiene <u>todas</u> las palabras</span>
+                        </label>
+                    </div>
+                    <div id="gsSummaryCounter" class="gs-summary-counter"></div>
+                </div>
+
+                <!-- Accesos rápidos dentro del diálogo -->
+                <div class="gs-quick-presets-row">
+                    <span>Explorar rápido:</span>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'noticias')">📰 Noticias</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'eventos')">📅 Eventos</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Asociación Club Peña', 'asociaciones')">🤝 Asociaciones</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Artesanía Esparto Pintura', 'artesanos')">🏺 Artesanos</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Casa Rural Hotel', 'alojamientos')">🛏️ Alojamientos</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Restaurante Bar', 'restauracion')">🍽️ Restauración</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'citas')">💬 Citas</button>
+                </div>
+
+                <!-- Pestañas de filtrado por sección -->
+                <div class="gs-category-tabs" id="gsCategoryTabs">
+                    <button type="button" class="gs-tab active" data-group="all" onclick="setGlobalSearchGroup('all')">📋 Todos <span id="gsCount_all">0</span></button>
+                    <button type="button" class="gs-tab" data-group="noticias" onclick="setGlobalSearchGroup('noticias')">📰 Noticias <span id="gsCount_noticias">0</span></button>
+                    <button type="button" class="gs-tab" data-group="eventos" onclick="setGlobalSearchGroup('eventos')">📅 Eventos <span id="gsCount_eventos">0</span></button>
+                    <button type="button" class="gs-tab" data-group="asociaciones" onclick="setGlobalSearchGroup('asociaciones')">🤝 Asociaciones <span id="gsCount_asociaciones">0</span></button>
+                    <button type="button" class="gs-tab" data-group="artesanos" onclick="setGlobalSearchGroup('artesanos')">🏺 Artesanos <span id="gsCount_artesanos">0</span></button>
+                    <button type="button" class="gs-tab" data-group="alojamientos" onclick="setGlobalSearchGroup('alojamientos')">🛏️ Alojamientos <span id="gsCount_alojamientos">0</span></button>
+                    <button type="button" class="gs-tab" data-group="restauracion" onclick="setGlobalSearchGroup('restauracion')">🍽️ Restauración <span id="gsCount_restauracion">0</span></button>
+                    <button type="button" class="gs-tab" data-group="citas" onclick="setGlobalSearchGroup('citas')">💬 Citas <span id="gsCount_citas">0</span></button>
+                    <button type="button" class="gs-tab" data-group="paginas" onclick="setGlobalSearchGroup('paginas')">📄 Otras Secciones <span id="gsCount_paginas">0</span></button>
+                    <button type="button" class="gs-tab" data-group="internet" onclick="setGlobalSearchGroup('internet')">🌍 Internet Global <span id="gsCount_internet">0</span></button>
+                </div>
+            </div>
+
+            <div class="gs-modal-body" id="gsResultsContainer">
+                <div class="gs-empty-state">
+                    <i class="fas fa-compass" style="font-size: 2.6rem; color: #2d6a4f; margin-bottom: 0.8rem;"></i>
+                    <h4>Explora todo el contenido de Moratalla o busca en Internet Global</h4>
+                    <p>Por defecto se busca dentro de <strong>moratalla-murcia.com</strong> mostrando los contenidos que incluyan <strong>cualquiera de las palabras</strong>. También puedes marcar <strong>todas las palabras</strong> o buscar en <strong>Internet Global</strong>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Botón Flotante del Buscador Global */
+        .gs-floating-trigger {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 99990;
+            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+            color: #ffffff;
+            border: 2px solid #d4af37;
+            border-radius: 50px;
+            padding: 0.72rem 1.25rem;
+            font-size: 0.92rem;
+            font-weight: 800;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 24px rgba(27, 67, 50, 0.35);
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        .gs-floating-trigger i {
+            color: #fde68a;
+            font-size: 1rem;
+        }
+        .gs-floating-trigger:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 12px 28px rgba(27, 67, 50, 0.48);
+        }
+
+        /* Modal del Buscador Global */
+        .gs-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(5px);
+            z-index: 999990;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.2rem;
+        }
+        .gs-modal-dialog {
+            background: #ffffff;
+            width: 100%;
+            max-width: 960px;
+            max-height: 88vh;
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 2px solid #2d6a4f;
+        }
+        .gs-modal-header {
+            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+            color: #ffffff;
+            padding: 1.15rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .gs-modal-header h3 {
+            margin: 0;
+            font-size: 1.22rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .gs-modal-header p {
+            margin: 0.2rem 0 0 0;
+            font-size: 0.83rem;
+            color: rgba(255, 255, 255, 0.86);
+        }
+        .gs-close-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: #ffffff;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .gs-close-btn:hover {
+            background: #ef4444;
+        }
+        .gs-modal-controls {
+            padding: 1rem 1.4rem 0.75rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .gs-dialog-input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 0.75rem;
+        }
+        .gs-dialog-input-box {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 0 12px;
+            gap: 10px;
+            transition: border-color 0.2s;
+        }
+        .gs-dialog-input-box:focus-within {
+            border-color: #2d6a4f;
+        }
+        .gs-dialog-input-box i {
+            color: #2d6a4f;
+            font-size: 1.05rem;
+        }
+        .gs-dialog-input-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 0.7rem 0;
+            font-size: 0.96rem;
+            font-family: inherit;
+            color: #0f172a;
+            min-width: 0;
+        }
+        #gsClearBtn {
+            background: #e2e8f0;
+            border: none;
+            color: #475569;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .gs-dialog-search-btn {
+            background: #1b4332;
+            color: #ffffff;
+            border: none;
+            padding: 0 1.35rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+        }
+        .gs-dialog-search-btn:hover {
+            background: #2d6a4f;
+        }
+        .gs-dialog-filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 0.65rem;
+        }
+        .gs-mode-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .gs-mode-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #334155;
+        }
+        .gs-mode-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.78rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .gs-mode-option input {
+            display: none;
+        }
+        .gs-mode-option .gs-check-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            border-radius: 4px;
+            border: 1px solid #94a3b8;
+            color: transparent;
+            font-size: 0.7rem;
+            font-weight: 900;
+        }
+        .gs-mode-option.active {
+            border: 2px solid #1b4332;
+            background: #ecfdf5;
+            color: #1b4332;
+            font-weight: 600;
+        }
+        .gs-mode-option.active .gs-check-mark {
+            background: #1b4332;
+            border-color: #1b4332;
+            color: #ffffff;
+        }
+        .gs-summary-counter {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1b4332;
+        }
+        .gs-quick-presets-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 0.65rem;
+        }
+        .gs-quick-presets-row span {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+        }
+        .gs-quick-presets-row button {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 3px 9px;
+            border-radius: 14px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .gs-quick-presets-row button:hover {
+            background: #2d6a4f;
+            color: #ffffff;
+            border-color: #2d6a4f;
+        }
+        .gs-category-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .gs-tab {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.77rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s;
+        }
+        .gs-tab span {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 0.71rem;
+        }
+        .gs-tab.active {
+            background: #1b4332;
+            border-color: #1b4332;
+            color: #ffffff;
+        }
+        .gs-tab.active span {
+            background: #d4af37;
+            color: #1b4332;
+        }
+        .gs-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.1rem 1.4rem;
+            background: #ffffff;
+        }
+        .gs-empty-state {
+            text-align: center;
+            padding: 2.2rem 1rem;
+            color: #64748b;
+        }
+        .gs-empty-state h4 {
+            margin: 0 0 0.4rem 0;
+            color: #1e293b;
+            font-size: 1.08rem;
+        }
+        .gs-results-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.8rem;
+        }
+        .gs-result-card {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 0.95rem 1.1rem;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+        }
+        .gs-result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(27, 67, 50, 0.1);
+            border-color: #2d6a4f;
+        }
+        .gs-result-thumb {
+            width: 76px;
+            height: 64px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #f1f5f9;
+        }
+        .gs-result-icon-box {
+            width: 54px;
+            height: 54px;
+            border-radius: 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #1b4332;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+        .gs-result-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .gs-result-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+        .gs-result-badge {
+            background: #1b4332;
+            color: #ffffff;
+            font-size: 0.69rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 9px;
+            border-radius: 12px;
+            letter-spacing: 0.4px;
+        }
+        .gs-result-sub {
+            font-size: 0.77rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .gs-result-title {
+            margin: 0 0 4px 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.3;
+        }
+        .gs-result-snippet {
+            margin: 0;
+            font-size: 0.86rem;
+            color: #475569;
+            line-height: 1.5;
+        }
+        .gs-highlight {
+            background: #fef08a;
+            color: #1e293b;
+            padding: 0 3px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+        @media (max-width: 640px) {
+            .gs-floating-trigger {
+                bottom: 16px;
+                right: 16px;
+                padding: 0.65rem 1rem;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+
+    <script>
+    let gsCurrentMode = 'OR';    // Por defecto: contiene cualquiera de las palabras
+    let gsCurrentScope = 'web';  // Por defecto: busca en la web moratalla-murcia.com
+    let gsCurrentGroup = 'all';
+    let gsCachedResults = [];
+    let gsCachedWords = [];
+    let gsDebounceTimer = null;
+
+    function syncSearchMode(mode) {
+        gsCurrentMode = (mode === 'AND') ? 'AND' : 'OR';
+
+        document.querySelectorAll('input[name="modal_search_mode"]').forEach(r => {
+            r.checked = (r.value === gsCurrentMode);
+        });
+
+        const modalOr = document.getElementById('modalLblModeOr');
+        const modalAnd = document.getElementById('modalLblModeAnd');
+        if (modalOr && modalAnd) {
+            modalOr.classList.toggle('active', gsCurrentMode === 'OR');
+            modalAnd.classList.toggle('active', gsCurrentMode === 'AND');
+        }
+    }
+
+    function syncSearchScope(scope) {
+        gsCurrentScope = (scope === 'internet' || scope === 'both') ? scope : 'web';
+
+        document.querySelectorAll('input[name="modal_search_scope"]').forEach(r => {
+            r.checked = (r.value === gsCurrentScope);
+        });
+
+        const modalScopes = {
+            web: document.getElementById('modalLblScopeWeb'),
+            internet: document.getElementById('modalLblScopeInternet'),
+            both: document.getElementById('modalLblScopeBoth')
+        };
+        Object.keys(modalScopes).forEach(k => {
+            const el = modalScopes[k];
+            if (el) el.classList.toggle('active', k === gsCurrentScope);
+        });
+
+        if (gsCurrentScope === 'internet') {
+            setGlobalSearchGroup('internet', false);
+        } else if (gsCurrentScope === 'web' && gsCurrentGroup === 'internet') {
+            setGlobalSearchGroup('all', false);
+        }
+    }
+
+    function openGlobalSearchModal(initialQuery = '', initialGroup = 'all') {
+        const modal = document.getElementById('globalSearchModal');
+        const modalInput = document.getElementById('modalGlobalSearchInput');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        if (initialGroup) {
+            setGlobalSearchGroup(initialGroup, false);
+        }
+        if (initialQuery !== '') {
+            modalInput.value = initialQuery;
+            executeGlobalSearch();
+        } else if (modalInput.value.trim() !== '') {
+            executeGlobalSearch();
+        }
+        setTimeout(() => modalInput.focus(), 80);
+    }
+
+    function closeGlobalSearchModal() {
+        const modal = document.getElementById('globalSearchModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function openGlobalSearchWithPreset(queryText, groupName) {
+        syncSearchScope('web');
+        openGlobalSearchModal(queryText, groupName);
+    }
+
+    function clearGlobalSearchInput() {
+        const inp = document.getElementById('modalGlobalSearchInput');
+        inp.value = '';
+        document.getElementById('gsClearBtn').style.display = 'none';
+        inp.focus();
+    }
+
+    function setGlobalSearchGroup(group, reRender = true) {
+        gsCurrentGroup = group;
+        document.querySelectorAll('#gsCategoryTabs .gs-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-group') === group);
+        });
+
+        if (group === 'internet' && gsCurrentScope === 'web' && reRender) {
+            syncSearchScope('both');
+            gsCurrentGroup = 'internet';
+            document.querySelectorAll('#gsCategoryTabs .gs-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-group') === 'internet');
+            });
+            executeGlobalSearch();
+            return;
+        }
+
+        if (reRender && gsCachedResults.length > 0) {
+            renderGlobalSearchResults();
+        }
+    }
+
+    function escapeGsHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+    }
+
+    function highlightSearchWords(text, words) {
+        let safe = escapeGsHtml(text);
+        if (!words || !words.length) return safe;
+        words.forEach(w => {
+            if (!w || w.length < 2) return;
+            const escapedW = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(' + escapedW + ')', 'gi');
+            safe = safe.replace(regex, '<mark class="gs-highlight">$1</mark>');
+        });
+        return safe;
+    }
+
+    function executeGlobalSearch() {
+        const inp = document.getElementById('modalGlobalSearchInput');
+        const q = inp.value.trim();
+        const clearBtn = document.getElementById('gsClearBtn');
+        const container = document.getElementById('gsResultsContainer');
+        const counterEl = document.getElementById('gsSummaryCounter');
+
+        clearBtn.style.display = q.length > 0 ? 'inline-block' : 'none';
+
+        if (q.length < 2) {
+            container.innerHTML = '<div class="gs-empty-state"><i class="fas fa-keyboard" style="font-size:2.2rem; color:#2d6a4f; margin-bottom:0.6rem;"></i><h4>Escribe al menos 2 caracteres para buscar</h4><p>Por defecto busca en <strong>moratalla-murcia.com</strong> mostrando contenidos que incluyan <strong>cualquiera de las palabras</strong>.</p></div>';
+            counterEl.textContent = '';
+            return;
+        }
+
+        const loadingLabel = (gsCurrentScope === 'internet')
+            ? 'Buscando en Internet Global...'
+            : (gsCurrentScope === 'both' ? 'Buscando en moratalla-murcia.com y en Internet Global...' : 'Buscando en la web moratalla-murcia.com...');
+        container.innerHTML = '<div class="gs-empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2.2rem; color:#2d6a4f; margin-bottom:0.6rem;"></i><h4>' + loadingLabel + '</h4></div>';
+
+        const url = 'search_ajax.php?q=' + encodeURIComponent(q)
+            + '&mode=' + encodeURIComponent(gsCurrentMode)
+            + '&scope=' + encodeURIComponent(gsCurrentScope);
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    container.innerHTML = '<div class="gs-empty-state">Error al realizar la búsqueda.</div>';
+                    return;
+                }
+                gsCachedResults = data.results || [];
+                gsCachedWords = data.words || [];
+                const counts = data.counts || {};
+
+                ['all', 'noticias', 'eventos', 'asociaciones', 'artesanos', 'alojamientos', 'restauracion', 'citas', 'paginas', 'internet'].forEach(k => {
+                    const badge = document.getElementById('gsCount_' + k);
+                    if (badge) badge.textContent = counts[k] || 0;
+                });
+
+                const scopeLabel = (data.scope === 'internet') ? 'Internet Global' : (data.scope === 'both' ? 'Web + Internet' : 'Web moratalla-murcia');
+                const modeClarification = (data.mode === 'AND') ? 'Todas las palabras' : 'Cualquiera de las palabras';
+                counterEl.innerHTML = 'Encontrados <strong>' + (data.total || 0) + '</strong> resultados en <strong>' + scopeLabel + '</strong> (' + modeClarification + ')';
+                renderGlobalSearchResults();
+            })
+            .catch(() => {
+                container.innerHTML = '<div class="gs-empty-state">No se pudo conectar con el buscador en este momento.</div>';
+            });
+    }
+
+    function renderGlobalSearchResults() {
+        const container = document.getElementById('gsResultsContainer');
+        const filtered = gsCachedResults.filter((it, idx) => {
+            it._idx = idx;
+            if (gsCurrentGroup === 'all') return true;
+            return it.group === gsCurrentGroup;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="gs-empty-state">' +
+                '<i class="fas fa-search-minus" style="font-size:2.2rem; color:#94a3b8; margin-bottom:0.6rem;"></i>' +
+                '<h4>No hay resultados en este apartado</h4>' +
+                '<p>' + (gsCurrentMode === 'AND' ? 'Prueba marcando la opción <strong>Contiene cualquiera de las palabras</strong> o seleccionando la pestaña <strong>Todos</strong>.' : 'Prueba con otras palabras o pulsa en la pestaña <strong>Todos</strong>.') + '</p>' +
+                '</div>';
+            return;
+        }
+
+        container.innerHTML = '<div class="gs-results-list">' + filtered.map(it => {
+            let mediaHtml = '';
+            if (it.image && !/\.(mp4|webm|ogg|mov|pdf)$/i.test(it.image)) {
+                mediaHtml = '<img src="' + escapeGsHtml(it.image) + '" class="gs-result-thumb" alt="" onerror="this.style.display=\'none\'">';
+            } else {
+                let iconInner = escapeGsHtml(it.icon || '📄');
+                if (/\.(svg|png|jpg|jpeg|webp|gif)$/i.test(it.icon || '')) {
+                    const iconSrc = (it.icon.indexOf('uploads/') === 0) ? it.icon : 'uploads/icons/' + it.icon;
+                    iconInner = '<img src="' + escapeGsHtml(iconSrc) + '" style="width:28px; height:28px; object-fit:contain;">';
+                } else if ((it.icon || '').indexOf('fa-') !== -1) {
+                    iconInner = '<i class="' + escapeGsHtml(it.icon) + '"></i>';
+                }
+                mediaHtml = '<div class="gs-result-icon-box">' + iconInner + '</div>';
+            }
+
+            const titleHighlighted = highlightSearchWords(it.title || '', gsCachedWords);
+            const snippetHighlighted = highlightSearchWords(it.snippet || '', gsCachedWords);
+            const subtitleHtml = it.subtitle ? '<span class="gs-result-sub">' + escapeGsHtml(it.subtitle) + '</span>' : '';
+
+            return '<div class="gs-result-card" onclick="openGlobalSearchResult(' + it._idx + ')">' +
+                mediaHtml +
+                '<div class="gs-result-content">' +
+                    '<div class="gs-result-meta">' +
+                        '<span class="gs-result-badge">' + escapeGsHtml(it.badge || 'Contenido') + '</span>' +
+                        subtitleHtml +
+                    '</div>' +
+                    '<h4 class="gs-result-title">' + titleHighlighted + '</h4>' +
+                    (snippetHighlighted ? '<p class="gs-result-snippet">' + snippetHighlighted + '</p>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('') + '</div>';
+    }
+
+    function openGlobalSearchResult(idx) {
+        const it = gsCachedResults[idx];
+        if (!it) return;
+
+        if (it.news_modal && typeof openNewsModal === 'function') {
+            closeGlobalSearchModal();
+            openNewsModal(it.news_modal);
+            return;
+        }
+        if (it.group === 'citas' && !it.url) {
+            if (navigator.clipboard && it.snippet) {
+                navigator.clipboard.writeText(it.snippet);
+                alert('Cita copiada al portapapeles:\n\n' + it.snippet);
+            }
+            return;
+        }
+        if (it.url) {
+            if (it.external) {
+                window.open(it.url, '_blank', 'noopener');
+            } else {
+                window.location.href = it.url;
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalInp = document.getElementById('modalGlobalSearchInput');
+        if (modalInp) {
+            modalInp.addEventListener('input', function() {
+                clearTimeout(gsDebounceTimer);
+                gsDebounceTimer = setTimeout(executeGlobalSearch, 280);
+            });
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeGlobalSearchModal();
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                openGlobalSearchModal();
+            }
+        });
+
+        // Si se llega con ?buscar=... abrir el cuadro automáticamente
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('buscar')) {
+            const bVal = params.get('buscar') || '';
+            // Evitar interferir con el filtro local de alojamientos.php o restaurantes.php salvo que esté vacío
+            const path = window.location.pathname.toLowerCase();
+            if (path.indexOf('alojamientos.php') === -1 && path.indexOf('restaurantes.php') === -1) {
+                openGlobalSearchModal(bVal, 'all');
+            }
+        }
+    });
+    </script>
 </body>
 </html>

@@ -390,6 +390,10 @@ function renderHorizontalMenu() {
                 $html .= "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'>{$iconHtml}" . htmlspecialchars($e['title']) . "</a></li>";
             }
 
+            if ($parentId === 0) {
+                $html .= "<li><a href='javascript:void(0);' onclick='if(typeof openGlobalSearchModal === \"function\"){ openGlobalSearchModal(); } else { window.location.href=\"index.php?buscar=\"; }' style='color: #fde68a; font-weight: 800;'><i class='fas fa-search' style='margin-right:6px;'></i>Buscador</a></li>";
+            }
+
             $html .= "</ul>";
             return $html;
         };
@@ -398,7 +402,7 @@ function renderHorizontalMenu() {
         echo $menuRenderedHtml;
     } catch (\Throwable $e) {
         file_put_contents(__DIR__ . '/../error_menu.log', date('Y-m-d H:i:s') . ' ' . $e->getMessage() . PHP_EOL, FILE_APPEND);
-        echo '<ul class="nav-menu container" id="main-nav"><li><a href="index.php">Inicio</a></li><li><a href="category.php?id=1">Asociaciones</a></li></ul>';
+        echo '<ul class="nav-menu container" id="main-nav"><li><a href="index.php">Inicio</a></li><li><a href="category.php?id=1">Asociaciones</a></li><li><a href="javascript:void(0);" onclick="if(typeof openGlobalSearchModal === \'function\') openGlobalSearchModal();"><i class="fas fa-search"></i> Buscador</a></li></ul>';
     }
 }
 ?>
