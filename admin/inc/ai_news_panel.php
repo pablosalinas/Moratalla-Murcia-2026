@@ -418,14 +418,27 @@ function toggleAiAssistantBody() {
 function formatSpanishDate(str) {
     if (!str || str === 'Fecha no localizada') return str || '';
     str = String(str).trim();
-    // Si viene como YYYY-MM-DD o YYYY-MM-DD HH:MM
-    const mIso = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+    // Si viene como YYYY-MM-DD o YYYY-MM-DDTHH:MM o YYYY-MM-DD HH:MM
+    const mIso = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s](\d{1,2}):(\d{2}))?/);
     if (mIso) {
         const d = String(mIso[3]).padStart(2, '0');
         const mo = String(mIso[2]).padStart(2, '0');
         const y = mIso[1];
         const time = (mIso[4] && mIso[4] !== '00') ? ` ${String(mIso[4]).padStart(2, '0')}:${mIso[5]}` : '';
         return `${d}/${mo}/${y}${time}`;
+    }
+    // Si viene como formato RFC o feed (ej: 'Thu, 11 Jun 2026 07:00:00 GMT' o '11 Jun 2026')
+    const mRfc = str.match(/^(?:[A-Za-z]{3},\s*)?(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (mRfc) {
+        const months = { jan:'01', feb:'02', mar:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
+        const mKey = mRfc[2].toLowerCase();
+        if (months[mKey]) {
+            const d = String(mRfc[1]).padStart(2, '0');
+            const mo = months[mKey];
+            const y = mRfc[3];
+            const time = (mRfc[4] && mRfc[4] !== '00') ? ` ${String(mRfc[4]).padStart(2, '0')}:${mRfc[5]}` : '';
+            return `${d}/${mo}/${y}${time}`;
+        }
     }
     // Si viene como DD/MM/YYYY
     const mEs = str.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
@@ -745,8 +758,11 @@ function renderFoundNewsList() {
             ? '<a href="' + escapeHtml(it.url) + '" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;"><i class="fas fa-external-link-alt"></i> Ver original</a>'
             : '';
 
+        const dateStrToFormat = (it.event_date_iso && it.event_date_iso !== '0000-00-00')
+            ? it.event_date_iso
+            : (it.pub_date || '');
         const dateHtml = it.date_found
-            ? '<span style="font-size:0.75rem; color:#1e293b; font-weight:700;"><i class="far fa-calendar-alt" style="color:#059669;"></i> ' + escapeHtml(formatSpanishDate(it.pub_date)) + '</span>'
+            ? '<span style="font-size:0.75rem; color:#1e293b; font-weight:700;"><i class="far fa-calendar-alt" style="color:#059669;"></i> ' + escapeHtml(formatSpanishDate(dateStrToFormat)) + '</span>'
             : '<span style="font-size:0.73rem; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:2px 7px; border-radius:4px; font-weight:700;" title="No se pudo localizar la fecha de publicación en el medio original (no se aplica la fecha de hoy)"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i> Fecha no localizada</span>';
 
         return '<div class="' + cardClass + '">' +

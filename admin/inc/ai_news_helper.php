@@ -58,6 +58,11 @@ function ensureAiNewsTrackingSchema($pdo) {
             $pdo->exec("ALTER TABLE news_events ADD COLUMN source_url VARCHAR(700) NULL AFTER icon");
         } catch (Exception $e2) {}
     }
+
+    // Auto-sanear fechas guardadas previamente para asegurar que siempre respeten DD/MM/YYYY a partir de su valor ISO
+    try {
+        $pdo->exec("UPDATE ai_processed_news SET published_date = DATE_FORMAT(published_date_iso, '%d/%m/%Y') WHERE published_date_iso IS NOT NULL AND published_date_iso != '0000-00-00'");
+    } catch (Exception $e) {}
 }
 
 /**
@@ -611,7 +616,7 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                 if (empty($item['date_found'])) {
                     if (!empty($pr['published_date_iso']) && $pr['published_date_iso'] !== '0000-00-00') {
                         $item['event_date_iso'] = $pr['published_date_iso'];
-                        $item['pub_date'] = !empty($pr['published_date']) ? $pr['published_date'] : date('d/m/Y', strtotime($pr['published_date_iso']));
+                        $item['pub_date'] = formatDateToSpanish($pr['published_date_iso']);
                         $item['date_found'] = true;
                         $item['timestamp'] = strtotime($pr['published_date_iso']) ?: 0;
                     } elseif (!empty($pr['published_date']) && $pr['published_date'] !== 'Fecha no localizada') {
@@ -654,7 +659,7 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                     $item['matched_title'] = $en['title'];
                     if (empty($item['date_found']) && !empty($en['event_date'])) {
                         $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
-                        $item['pub_date'] = date('d/m/Y', strtotime($en['event_date']));
+                        $item['pub_date'] = formatDateToSpanish($en['event_date']);
                         $item['date_found'] = true;
                     }
                     break;
@@ -665,7 +670,7 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                     $item['matched_title'] = $en['title'];
                     if (empty($item['date_found']) && !empty($en['event_date'])) {
                         $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
-                        $item['pub_date'] = date('d/m/Y', strtotime($en['event_date']));
+                        $item['pub_date'] = formatDateToSpanish($en['event_date']);
                         $item['date_found'] = true;
                     }
                     break;
@@ -693,7 +698,7 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
         if (!empty($pr['published_date_iso']) && $pr['published_date_iso'] !== '0000-00-00') {
             $dateFound = true;
             $eventDateIso = $pr['published_date_iso'];
-            $pubDateStr = !empty($pr['published_date']) ? $pr['published_date'] : date('d/m/Y', strtotime($pr['published_date_iso']));
+            $pubDateStr = formatDateToSpanish($pr['published_date_iso']);
             $ts = strtotime($pr['published_date_iso']) ?: 0;
         } elseif (!empty($pr['published_date']) && $pr['published_date'] !== 'Fecha no localizada') {
             $parsed = detectArticlePublicationDate('', '', $pr['published_date']);
@@ -706,7 +711,7 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
         } elseif (!empty($pr['real_event_date'])) {
             $dateFound = true;
             $eventDateIso = date('Y-m-d', strtotime($pr['real_event_date']));
-            $pubDateStr = date('d/m/Y', strtotime($pr['real_event_date']));
+            $pubDateStr = formatDateToSpanish($pr['real_event_date']);
             $ts = strtotime($pr['real_event_date']) ?: 0;
         }
 
