@@ -3,6 +3,12 @@
 // Panel supervisado de localización de noticias de Moratalla, control anti-redundancia, redacción con Google Gemini y 3 opciones combinables de imagen
 $hasGeminiKeyConfigured = !empty(getGeminiApiKey($pdo));
 $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
+
+// Rango de fechas por defecto configurado en settings
+$stmtDateSettings = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('news_search_date_from', 'news_search_date_to')");
+$dateSettings = $stmtDateSettings ? $stmtDateSettings->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+$defaultDateFrom = $dateSettings['news_search_date_from'] ?? '';
+$defaultDateTo = $dateSettings['news_search_date_to'] ?? '';
 ?>
 
 <style>
@@ -227,6 +233,7 @@ $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
                 <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Temas rápidos:</span>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Moratalla Murcia')">📰 General Moratalla</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Banda de Música de Moratalla')">🎵 Banda de Música</button>
+                <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Moratalla Murcia y Banda de Música de Moratalla')" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700;"><i class="fas fa-layer-group"></i> 🔄 Moratalla + Banda de Música</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Ayuntamiento de Moratalla')">🏛️ Ayuntamiento</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Turismo Cultura Castillo Moratalla')">🏰 Turismo y Patrimonio</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Fiestas Tambor Encierros Moratalla')">🥁 Fiestas y Tradiciones</button>
@@ -245,7 +252,7 @@ $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
             <!-- Botones interactivos de filtro y reconducción por estado (Disponibles, Publicadas, Descartadas) -->
             <div id="aiNewsStatsBar" style="display: none; margin-top: 0.9rem; padding: 0.6rem 0.8rem; background: #f8fafc; border-radius: 8px; font-size: 0.82rem; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0;">
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <span style="font-size: 0.78rem; color: #475569; font-weight: 700;"><i class="fas fa-filter"></i> Ver / Reconducir:</span>
+                    <span style="font-size: 0.78rem; color: #475569; font-weight: 700;"><i class="fas fa-filter"></i> Estado:</span>
                     <button type="button" id="btnFilterNew" onclick="setNewsStatusFilter('new')" style="border: 2px solid #4f46e5; background: #eef2ff; color: #3730a3; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;">
                         <span id="statNewCount">🟢 0 Nuevas disponibles</span>
                     </button>
@@ -260,6 +267,46 @@ $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
                     </button>
                 </div>
                 <span id="activeFilterHint" style="font-size: 0.76rem; color: #64748b; font-weight: 600;">Mostrando: Nuevas disponibles</span>
+            </div>
+
+            <!-- Filtros detallados de Administración (Rango de Fechas Desde/Hasta, Fecha y Medio/Fuente) -->
+            <div id="aiNewsFilterToolbar" style="display: none; margin-top: 0.5rem; padding: 0.6rem 0.8rem; background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                    <!-- Rango Desde / Hasta delimitado -->
+                    <div style="display: flex; align-items: center; gap: 5px; background: #f0fdf4; padding: 3px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: #166534;" title="Delimitar período de búsqueda"><i class="far fa-calendar-alt"></i> Delimitar:</span>
+                        <input type="date" id="aiNewsDateFrom" value="<?php echo htmlspecialchars($defaultDateFrom); ?>" onchange="onDateRangeChange()" title="Fecha Desde" style="padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.78rem; background: #ffffff; color: #14532d; font-weight: 600;">
+                        <span style="font-size: 0.75rem; color: #166534; font-weight: 600;">hasta</span>
+                        <input type="date" id="aiNewsDateTo" value="<?php echo htmlspecialchars($defaultDateTo); ?>" onchange="onDateRangeChange()" title="Fecha Hasta" style="padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.78rem; background: #ffffff; color: #14532d; font-weight: 600;">
+                        <button type="button" onclick="clearDateRangeInputs()" class="btn btn-sm" style="padding: 2px 6px; font-size: 0.72rem; background: #ffffff; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer;" title="Limpiar rango de fechas (Sin límite)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: #475569;"><i class="far fa-clock" style="color: #6366f1;"></i> Período:</span>
+                        <select id="aiNewsDateFilter" onchange="applyAllNewsFilters()" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; background: #f8fafc; color: #1e293b; font-weight: 600; cursor: pointer;">
+                            <option value="all">📅 Todas las fechas</option>
+                            <option value="with_date">✅ Con fecha localizada</option>
+                            <option value="no_date">⚠️ Sin fecha localizada (Revisar)</option>
+                            <option value="last_24h">⏱️ Últimas 24 horas</option>
+                            <option value="last_7d">📆 Últimos 7 días</option>
+                            <option value="last_30d">🗓️ Últimos 30 días</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: #475569;"><i class="fas fa-newspaper" style="color: #6366f1;"></i> Medio:</span>
+                        <select id="aiNewsSourceFilter" onchange="applyAllNewsFilters()" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; background: #f8fafc; color: #1e293b; font-weight: 600; max-width: 220px; cursor: pointer;">
+                            <option value="all">📰 Todos los medios</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="filteredResultsCounter" style="font-size: 0.78rem; color: #475569; font-weight: 700;"></span>
+                    <button type="button" onclick="resetAllNewsFilters()" class="btn btn-sm" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.75rem; padding: 3px 8px; cursor: pointer;">
+                        <i class="fas fa-undo"></i> Restablecer filtros
+                    </button>
+                </div>
             </div>
 
             <!-- Estado de carga de búsqueda -->
@@ -424,6 +471,11 @@ function quickSearchTopic(topic) {
 
 function searchInternetNews() {
     const q = document.getElementById('aiNewsSearchQuery').value.trim() || 'Moratalla Murcia';
+    const dateFromEl = document.getElementById('aiNewsDateFrom');
+    const dateToEl = document.getElementById('aiNewsDateTo');
+    const dateFrom = dateFromEl ? dateFromEl.value.trim() : '';
+    const dateTo = dateToEl ? dateToEl.value.trim() : '';
+
     const loading = document.getElementById('aiSearchLoading');
     const container = document.getElementById('aiFoundNewsContainer');
     loading.style.display = 'block';
@@ -432,6 +484,8 @@ function searchInternetNews() {
     const fd = new FormData();
     fd.append('ajax_action', 'search_news');
     fd.append('query', q);
+    fd.append('date_from', dateFrom);
+    fd.append('date_to', dateTo);
 
     fetch('ai_news_ajax.php', { method: 'POST', body: fd })
         .then(r => r.json())
@@ -439,6 +493,7 @@ function searchInternetNews() {
             loading.style.display = 'none';
             if (data.success) {
                 foundInternetNews = data.items || [];
+                updateSourceFilterOptions();
                 renderFoundNewsList();
             } else {
                 container.innerHTML = '<div style="padding:1rem; color:#dc2626;">Error al buscar noticias: ' + (data.error || 'Desconocido') + '</div>';
@@ -450,7 +505,72 @@ function searchInternetNews() {
         });
 }
 
+const defaultSavedDateFrom = <?php echo json_encode($defaultDateFrom); ?>;
+const defaultSavedDateTo   = <?php echo json_encode($defaultDateTo); ?>;
+
 let currentNewsStatusFilter = 'new'; // 'new' | 'published' | 'discarded' | 'all'
+let currentNewsDateFilter = 'all';   // 'all' | 'with_date' | 'no_date' | 'last_24h' | 'last_7d' | 'last_30d'
+let currentNewsSourceFilter = 'all'; // 'all' | medio concreto
+
+function onDateRangeChange() {
+    applyAllNewsFilters();
+    searchInternetNews();
+}
+
+function clearDateRangeInputs() {
+    const fromEl = document.getElementById('aiNewsDateFrom');
+    const toEl = document.getElementById('aiNewsDateTo');
+    if (fromEl) fromEl.value = '';
+    if (toEl) toEl.value = '';
+    applyAllNewsFilters();
+    searchInternetNews();
+}
+
+function updateSourceFilterOptions() {
+    const select = document.getElementById('aiNewsSourceFilter');
+    if (!select) return;
+    const currentVal = select.value;
+    const sources = {};
+    foundInternetNews.forEach(it => {
+        const s = (it.source || '').trim();
+        if (s && s !== 'Historial IA') {
+            sources[s] = (sources[s] || 0) + 1;
+        }
+    });
+    let html = '<option value="all">📰 Todos los medios (' + foundInternetNews.length + ')</option>';
+    Object.keys(sources).sort().forEach(src => {
+        html += '<option value="' + escapeHtml(src) + '">' + escapeHtml(src) + ' (' + sources[src] + ')</option>';
+    });
+    select.innerHTML = html;
+    if (sources[currentVal]) {
+        select.value = currentVal;
+    } else {
+        select.value = 'all';
+    }
+}
+
+function applyAllNewsFilters() {
+    const dateSel = document.getElementById('aiNewsDateFilter');
+    if (dateSel) currentNewsDateFilter = dateSel.value;
+    const srcSel = document.getElementById('aiNewsSourceFilter');
+    if (srcSel) currentNewsSourceFilter = srcSel.value;
+    renderFoundNewsList();
+}
+
+function resetAllNewsFilters() {
+    currentNewsDateFilter = 'all';
+    currentNewsSourceFilter = 'all';
+    const dateSel = document.getElementById('aiNewsDateFilter');
+    if (dateSel) dateSel.value = 'all';
+    const srcSel = document.getElementById('aiNewsSourceFilter');
+    if (srcSel) srcSel.value = 'all';
+    const fromEl = document.getElementById('aiNewsDateFrom');
+    const toEl = document.getElementById('aiNewsDateTo');
+    if (fromEl) fromEl.value = defaultSavedDateFrom;
+    if (toEl) toEl.value = defaultSavedDateTo;
+    setNewsStatusFilter('new');
+    searchInternetNews();
+}
 
 function onToggleHideProcessedChk() {
     const hide = document.getElementById('hideProcessedNewsChk').checked;
@@ -511,29 +631,82 @@ function renderFoundNewsList() {
     });
 
     const statsBar = document.getElementById('aiNewsStatsBar');
-    statsBar.style.display = 'flex';
+    if (statsBar) statsBar.style.display = 'flex';
+    const filterToolbar = document.getElementById('aiNewsFilterToolbar');
+    if (filterToolbar) filterToolbar.style.display = 'flex';
+
     document.getElementById('statNewCount').textContent = '🟢 ' + countNew + ' Nuevas disponibles';
     document.getElementById('statPubCount').textContent = '🔵 ' + countPub + ' Ya publicadas en la web';
     document.getElementById('statDiscCount').textContent = '⚪ ' + countDisc + ' Descartadas';
 
+    const nowTs = Math.floor(Date.now() / 1000);
     const visibleItems = foundInternetNews.filter((it, idx) => {
         it._idx = idx;
         const st = it.process_status || 'new';
-        if (currentNewsStatusFilter === 'new') return st === 'new';
-        if (currentNewsStatusFilter === 'published') return st === 'published';
-        if (currentNewsStatusFilter === 'discarded') return st === 'discarded';
+
+        // 1. Filtro por Estado
+        if (currentNewsStatusFilter === 'new' && st !== 'new') return false;
+        if (currentNewsStatusFilter === 'published' && st !== 'published') return false;
+        if (currentNewsStatusFilter === 'discarded' && st !== 'discarded') return false;
+
+        // 2. Filtro por Rango de Fechas Delimitado (Desde / Hasta)
+        const dFrom = document.getElementById('aiNewsDateFrom') ? document.getElementById('aiNewsDateFrom').value.trim() : '';
+        const dTo   = document.getElementById('aiNewsDateTo')   ? document.getElementById('aiNewsDateTo').value.trim()   : '';
+        if (dFrom || dTo) {
+            let itemYmd = '';
+            if (it.event_date_iso) {
+                itemYmd = it.event_date_iso.substring(0, 10);
+            } else if (it.timestamp) {
+                const d = new Date(it.timestamp * 1000);
+                const pad = n => String(n).padStart(2, '0');
+                itemYmd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            }
+            if (!itemYmd) {
+                return false;
+            }
+            if (dFrom && itemYmd < dFrom) return false;
+            if (dTo && itemYmd > dTo) return false;
+        }
+
+        // 3. Filtro por Selección Rápida de Fecha
+        const dateFound = !!it.date_found;
+        const ts = it.timestamp || 0;
+        if (currentNewsDateFilter === 'with_date' && !dateFound) return false;
+        if (currentNewsDateFilter === 'no_date' && dateFound) return false;
+        if (currentNewsDateFilter === 'last_24h') {
+            if (!dateFound || (nowTs - ts) > (86400 * 1.5)) return false;
+        }
+        if (currentNewsDateFilter === 'last_7d') {
+            if (!dateFound || (nowTs - ts) > (86400 * 7.5)) return false;
+        }
+        if (currentNewsDateFilter === 'last_30d') {
+            if (!dateFound || (nowTs - ts) > (86400 * 31)) return false;
+        }
+
+        // 3. Filtro por Medio / Fuente
+        if (currentNewsSourceFilter !== 'all') {
+            if ((it.source || '').trim().toLowerCase() !== currentNewsSourceFilter.trim().toLowerCase()) {
+                return false;
+            }
+        }
+
         return true;
     });
 
+    const counterSpan = document.getElementById('filteredResultsCounter');
+    if (counterSpan) {
+        counterSpan.textContent = visibleItems.length + ' de ' + foundInternetNews.length + ' resultados';
+    }
+
     if (visibleItems.length === 0) {
         if (currentNewsStatusFilter === 'new' && (countPub > 0 || countDisc > 0)) {
-            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">No hay noticias nuevas pendientes en esta búsqueda. Pulsa en los botones <strong>🔵 Ya publicadas (' + countPub + ')</strong> o <strong>⚪ Descartadas (' + countDisc + ')</strong> de arriba para verlas o reconducirlas.</div>';
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">No hay noticias nuevas pendientes con los filtros aplicados. Pulsa en los botones <strong>🔵 Ya publicadas (' + countPub + ')</strong> o <strong>⚪ Descartadas (' + countDisc + ')</strong>, o pulra <strong>Restablecer filtros</strong>.</div>';
         } else if (currentNewsStatusFilter === 'published') {
-            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f0fdf4; border-radius:8px;">No hay noticias marcadas como publicadas en este listado.</div>';
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f0fdf4; border-radius:8px;">No hay noticias publicadas que coincidan con los filtros seleccionados.</div>';
         } else if (currentNewsStatusFilter === 'discarded') {
-            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">No hay noticias descartadas en este momento.</div>';
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#475569; background:#f8fafc; border-radius:8px;">No hay noticias descartadas que coincidan con los filtros seleccionados.</div>';
         } else {
-            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#64748b;">No se encontraron noticias para esa búsqueda. Prueba con otros términos.</div>';
+            container.innerHTML = '<div style="padding:1.2rem; text-align:center; color:#64748b;">No se encontraron noticias con los filtros actuales. Prueba a seleccionar <strong>Restablecer filtros</strong> o cambiar los términos de búsqueda.</div>';
         }
         return;
     }
@@ -585,6 +758,10 @@ function renderFoundNewsList() {
             ? '<a href="' + escapeHtml(it.url) + '" target="_blank" style="font-size:0.75rem; color:#2563eb; text-decoration:none; font-weight:600;"><i class="fas fa-external-link-alt"></i> Ver original</a>'
             : '';
 
+        const dateHtml = it.date_found
+            ? '<span style="font-size:0.75rem; color:#1e293b; font-weight:700;"><i class="far fa-calendar-alt" style="color:#059669;"></i> ' + escapeHtml(it.pub_date) + '</span>'
+            : '<span style="font-size:0.73rem; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:2px 7px; border-radius:4px; font-weight:700;" title="No se pudo localizar la fecha de publicación en el medio original (no se aplica la fecha de hoy)"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i> Fecha no localizada</span>';
+
         return '<div class="' + cardClass + '">' +
             '<div style="display:flex; gap:12px; align-items:flex-start; flex:1; min-width:0;">' +
                 thumbHtml +
@@ -592,7 +769,7 @@ function renderFoundNewsList() {
                     '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:4px;">' +
                         statusBadge +
                         '<span style="font-size:0.76rem; font-weight:700; color:#6d28d9; background:#f3e8ff; padding:2px 8px; border-radius:4px;">' + escapeHtml(it.source) + '</span>' +
-                        '<span style="font-size:0.75rem; color:#64748b;"><i class="far fa-clock"></i> ' + escapeHtml(it.pub_date) + '</span>' +
+                        dateHtml +
                         origLinkHtml +
                     '</div>' +
                     '<div style="font-weight:700; color:#0f172a; font-size:0.94rem; line-height:1.3;">' + escapeHtml(it.title) + '</div>' +
@@ -677,6 +854,7 @@ function runDraftPreparation(itemData) {
     fd.append('snippet', itemData.snippet || '');
     fd.append('source', itemData.source || '');
     fd.append('rss_image', itemData.rss_image || '');
+    fd.append('pub_date', itemData.pub_date || '');
 
     fetch('ai_news_ajax.php', { method: 'POST', body: fd })
         .then(r => r.json())
@@ -703,10 +881,23 @@ function runDraftPreparation(itemData) {
                 tinymce.get('news_content').setContent(contentHtml);
             }
 
-            // Fecha del evento (si aplica)
+            // Fecha real de la noticia / evento
             const eventDateInput = document.querySelector('input[name="event_date"]');
-            if (eventDateInput && draft.event_date) {
-                eventDateInput.value = draft.event_date;
+            const dateNoticeBox = document.getElementById('aiDateDetectionNotice');
+            if (eventDateInput) {
+                if (draft.date_found && draft.event_date) {
+                    eventDateInput.value = draft.event_date;
+                    if (dateNoticeBox) {
+                        dateNoticeBox.innerHTML = '<div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:6px 10px; border-radius:6px; font-size:0.82rem; font-weight:600;"><i class="fas fa-check-circle" style="color:#059669;"></i> Fecha real de la noticia localizada en el artículo original: <strong>' + escapeHtml(draft.event_date) + '</strong> (' + escapeHtml(draft.date_status_message || '') + '). NUNCA se usa la fecha de hoy.</div>';
+                        dateNoticeBox.style.display = 'block';
+                    }
+                } else {
+                    eventDateInput.value = '';
+                    if (dateNoticeBox) {
+                        dateNoticeBox.innerHTML = '<div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:6px 10px; border-radius:6px; font-size:0.82rem; font-weight:600;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i> ⚠️ Fecha de la noticia no localizada en el medio original. No se ha asignado la fecha de hoy. Por favor, indícala manualmente si la conoces.</div>';
+                        dateNoticeBox.style.display = 'block';
+                    }
+                }
             }
 
             // Categoría sugerida
@@ -762,10 +953,14 @@ function runDraftPreparation(itemData) {
             // Mostrar aviso de supervisión
             const banner = document.getElementById('supervisedDraftReadyBanner');
             if (banner) {
+                let dateBadgeText = (draft.date_found && draft.event_date)
+                    ? '<div style="margin-top:6px; font-size:0.83rem; color:#065f46;"><i class="fas fa-calendar-check"></i> <strong>Fecha de la noticia localizada:</strong> ' + escapeHtml(draft.event_date) + ' (' + escapeHtml(draft.date_status_message || '') + '). No es la fecha de hoy.</div>'
+                    : '<div style="margin-top:6px; font-size:0.83rem; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:4px 8px; border-radius:4px;"><i class="fas fa-exclamation-triangle"></i> <strong>Aviso sobre la fecha:</strong> No se ha podido localizar la fecha de publicación en el medio original. Debes indicarla manualmente en el campo «Fecha de la Noticia / Evento».</div>';
+
                 banner.style.display = 'block';
                 banner.innerHTML = '<i class="fas fa-check-circle"></i> <strong>Borrador supervisado listo:</strong> Revisa el título, el texto redactado ' +
                     (draft.used_gemini ? 'con <strong>Google Gemini (' + escapeHtml(draft.model || '') + ')</strong>' : 'en modo estructurado') +
-                    ' y las 3 opciones de fotografía antes de pulsar <strong>Guardar</strong>.';
+                    ', la fecha y las 3 opciones de fotografía antes de pulsar <strong>Guardar</strong>.' + dateBadgeText;
                 banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         })
@@ -997,6 +1192,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const prefillTitle = params.get('prefill_title') || '';
     const prefillSource = params.get('prefill_source') || '';
     const prefillImg = params.get('prefill_img') || '';
+    const prefillDate = params.get('prefill_date') || '';
+    const prefillDateIso = params.get('prefill_date_iso') || '';
+    const dateFound = params.get('date_found') === '1';
     const quickAction = params.get('quick_action') || '';
 
     if (prefillUrl || prefillTitle) {
@@ -1023,7 +1221,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 title: prefillTitle,
                 snippet: '',
                 source: prefillSource,
-                rss_image: prefillImg
+                rss_image: prefillImg,
+                pub_date: prefillDate,
+                event_date_iso: prefillDateIso,
+                date_found: dateFound
             });
         }
     }

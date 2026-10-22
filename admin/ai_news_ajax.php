@@ -18,7 +18,9 @@ $action = $_POST['ajax_action'] ?? $_GET['ajax_action'] ?? '';
 try {
     if ($action === 'search_news') {
         $query = trim($_POST['query'] ?? $_GET['query'] ?? 'Moratalla Murcia');
-        $items = searchMoratallaNews($pdo, $query, 28);
+        $dateFrom = isset($_POST['date_from']) ? trim($_POST['date_from']) : (isset($_GET['date_from']) ? trim($_GET['date_from']) : null);
+        $dateTo   = isset($_POST['date_to'])   ? trim($_POST['date_to'])   : (isset($_GET['date_to'])   ? trim($_GET['date_to'])   : null);
+        $items = searchMoratallaNews($pdo, $query, 28, $dateFrom, $dateTo);
 
         $counts = ['new' => 0, 'published' => 0, 'discarded' => 0];
         foreach ($items as $it) {
@@ -42,6 +44,7 @@ try {
         $snippet = trim($_POST['snippet'] ?? '');
         $source = trim($_POST['source'] ?? '');
         $rssImage = trim($_POST['rss_image'] ?? '');
+        $pubDate = trim($_POST['pub_date'] ?? '');
 
         if ($url === '' && $title === '') {
             ob_clean();
@@ -49,8 +52,8 @@ try {
             exit;
         }
 
-        // 1. Extraer texto e imágenes originales de la noticia (Opción A)
-        $articleInfo = extractArticleContentAndImages($url, $title, $snippet, $rssImage, $source);
+        // 1. Extraer texto e imágenes originales de la noticia (Opción A) y localizar su fecha real
+        $articleInfo = extractArticleContentAndImages($url, $title, $snippet, $rssImage, $source, $pubDate);
 
         // 2. Obtener categorías de la base de datos para que Gemini sugiera la más adecuada
         $cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();

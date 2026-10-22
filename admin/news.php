@@ -290,7 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Registrar la noticia en el control anti-redundancia (ai_processed_news) para no volver a ofrecerla como pendiente
             if (!empty($source_url) || !empty($ai_original_title)) {
-                markNewsAsProcessed($pdo, $source_url ?: $title, $ai_original_title ?: $title, $ai_source_name, 'published', $news_id);
+                $pubDateFormatted = !empty($event_date) ? date('d/m/Y', strtotime($event_date)) : null;
+                markNewsAsProcessed($pdo, $source_url ?: $title, $ai_original_title ?: $title, $ai_source_name, 'published', $news_id, null, null, $pubDateFormatted, $event_date);
             }
 
             // Procesar imágenes preseleccionadas para la galería desde las Opciones A, B o C
@@ -647,9 +648,10 @@ adminHeader("Noticias y Eventos");
             
             <div style="margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div>
-                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Fecha del Evento (Opcional)</label>
-                    <input type="date" name="event_date" value="<?php echo htmlspecialchars($news_data['event_date'] ?? ''); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
-                    <small style="color: #666; display: block; margin-top: 0.4rem;">Indica la fecha si esta noticia corresponde a un evento futuro o pasado.</small>
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Fecha de la Noticia / Evento</label>
+                    <input type="date" name="event_date" id="newsEventDateInput" value="<?php echo htmlspecialchars($news_data['event_date'] ?? ''); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
+                    <div id="aiDateDetectionNotice" style="margin-top: 6px;"></div>
+                    <small style="color: #666; display: block; margin-top: 0.4rem;">Indica la fecha real en la que ocurrió o se publicó la noticia (la IA la detecta del artículo original; si no se localiza, debes indicarla aquí).</small>
                 </div>
                 <div>
                     <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Imagen Principal, Documento PDF o Vídeo</label>

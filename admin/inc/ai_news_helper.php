@@ -26,6 +26,8 @@ function ensureAiNewsTrackingSchema($pdo) {
             news_event_id INT NULL,
             snippet_summary TEXT NULL,
             rss_image VARCHAR(700) NULL,
+            published_date VARCHAR(60) NULL,
+            published_date_iso DATE NULL,
             processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_url_hash (url_hash),
             INDEX idx_title_norm (title_norm),
@@ -42,12 +44,313 @@ function ensureAiNewsTrackingSchema($pdo) {
     }
 
     try {
+        $pdo->query("SELECT published_date FROM ai_processed_news LIMIT 1");
+    } catch (Exception $e) {
+        try {
+            $pdo->exec("ALTER TABLE ai_processed_news ADD COLUMN published_date VARCHAR(60) NULL AFTER rss_image, ADD COLUMN published_date_iso DATE NULL AFTER published_date");
+        } catch (Exception $e2) {}
+    }
+
+    try {
         $pdo->query("SELECT source_url FROM news_events LIMIT 1");
     } catch (Exception $e) {
         try {
             $pdo->exec("ALTER TABLE news_events ADD COLUMN source_url VARCHAR(700) NULL AFTER icon");
         } catch (Exception $e2) {}
     }
+}
+
+/**
+ * Parsea cadenas de fecha en español o estándares (ISO, RFC) a timestamp UNIX.
+ * Devuelve null si no es una fecha válida o reconocible (NUNCA devuelve la fecha actual por defecto).
+ */
+function parseSpanishDateStringToTimestamp($str) {
+    $str = trim((string)$str);
+    if ($str === '') return null;
+
+    // Descartar frases o etiquetas no temporales
+    if (preg_match('/^(reciente|hoy|ayer|hace|desconocid|sin fecha|fecha no)/i', $str)) {
+        // Solo interpretar 'ayer' o 'hace X' si se requiere expresamente; para evitar fechas falsas, descartar o evaluar relativo
+        if (preg_match('/hace\s+(\d+)\s+hora/iu', $str, $hm)) {
+            return time() - ((int)$hm[1] * 3600);
+        }
+        if (preg_match('/hace\s+(\d+)\s+d[ií]a/iu', $str, $dm)) {
+            return time() - ((int)$dm[1] * 86400);
+        }
+        if (preg_match('/^ayer/iu', $str)) {
+            return strtotime('-1 day');
+        }
+        return null;
+    }
+
+    // Intento 1: strtotime directo
+    $ts = @strtotime($str);
+    if ($ts !== false && $ts > 946684800 && $ts < (time() + 86400 * 365)) {
+        return $ts;
+    }
+
+    // Meses en español
+    $months = [
+        'enero' => '01', 'febrero' => '02', 'marzo' => '03', 'abril' => '04',
+        'mayo' => '05', 'junio' => '06', 'julio' => '07', 'agosto' => '08',
+        'septiembre' => '09', 'setiembre' => '09', 'octubre' => '10',
+        'noviembre' => '11', 'diciembre' => '12'
+    ];
+
+    // Formato '12 de octubre de 2026' o '12 de octubre 2026, 17:30'
+    if (preg_match('/(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+(?:de\s+)?(\d{4})(?:\s*,?\s*(\d{1,2}):(\d{2}))?/iu', $str, $m)) {
+        $day = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+        $monthName = mb_strtolower($m[2], 'UTF-8');
+        $year = $m[3];
+        $hour = isset($m[4]) ? str_pad($m[4], 2, '0', STR_PAD_LEFT) : '12';
+        $min = isset($m[5]) ? str_pad($m[5], 2, '0', STR_PAD_LEFT) : '00';
+
+        if (isset($months[$monthName])) {
+            $month = $months[$monthName];
+            $iso = "$year-$month-$day $hour:$min:00";
+            $ts = @strtotime($iso);
+            if ($ts !== false) return $ts;
+        }
+    }
+
+    // Formato DD/MM/YYYY o DD-MM-YYYY
+    if (preg_match('/(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/', $str, $m)) {
+        $day = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+        $month = str_pad($m[2], 2, '0', STR_PAD_LEFT);
+        $year = $m[3];
+        $hour = isset($m[4]) ? str_pad($m[4], 2, '0', STR_PAD_LEFT) : '12';
+        $min = isset($m[5]) ? str_pad($m[5], 2, '0', STR_PAD_LEFT) : '00';
+        $iso = "$year-$month-$day $hour:$min:00";
+        $ts = @strtotime($iso);
+        if ($ts !== false) return $ts;
+    }
+
+    return null;
+}
+
+/**
+ * Detecta con máxima precisión la fecha REAL de publicación o acontecimiento de una noticia:
+ * 1) JSON-LD (datePublished, dateCreated, dateModified)
+ * 2) Meta tags (article:published_time, og:published_time, pubdate, etc.)
+ * 3) Elementos HTML <time>
+ * 4) Patrones textuales de fecha en español en el cuerpo
+ * 5) Patrón YYYY/MM/DD o YYYY-MM-DD en la URL
+ * 6) pubDate del feed RSS si es válido
+ *
+ * Si no se encuentra, devuelve found = false y date_fmt = 'Fecha no localizada' (NUNCA el día de hoy).
+ */
+function detectArticlePublicationDate($html, $url, $fallbackRssPubDate = '') {
+    $result = [
+        'found'       => false,
+        'timestamp'   => null,
+        'date_iso'    => '',
+        'date_fmt'    => 'Fecha no localizada',
+        'date_source' => ''
+    ];
+
+    $resolvedTs = null;
+    $source = '';
+
+    if (!empty($html)) {
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument();
+        @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $xpath = new DOMXPath($dom);
+
+        // 1. JSON-LD: datePublished, dateCreated, dateModified
+        $scriptNodes = $xpath->query('//script[@type="application/ld+json"]');
+        foreach ($scriptNodes as $script) {
+            $jsonRaw = trim($script->textContent);
+            $data = @json_decode($jsonRaw, true);
+            if (is_array($data)) {
+                $findDateInJson = function ($node) use (&$findDateInJson, &$resolvedTs, &$source) {
+                    if ($resolvedTs !== null || !is_array($node)) return;
+                    if (!empty($node['datePublished']) && is_string($node['datePublished'])) {
+                        $ts = parseSpanishDateStringToTimestamp($node['datePublished']);
+                        if ($ts) {
+                            $resolvedTs = $ts;
+                            $source = 'JSON-LD datePublished';
+                            return;
+                        }
+                    }
+                    if (!empty($node['dateCreated']) && is_string($node['dateCreated'])) {
+                        $ts = parseSpanishDateStringToTimestamp($node['dateCreated']);
+                        if ($ts) {
+                            $resolvedTs = $ts;
+                            $source = 'JSON-LD dateCreated';
+                            return;
+                        }
+                    }
+                    if (!empty($node['dateModified']) && is_string($node['dateModified'])) {
+                        $ts = parseSpanishDateStringToTimestamp($node['dateModified']);
+                        if ($ts) {
+                            $resolvedTs = $ts;
+                            $source = 'JSON-LD dateModified';
+                            return;
+                        }
+                    }
+                    foreach ($node as $k => $v) {
+                        if (is_array($v)) $findDateInJson($v);
+                    }
+                };
+                $findDateInJson($data);
+                if ($resolvedTs !== null) break;
+            }
+        }
+
+        // 2. Meta tags
+        if ($resolvedTs === null) {
+            $metaProps = [
+                'article:published_time', 'og:published_time', 'publication_date',
+                'publishdate', 'publish_date', 'pubdate', 'date', 'dc.date',
+                'dc.date.issued', 'parsely-pub-date', 'sailthru.date', 'article:modified_time', 'og:updated_time'
+            ];
+            foreach ($xpath->query('//meta') as $meta) {
+                $prop = strtolower(trim($meta->getAttribute('property') ?: $meta->getAttribute('name')));
+                $content = trim($meta->getAttribute('content'));
+                if ($content === '') continue;
+                if (in_array($prop, $metaProps, true)) {
+                    $ts = parseSpanishDateStringToTimestamp($content);
+                    if ($ts) {
+                        $resolvedTs = $ts;
+                        $source = "Meta $prop";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. Time tags
+        if ($resolvedTs === null) {
+            $timeNodes = $xpath->query('//time');
+            foreach ($timeNodes as $tn) {
+                $dt = trim($tn->getAttribute('datetime'));
+                if ($dt !== '') {
+                    $ts = parseSpanishDateStringToTimestamp($dt);
+                    if ($ts) {
+                        $resolvedTs = $ts;
+                        $source = '<time datetime>';
+                        break;
+                    }
+                }
+                $txt = trim($tn->textContent);
+                if ($txt !== '') {
+                    $ts = parseSpanishDateStringToTimestamp($txt);
+                    if ($ts) {
+                        $resolvedTs = $ts;
+                        $source = '<time> text';
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 4. Patrón textual en el cuerpo o cabecera de la noticia
+        if ($resolvedTs === null) {
+            if (preg_match('/(?:publicad[oa]|actualizad[oa]|fecha|cread[oa])[:\s]+(\d{1,2}\s+de\s+[a-záéíóúñ]+\s+(?:de\s+)?\d{4}(?:\s*,?\s*\d{1,2}:\d{2})?)/iu', $html, $m)) {
+                $ts = parseSpanishDateStringToTimestamp($m[1]);
+                if ($ts) {
+                    $resolvedTs = $ts;
+                    $source = 'Texto: ' . $m[1];
+                }
+            }
+        }
+    }
+
+    // 5. Patrón de fecha en la URL (ej: /2026/10/12/ o /2026-10-12-)
+    if ($resolvedTs === null && !empty($url)) {
+        if (preg_match('#/(20\d{2})/(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])#', $url, $um)) {
+            $ts = @strtotime("{$um[1]}-{$um[2]}-{$um[3]} 12:00:00");
+            if ($ts) {
+                $resolvedTs = $ts;
+                $source = 'Ruta URL (YYYY/MM/DD)';
+            }
+        } elseif (preg_match('#/(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])#', $url, $um)) {
+            $ts = @strtotime("{$um[1]}-{$um[2]}-{$um[3]} 12:00:00");
+            if ($ts) {
+                $resolvedTs = $ts;
+                $source = 'Ruta URL (YYYY-MM-DD)';
+            }
+        }
+    }
+
+    // 6. Respaldo: pubDate del feed RSS si es válido
+    if ($resolvedTs === null && !empty($fallbackRssPubDate)) {
+        $ts = parseSpanishDateStringToTimestamp($fallbackRssPubDate);
+        if ($ts) {
+            $resolvedTs = $ts;
+            $source = 'Feed RSS pubDate';
+        }
+    }
+
+    if ($resolvedTs !== null) {
+        $result['found']       = true;
+        $result['timestamp']   = $resolvedTs;
+        $result['date_iso']    = date('Y-m-d', $resolvedTs);
+        $hasTime               = (date('H:i', $resolvedTs) !== '00:00' && date('H:i', $resolvedTs) !== '12:00');
+        $result['date_fmt']    = $hasTime ? date('d/m/Y H:i', $resolvedTs) : date('d/m/Y', $resolvedTs);
+        $result['date_source'] = $source;
+    }
+
+    return $result;
+}
+
+/**
+ * Comprueba si una noticia cumple con el rango de fechas delimitado [dateFrom, dateTo].
+ * Si dateFrom o dateTo están vacíos, no se aplica límite en ese extremo.
+ * Si ambos están vacíos, devuelve true (sin restricción temporal).
+ * Si la noticia no tiene fecha localizada y hay un rango activo:
+ * - Si $allowUndated es true, se permite.
+ * - Si $allowUndated es false, se descarta (para búsquedas estrictas automáticas y filtrado por rango).
+ */
+function isNewsItemInDateRange($item, $dateFrom = '', $dateTo = '', $allowUndated = false) {
+    $dateFrom = trim((string)($dateFrom ?? ''));
+    $dateTo   = trim((string)($dateTo ?? ''));
+
+    // Sin delimitación temporal activa
+    if ($dateFrom === '' && $dateTo === '') {
+        return true;
+    }
+
+    $hasDate = !empty($item['date_found']);
+    $dateIso = !empty($item['event_date_iso']) ? trim((string)$item['event_date_iso']) : '';
+    $timestamp = !empty($item['timestamp']) ? (int)$item['timestamp'] : 0;
+    $pubDate = !empty($item['pub_date']) ? trim((string)$item['pub_date']) : '';
+
+    // Si explícitamente es 'Fecha no localizada' y no tiene timestamp ni ISO
+    if (!$hasDate && empty($dateIso) && $timestamp <= 0 && ($pubDate === '' || $pubDate === 'Fecha no localizada')) {
+        return (bool)$allowUndated;
+    }
+
+    // Extraer año-mes-día YYYY-MM-DD
+    $itemYmd = '';
+    if (!empty($dateIso)) {
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $dateIso, $m)) {
+            $itemYmd = $m[1];
+        }
+    }
+    if ($itemYmd === '' && $timestamp > 0) {
+        $itemYmd = date('Y-m-d', $timestamp);
+    }
+    if ($itemYmd === '' && !empty($pubDate) && $pubDate !== 'Fecha no localizada') {
+        $parsed = detectArticlePublicationDate('', '', $pubDate);
+        if ($parsed['found'] && !empty($parsed['date_iso'])) {
+            $itemYmd = substr($parsed['date_iso'], 0, 10);
+        }
+    }
+
+    if ($itemYmd === '') {
+        return (bool)$allowUndated;
+    }
+
+    if ($dateFrom !== '' && $itemYmd < $dateFrom) {
+        return false;
+    }
+    if ($dateTo !== '' && $itemYmd > $dateTo) {
+        return false;
+    }
+
+    return true;
 }
 
 /**
@@ -123,7 +426,7 @@ function areNewsTitlesRedundant($normA, $normB) {
 /**
  * Registra una noticia en `ai_processed_news` (disponible, publicada o descartada)
  */
-function markNewsAsProcessed($pdo, $sourceUrl, $originalTitle, $sourceName = '', $status = 'published', $newsEventId = null, $snippetSummary = null, $rssImage = null) {
+function markNewsAsProcessed($pdo, $sourceUrl, $originalTitle, $sourceName = '', $status = 'published', $newsEventId = null, $snippetSummary = null, $rssImage = null, $publishedDate = null, $publishedDateIso = null) {
     ensureAiNewsTrackingSchema($pdo);
     $sourceUrl = trim((string)$sourceUrl);
     $originalTitle = trim((string)$originalTitle);
@@ -150,12 +453,35 @@ function markNewsAsProcessed($pdo, $sourceUrl, $originalTitle, $sourceName = '',
             snippet_summary = COALESCE(?, snippet_summary),
             rss_image = COALESCE(?, rss_image),
             source_name = COALESCE(NULLIF(?, ''), source_name),
+            published_date = COALESCE(NULLIF(?, ''), published_date),
+            published_date_iso = COALESCE(?, published_date_iso),
             processed_at = NOW()
             WHERE id = ?");
-        return $upd->execute([$finalStatus, $newsEventId ?: null, $snippetSummary ?: null, $rssImage ?: null, $sourceName, $existingId]);
+        return $upd->execute([
+            $finalStatus,
+            $newsEventId ?: null,
+            $snippetSummary ?: null,
+            $rssImage ?: null,
+            $sourceName,
+            $publishedDate ?: null,
+            $publishedDateIso ?: null,
+            $existingId
+        ]);
     } else {
-        $ins = $pdo->prepare("INSERT INTO ai_processed_news (source_url, url_hash, title_original, title_norm, source_name, status, news_event_id, snippet_summary, rss_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $ins->execute([$sourceUrl, $urlHash, $originalTitle, $titleNorm, $sourceName, $status, $newsEventId ?: null, $snippetSummary ?: null, $rssImage ?: null]);
+        $ins = $pdo->prepare("INSERT INTO ai_processed_news (source_url, url_hash, title_original, title_norm, source_name, status, news_event_id, snippet_summary, rss_image, published_date, published_date_iso) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        return $ins->execute([
+            $sourceUrl,
+            $urlHash,
+            $originalTitle,
+            $titleNorm,
+            $sourceName,
+            $status,
+            $newsEventId ?: null,
+            $snippetSummary ?: null,
+            $rssImage ?: null,
+            $publishedDate ?: null,
+            $publishedDateIso ?: null
+        ]);
     }
 }
 
@@ -180,17 +506,17 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
 
     $processedRows = [];
     try {
-        $stmt = $pdo->query("SELECT p.*, ne.title as published_title, ne.id as real_news_id
+        $stmt = $pdo->query("SELECT p.*, ne.title as published_title, ne.id as real_news_id, ne.event_date as real_event_date
                              FROM ai_processed_news p
                              LEFT JOIN news_events ne ON p.news_event_id = ne.id
                              ORDER BY p.processed_at DESC");
-        $processedRows = $stmt->fetchAll();
+        $processedRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
 
     $existingNews = [];
     try {
         $stmt2 = $pdo->query("SELECT id, title, source_url, event_date FROM news_events ORDER BY id DESC");
-        while ($r = $stmt2->fetch()) {
+        while ($r = $stmt2->fetch(PDO::FETCH_ASSOC)) {
             $r['title_norm'] = normalizeNewsTitleForDedupe($r['title']);
             $r['url_hash'] = !empty($r['source_url']) ? hash('sha256', normalizeUrlForHash($r['source_url'])) : '';
             $existingNews[] = $r;
@@ -217,6 +543,25 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                 $matchedRecordIds[(int)$pr['id']] = true;
                 $item['processed_record_id'] = (int)$pr['id'];
                 $item['processed_date'] = $pr['processed_at'] ? date('d/m/Y H:i', strtotime($pr['processed_at'])) : '';
+
+                // Si la noticia registrada tiene guardada la fecha real de publicación y el ítem del feed aún no la tenía
+                if (empty($item['date_found'])) {
+                    if (!empty($pr['published_date_iso']) && $pr['published_date_iso'] !== '0000-00-00') {
+                        $item['event_date_iso'] = $pr['published_date_iso'];
+                        $item['pub_date'] = !empty($pr['published_date']) ? $pr['published_date'] : date('d/m/Y', strtotime($pr['published_date_iso']));
+                        $item['date_found'] = true;
+                        $item['timestamp'] = strtotime($pr['published_date_iso']) ?: 0;
+                    } elseif (!empty($pr['published_date']) && $pr['published_date'] !== 'Fecha no localizada') {
+                        $parsedDt = detectArticlePublicationDate('', '', $pr['published_date']);
+                        if ($parsedDt['found']) {
+                            $item['event_date_iso'] = $parsedDt['date_iso'];
+                            $item['pub_date'] = $parsedDt['date_fmt'];
+                            $item['date_found'] = true;
+                            $item['timestamp'] = $parsedDt['timestamp'];
+                        }
+                    }
+                }
+
                 if ($pr['status'] === 'discarded') {
                     $item['process_status'] = 'discarded';
                     $item['matched_title'] = $pr['title_original'];
@@ -244,12 +589,22 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                     $item['process_status'] = 'published';
                     $item['matched_news_id'] = (int)$en['id'];
                     $item['matched_title'] = $en['title'];
+                    if (empty($item['date_found']) && !empty($en['event_date'])) {
+                        $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
+                        $item['pub_date'] = date('d/m/Y', strtotime($en['event_date']));
+                        $item['date_found'] = true;
+                    }
                     break;
                 }
                 if (areNewsTitlesRedundant($itemTitleNorm, $en['title_norm'])) {
                     $item['process_status'] = 'published';
                     $item['matched_news_id'] = (int)$en['id'];
                     $item['matched_title'] = $en['title'];
+                    if (empty($item['date_found']) && !empty($en['event_date'])) {
+                        $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
+                        $item['pub_date'] = date('d/m/Y', strtotime($en['event_date']));
+                        $item['date_found'] = true;
+                    }
                     break;
                 }
             }
@@ -263,26 +618,51 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
         $prId = (int)$pr['id'];
         if (isset($matchedRecordIds[$prId])) continue;
 
-        $ts = !empty($pr['processed_at']) ? @strtotime($pr['processed_at']) : time();
         $st = 'published';
         if ($pr['status'] === 'discarded') $st = 'discarded';
         elseif ($pr['status'] === 'available' || $pr['status'] === 'new') $st = 'new';
+
+        $dateFound = false;
+        $eventDateIso = '';
+        $pubDateStr = 'Fecha no localizada';
+        $ts = 0;
+
+        if (!empty($pr['published_date_iso']) && $pr['published_date_iso'] !== '0000-00-00') {
+            $dateFound = true;
+            $eventDateIso = $pr['published_date_iso'];
+            $pubDateStr = !empty($pr['published_date']) ? $pr['published_date'] : date('d/m/Y', strtotime($pr['published_date_iso']));
+            $ts = strtotime($pr['published_date_iso']) ?: 0;
+        } elseif (!empty($pr['published_date']) && $pr['published_date'] !== 'Fecha no localizada') {
+            $parsed = detectArticlePublicationDate('', '', $pr['published_date']);
+            if ($parsed['found']) {
+                $dateFound = true;
+                $eventDateIso = $parsed['date_iso'];
+                $pubDateStr = $parsed['date_fmt'];
+                $ts = $parsed['timestamp'] ?: 0;
+            }
+        } elseif (!empty($pr['real_event_date'])) {
+            $dateFound = true;
+            $eventDateIso = date('Y-m-d', strtotime($pr['real_event_date']));
+            $pubDateStr = date('d/m/Y', strtotime($pr['real_event_date']));
+            $ts = strtotime($pr['real_event_date']) ?: 0;
+        }
 
         $items[] = [
             'title'               => $pr['title_original'] ?: ($pr['published_title'] ?: 'Noticia registrada'),
             'url'                 => $pr['source_url'] ?: '',
             'snippet'             => $pr['snippet_summary'] ?: '',
             'source'              => $pr['source_name'] ?: 'Historial IA',
-            'pub_date'            => $ts ? date('d/m/Y H:i', $ts) : 'Registrada',
-            'event_date_iso'      => $ts ? date('Y-m-d', $ts) : date('Y-m-d'),
-            'timestamp'           => $ts ?: 0,
+            'pub_date'            => $pubDateStr,
+            'event_date_iso'      => $eventDateIso,
+            'date_found'          => $dateFound,
+            'timestamp'           => $ts,
             'rss_image'           => $pr['rss_image'] ?: '',
             'url_hash'            => $pr['url_hash'],
             'process_status'      => $st,
             'matched_news_id'     => $pr['real_news_id'] ?: $pr['news_event_id'],
             'matched_title'       => $pr['published_title'] ?: $pr['title_original'],
             'processed_record_id' => $prId,
-            'processed_date'      => $ts ? date('d/m/Y H:i', $ts) : ''
+            'processed_date'      => !empty($pr['processed_at']) ? date('d/m/Y H:i', strtotime($pr['processed_at'])) : ''
         ];
     }
 
@@ -365,14 +745,83 @@ function aiHttpGet($url, $timeout = 12, &$finalUrl = null) {
 }
 
 /**
- * Busca noticias recientes en internet sobre Moratalla combinando Bing News RSS y Google News RSS
+ * Busca noticias recientes en internet sobre Moratalla combinando Bing News RSS y Google News RSS.
+ * Permite delimitar el rango de fechas con $dateFrom y $dateTo (por defecto lee la configuración en settings).
  */
-function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25) {
+function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25, $dateFrom = null, $dateTo = null) {
     $query = trim($query);
     if ($query === '') {
         $query = 'Moratalla Murcia';
     }
 
+    if ($dateFrom === null || $dateTo === null) {
+        $cfgStmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('news_search_date_from', 'news_search_date_to')");
+        $cfgRows = $cfgStmt ? $cfgStmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+        if ($dateFrom === null) $dateFrom = $cfgRows['news_search_date_from'] ?? '';
+        if ($dateTo === null) $dateTo = $cfgRows['news_search_date_to'] ?? '';
+    }
+
+    // Comprobar si es una búsqueda combinada de Moratalla + Banda de Música
+    $isCombined = (
+        stripos($query, 'banda') !== false &&
+        stripos($query, 'moratalla') !== false &&
+        (stripos($query, ' y ') !== false || stripos($query, '+') !== false || stripos($query, 'combinad') !== false)
+    );
+
+    $fetchBatchSize = max(35, $maxResults * 2);
+
+    if ($isCombined) {
+        $subA = searchMoratallaNewsSingleQuery($pdo, 'Moratalla Murcia', $fetchBatchSize, false);
+        $subB = searchMoratallaNewsSingleQuery($pdo, 'Banda de Música de Moratalla', $fetchBatchSize, false);
+        $combined = [];
+        $seen = [];
+        foreach (array_merge($subA, $subB) as $it) {
+            $h = $it['url_hash'] ?? hash('sha256', normalizeUrlForHash($it['url'] ?: $it['title']));
+            if (!isset($seen[$h])) {
+                $seen[$h] = true;
+                $combined[] = $it;
+            }
+        }
+        $annotated = annotateNewsWithProcessedStatus($pdo, $combined);
+
+        // Si hay rango de fechas configurado, filtrar estrictamente
+        if (!empty($dateFrom) || !empty($dateTo)) {
+            $filtered = [];
+            foreach ($annotated as $it) {
+                if (isNewsItemInDateRange($it, $dateFrom, $dateTo, false)) {
+                    $filtered[] = $it;
+                }
+            }
+            $annotated = $filtered;
+        }
+
+        usort($annotated, function ($a, $b) {
+            return ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0);
+        });
+        return array_slice($annotated, 0, $maxResults);
+    }
+
+    $items = searchMoratallaNewsSingleQuery($pdo, $query, $fetchBatchSize, false);
+    $annotated = annotateNewsWithProcessedStatus($pdo, $items);
+
+    if (!empty($dateFrom) || !empty($dateTo)) {
+        $filtered = [];
+        foreach ($annotated as $it) {
+            if (isNewsItemInDateRange($it, $dateFrom, $dateTo, false)) {
+                $filtered[] = $it;
+            }
+        }
+        $annotated = $filtered;
+    }
+
+    usort($annotated, function ($a, $b) {
+        return ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0);
+    });
+
+    return array_slice($annotated, 0, $maxResults);
+}
+
+function searchMoratallaNewsSingleQuery($pdo, $query, $maxResults = 25, $doAnnotate = true) {
     $items = [];
     $seenNormTitles = [];
 
@@ -422,15 +871,17 @@ function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25
 
                 if ($title !== '' && !$isDupInBatch) {
                     $seenNormTitles[] = $normTitle;
-                    $timestamp = $pubDate ? @strtotime($pubDate) : time();
+                    $dateInfo = detectArticlePublicationDate('', $realUrl, $pubDate);
                     $items[] = [
                         'title'          => $title,
                         'url'            => $realUrl,
                         'snippet'        => $desc,
                         'source'         => $sourceName ?: 'Prensa Digital',
-                        'pub_date'       => $timestamp ? date('d/m/Y H:i', $timestamp) : 'Reciente',
-                        'event_date_iso' => $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d'),
-                        'timestamp'      => $timestamp ?: 0,
+                        'pub_date'       => $dateInfo['found'] ? $dateInfo['date_fmt'] : 'Fecha no localizada',
+                        'event_date_iso' => $dateInfo['found'] ? $dateInfo['date_iso'] : '',
+                        'date_found'     => $dateInfo['found'],
+                        'date_source'    => $dateInfo['date_source'],
+                        'timestamp'      => $dateInfo['found'] ? $dateInfo['timestamp'] : 0,
                         'rss_image'      => $rssImage
                     ];
                 }
@@ -479,16 +930,18 @@ function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25
 
                 if ($cleanTitle !== '' && !$isDupInBatch) {
                     $seenNormTitles[] = $normTitle;
-                    $timestamp = $pubDate ? @strtotime($pubDate) : time();
+                    $dateInfo = detectArticlePublicationDate('', $link, $pubDate);
                     $items[] = [
                         'title'          => $cleanTitle,
                         'url'            => $link,
                         'source_domain'  => $sourceUrl,
                         'snippet'        => $cleanDesc ?: $cleanTitle,
                         'source'         => $sourceName ?: 'Google News',
-                        'pub_date'       => $timestamp ? date('d/m/Y H:i', $timestamp) : 'Reciente',
-                        'event_date_iso' => $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d'),
-                        'timestamp'      => $timestamp ?: 0,
+                        'pub_date'       => $dateInfo['found'] ? $dateInfo['date_fmt'] : 'Fecha no localizada',
+                        'event_date_iso' => $dateInfo['found'] ? $dateInfo['date_iso'] : '',
+                        'date_found'     => $dateInfo['found'],
+                        'date_source'    => $dateInfo['date_source'],
+                        'timestamp'      => $dateInfo['found'] ? $dateInfo['timestamp'] : 0,
                         'rss_image'      => ''
                     ];
                 }
@@ -501,7 +954,7 @@ function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25
     });
 
     $sliced = array_slice($items, 0, $maxResults);
-    return annotateNewsWithProcessedStatus($pdo, $sliced);
+    return $doAnnotate ? annotateNewsWithProcessedStatus($pdo, $sliced) : $sliced;
 }
 
 /**
@@ -635,7 +1088,7 @@ function makeAbsoluteUrl($relUrl, $baseUrl) {
  * Extrae exclusivamente el contenido e imágenes originales (Opción A) de la noticia seleccionada,
  * sin mezclar noticias relacionadas ni resultados externos de otros temas.
  */
-function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnippet = '', $rssImage = '', $sourceName = '') {
+function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnippet = '', $rssImage = '', $sourceName = '', $fallbackPubDate = '') {
     $resolvedUrl = resolveRealArticleUrl($url, $fallbackTitle, $sourceName);
     $finalUrl = $resolvedUrl;
     $html = '';
@@ -812,12 +1265,19 @@ function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnip
         $detectedSource = preg_replace('/^www\./i', '', $host) ?: 'Prensa Digital';
     }
 
+    // Localizar la fecha REAL de la noticia en el artículo original
+    $dateInfo = detectArticlePublicationDate($html, $finalUrl, $fallbackPubDate);
+
     return [
-        'resolved_url'    => $finalUrl,
-        'title'           => $extractedTitle,
-        'body_text'       => mb_substr(trim($extractedText), 0, 12000),
-        'source_name'     => $detectedSource,
-        'original_images' => array_slice($images, 0, 10)
+        'resolved_url'       => $finalUrl,
+        'title'              => $extractedTitle,
+        'body_text'          => mb_substr(trim($extractedText), 0, 12000),
+        'source_name'        => $detectedSource,
+        'original_images'    => array_slice($images, 0, 10),
+        'published_date'     => $dateInfo['found'] ? $dateInfo['date_fmt'] : 'Fecha no localizada',
+        'published_date_iso' => $dateInfo['found'] ? $dateInfo['date_iso'] : '',
+        'date_found'         => $dateInfo['found'],
+        'date_source'        => $dateInfo['date_source']
     ];
 }
 
@@ -1038,7 +1498,7 @@ function generateConciseAiDraftViaFreeLlm($prompt) {
  * Procesador local limpio y escueto (solo en caso de fallo total de red con los motores IA):
  * Ciñe el contenido estrictamente a la noticia seleccionada sin añadir rellenos sobre fiestas ni otros temas.
  */
-function transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceName, $sourceUrl = '', $categories = []) {
+function transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceName, $sourceUrl = '', $categories = [], $articleInfo = []) {
     $titleOnlyLower = mb_strtolower($titleOrig, 'UTF-8');
 
     $suggestedIcon = '📰';
@@ -1107,20 +1567,28 @@ function transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceN
         }
     }
 
+    $resolvedEventDate = !empty($articleInfo['published_date_iso']) ? $articleInfo['published_date_iso'] : '';
+    $resolvedDateFound = !empty($articleInfo['date_found']);
+    $resolvedDateMsg = $resolvedDateFound
+        ? ('Fecha de la noticia localizada: ' . ($articleInfo['published_date'] ?? $resolvedEventDate))
+        : 'Fecha no localizada en la fuente de origen';
+
     return [
-        'title'            => $cleanTitle,
-        'lead'             => $lead,
-        'key_points'       => $keyPoints,
-        'sections'         => $sections,
-        'topic_tag'        => $topicTag,
-        'event_date'       => '',
-        'category_id'      => $suggestedCatId,
-        'icon'             => $suggestedIcon,
-        'image_caption'    => $cleanTitle,
-        'ai_image_prompt'  => "Photorealistic editorial news photography in Moratalla, Region of Murcia, Spain, strictly representing: " . $titleOrig . ", natural daylight, realistic journalism photo, no text",
-        'archive_keywords' => $keywords,
-        'source_name'      => $sourceName,
-        'source_url'       => $sourceUrl
+        'title'               => $cleanTitle,
+        'lead'                => $lead,
+        'key_points'          => $keyPoints,
+        'sections'            => $sections,
+        'topic_tag'           => $topicTag,
+        'event_date'          => $resolvedEventDate,
+        'date_found'          => $resolvedDateFound,
+        'date_status_message' => $resolvedDateMsg,
+        'category_id'         => $suggestedCatId,
+        'icon'                => $suggestedIcon,
+        'image_caption'       => $cleanTitle,
+        'ai_image_prompt'     => "Photorealistic editorial news photography in Moratalla, Region of Murcia, Spain, strictly representing: " . $titleOrig . ", natural daylight, realistic journalism photo, no text",
+        'archive_keywords'    => $keywords,
+        'source_name'         => $sourceName,
+        'source_url'          => $sourceUrl
     ];
 }
 
@@ -1142,8 +1610,16 @@ function generateSupervisedDraftWithGemini($pdo, $articleInfo, $categories = [])
     $sourceName = $articleInfo['source_name'] ?? 'Prensa Digital';
     $sourceUrl = $articleInfo['resolved_url'] ?? '';
 
+    $articleDateIso = $articleInfo['published_date_iso'] ?? '';
+    $articleDateFound = !empty($articleInfo['date_found']);
+    $articleDateFmt = $articleInfo['published_date'] ?? 'Fecha no localizada';
+
+    $dateDetectionPromptText = $articleDateFound
+        ? "Fecha de publicación REAL localizada en el artículo original: {$articleDateFmt} ({$articleDateIso}). Debes colocar esta fecha concreta en \"event_date\" y poner \"date_found\": true salvo que el texto detalle expresamente otra fecha de celebración o acontecimiento."
+        : "Fecha de publicación original: NO LOCALIZADA en la fuente. Si en el texto tampoco se menciona una fecha concreta de suceso, devuelve estrictamente null o \"\" en \"event_date\" y pon \"date_found\": false. NUNCA inventes la fecha actual.";
+
     $prompt = <<<PROMPT
-Eres un redactor periodístico profesional. Fecha actual: {$todayIso}.
+Eres un redactor periodístico profesional. Fecha actual de referencia: {$todayIso}.
 
 Tu tarea es redactar con PALABRAS PROPIAS (redacción propia de IA, sin copiar literalmente frases del original) la siguiente noticia sobre Moratalla, de forma ESCUETA, DIRECTA, CLARA Y RIGUROSA.
 
@@ -1152,10 +1628,16 @@ REGLAS ESTRICTAS DE CONTENIDO:
 2. PROHIBIDO hablar de fiestas, turismo, encierros, tambores, el castillo o cualquier otro tema que NO esté directamente en la noticia seleccionada. Cíñete 100% al asunto real de la noticia.
 3. REDACCIÓN PROPIA Y ESCUETA: Reescribe la noticia con vocabulario y estructura propios, pero manteniendo un estilo escueto, conciso y al grano (entre 1 y 3 párrafos bien redactados con los datos esenciales de la noticia: qué ha pasado, quién, cuándo, dónde y cifras o datos clave). No rellenes con paja ni frases genéricas sobre el municipio.
 4. Conserva con exactitud los datos reales (fechas, nombres, lugares, cifras) e indica el medio de donde se ha obtenido.
+5. CRITERIO ESTRICTO DE FECHA:
+   - NUNCA asignes la fecha de hoy ({$todayIso}) por defecto, a menos que el texto afirme de forma indiscutible que ocurrió hoy.
+   - Si la fecha de la noticia fue localizada ("{$articleDateIso}"), colócala en "event_date" y "date_found": true.
+   - Si la noticia describe un suceso con una fecha concreta en el texto, usa esa fecha en "event_date" en formato YYYY-MM-DD y "date_found": true.
+   - Si no se localiza ninguna fecha en los datos ni en el texto, debes devolver estrictamente null o "" en "event_date", y "date_found": false. NUNCA inventes la fecha actual.
 
 Noticia seleccionada:
 - Titular original: {$titleOrig}
 - Obtenido de (Fuente): {$sourceName}
+- {$dateDetectionPromptText}
 - Texto capturado de la noticia:
 {$bodyOrig}
 
@@ -1182,7 +1664,9 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin bloques markdown ```json) co
       "quote": "Cita textual breve solo si aparece literalmente en la noticia original, o cadena vacía"
     }
   ],
-  "event_date": "Si la noticia menciona una fecha concreta de evento pon YYYY-MM-DD, si no deja cadena vacía",
+  "event_date": "Fecha real de la noticia o acontecimiento en formato YYYY-MM-DD, o null si no se localiza ninguna fecha",
+  "date_found": true,
+  "date_status_message": "Explicación breve de la fecha localizada (ej: 'Fecha de la noticia localizada: DD/MM/YYYY' o 'Fecha de la noticia no localizada en el texto original')",
   "category_id": "ID numérico de la categoría más adecuada de la lista proporcionada, o cadena vacía",
   "icon": "Un único emoji acorde estrictamente al tema de la noticia (ej. 🏛️, 📰, ⚠️, 🌲, 🏆, 🎭, 🚧)",
   "image_caption": "Pie de foto descriptivo y conciso sobre la noticia (máx 100 caracteres)",
@@ -1192,6 +1676,34 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin bloques markdown ```json) co
 PROMPT;
 
     $lastError = '';
+
+    $finalizeDraftDate = function(&$draft) use ($articleInfo) {
+        $evDate = trim((string)($draft['event_date'] ?? ''));
+        if ($evDate !== '' && strtolower($evDate) !== 'null') {
+            $parsed = detectArticlePublicationDate('', '', $evDate);
+            if ($parsed['found']) {
+                $draft['event_date'] = $parsed['date_iso'];
+                $draft['date_found'] = true;
+                $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . date('d/m/Y', strtotime($parsed['date_iso']));
+            } elseif (!empty($articleInfo['date_found'])) {
+                $draft['event_date'] = $articleInfo['published_date_iso'];
+                $draft['date_found'] = true;
+                $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . ($articleInfo['published_date'] ?: date('d/m/Y', strtotime($articleInfo['published_date_iso'])));
+            } else {
+                $draft['event_date'] = '';
+                $draft['date_found'] = false;
+                $draft['date_status_message'] = 'Fecha no localizada en la fuente de origen';
+            }
+        } elseif (!empty($articleInfo['date_found'])) {
+            $draft['event_date'] = $articleInfo['published_date_iso'];
+            $draft['date_found'] = true;
+            $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . ($articleInfo['published_date'] ?: date('d/m/Y', strtotime($articleInfo['published_date_iso'])));
+        } else {
+            $draft['event_date'] = '';
+            $draft['date_found'] = false;
+            $draft['date_status_message'] = 'Fecha no localizada en la fuente de origen';
+        }
+    };
 
     // 1. Intentar con Google Gemini si hay clave configurada
     if (!empty($apiKey)) {
@@ -1234,6 +1746,7 @@ PROMPT;
                     $textOut = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($textOut));
                     $jsonDraft = json_decode($textOut, true);
                     if (is_array($jsonDraft) && !empty($jsonDraft['title'])) {
+                        $finalizeDraftDate($jsonDraft);
                         $jsonDraft['source_name'] = $sourceName;
                         $jsonDraft['source_url'] = $sourceUrl;
                         $jsonDraft['content_html'] = buildMoratallaCorporateNewsHtml($jsonDraft);
@@ -1252,6 +1765,7 @@ PROMPT;
     // 2. Motor IA gratuito automático (para que SIEMPRE tenga redacción propia por IA aunque no haya clave Gemini)
     $freeAiDraft = generateConciseAiDraftViaFreeLlm($prompt);
     if (is_array($freeAiDraft) && !empty($freeAiDraft['title'])) {
+        $finalizeDraftDate($freeAiDraft);
         $freeAiDraft['source_name'] = $sourceName;
         $freeAiDraft['source_url'] = $sourceUrl;
         $freeAiDraft['content_html'] = buildMoratallaCorporateNewsHtml($freeAiDraft);
@@ -1261,7 +1775,7 @@ PROMPT;
     }
 
     // 3. Respaldo local escueto sin rellenos ajenos
-    $localParts = transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceName, $sourceUrl, $categories);
+    $localParts = transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceName, $sourceUrl, $categories, $articleInfo);
     $localParts['content_html'] = buildMoratallaCorporateNewsHtml($localParts);
     $localParts['used_gemini'] = false;
     $localParts['gemini_note'] = empty($apiKey)
@@ -1431,7 +1945,7 @@ function searchLocalMoratallaArchive($pdo, $searchQuery = '', $limit = 24) {
  * Obtiene la configuración actual de los horarios de búsqueda automática diaria de noticias
  */
 function getAutoNewsDigestConfig($pdo) {
-    $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('auto_news_time_1', 'auto_news_time_2', 'auto_news_last_run_1', 'auto_news_last_run_2', 'auto_news_last_status', 'admin_email')");
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('auto_news_time_1', 'auto_news_time_2', 'auto_news_last_run_1', 'auto_news_last_run_2', 'auto_news_last_status', 'admin_email', 'news_search_date_from', 'news_search_date_to')");
     $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
 
     $time1 = isset($rows['auto_news_time_1']) && preg_match('/^\d{2}:\d{2}$/', trim($rows['auto_news_time_1']))
@@ -1444,13 +1958,22 @@ function getAutoNewsDigestConfig($pdo) {
     $mailCfg = getMailConfig($pdo);
     $recipient = !empty($rows['admin_email']) ? trim($rows['admin_email']) : $mailCfg['admin_email'];
 
+    $dateFrom = isset($rows['news_search_date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($rows['news_search_date_from']))
+        ? trim($rows['news_search_date_from'])
+        : '';
+    $dateTo = isset($rows['news_search_date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($rows['news_search_date_to']))
+        ? trim($rows['news_search_date_to'])
+        : '';
+
     return [
         'time_1'        => $time1,
         'time_2'        => $time2,
         'last_run_1'    => $rows['auto_news_last_run_1'] ?? '',
         'last_run_2'    => $rows['auto_news_last_run_2'] ?? '',
         'last_status'   => $rows['auto_news_last_status'] ?? '',
-        'recipient'     => $recipient
+        'recipient'     => $recipient,
+        'date_from'     => $dateFrom,
+        'date_to'       => $dateTo
     ];
 }
 
@@ -1463,6 +1986,10 @@ function getAutoNewsDigestConfig($pdo) {
 function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
     ensureAiNewsTrackingSchema($pdo);
 
+    $cfg = getAutoNewsDigestConfig($pdo);
+    $dateFrom = $cfg['date_from'] ?? '';
+    $dateTo   = $cfg['date_to'] ?? '';
+
     $queries = [
         'Moratalla Murcia',
         'Banda de Música de Moratalla'
@@ -1473,8 +2000,11 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
     $seenUrlHashes = [];
 
     foreach ($queries as $q) {
-        $batch = searchMoratallaNews($pdo, $q, 24);
+        $batch = searchMoratallaNews($pdo, $q, 24, $dateFrom, $dateTo);
         foreach ($batch as $it) {
+            if (!isNewsItemInDateRange($it, $dateFrom, $dateTo, false)) {
+                continue;
+            }
             $normTitle = normalizeNewsTitleForDedupe($it['title'] ?? '');
             $urlHash = $it['url_hash'] ?? hash('sha256', normalizeUrlForHash($it['url'] ?? $it['title']));
 
@@ -1542,7 +2072,8 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
             $item['title'] ?? '',
             $item['snippet'] ?? '',
             $item['rss_image'] ?? '',
-            $item['source'] ?? ''
+            $item['source'] ?? '',
+            $item['pub_date'] ?? ''
         );
 
         $imageUrl = '';
@@ -1579,10 +2110,25 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
 
         $resolvedUrl = !empty($art['resolved_url']) ? $art['resolved_url'] : ($item['url'] ?? '');
 
+        $dateFound = (!empty($art['date_found']) || !empty($item['date_found']));
+        $pubDateFinal = !empty($art['date_found'])
+            ? $art['published_date']
+            : (!empty($item['date_found']) ? $item['pub_date'] : 'Fecha no localizada');
+        $eventDateIsoFinal = !empty($art['date_found'])
+            ? $art['published_date_iso']
+            : (!empty($item['date_found']) ? $item['event_date_iso'] : '');
+
+        // Si una vez extraído el artículo completo su fecha real no entra en el rango configurado, se descarta del boletín
+        if (!isNewsItemInDateRange(['event_date_iso' => $eventDateIsoFinal, 'date_found' => $dateFound, 'pub_date' => $pubDateFinal], $dateFrom, $dateTo, false)) {
+            continue;
+        }
+
         $enrichedItems[] = [
             'title'           => $art['title'] ?: $item['title'],
             'source'          => $art['source_name'] ?: ($item['source'] ?: 'Prensa Digital'),
-            'pub_date'        => $item['pub_date'] ?? date('d/m/Y H:i'),
+            'pub_date'        => $pubDateFinal,
+            'event_date_iso'  => $eventDateIsoFinal,
+            'date_found'      => $dateFound,
             'url'             => $resolvedUrl,
             'original_url'    => $item['url'] ?? $resolvedUrl,
             'image_url'       => $imageUrl,
@@ -1660,7 +2206,9 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
                 'available',
                 null,
                 $ei['summary'],
-                $ei['image_url']
+                $ei['image_url'],
+                $ei['pub_date'],
+                $ei['event_date_iso']
             );
         }
     }
@@ -1673,7 +2221,9 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
             'new'       => count($newAvailable),
             'published' => count($publishedList),
             'discarded' => count($discardedList)
-        ]
+        ],
+        'date_from' => $dateFrom,
+        'date_to'   => $dateTo
     ];
 }
 
@@ -1699,6 +2249,17 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     $dateStr = date('d/m/Y H:i');
     $totalItems = count($items);
 
+    $dateFrom = $digestData['date_from'] ?? ($digestCfg['date_from'] ?? '');
+    $dateTo   = $digestData['date_to'] ?? ($digestCfg['date_to'] ?? '');
+    $dateRangeInfo = '';
+    if ($dateFrom !== '' && $dateTo !== '') {
+        $dateRangeInfo = "Delimitación temporal: Desde {$dateFrom} hasta {$dateTo}";
+    } elseif ($dateFrom !== '') {
+        $dateRangeInfo = "Delimitación temporal: Desde {$dateFrom}";
+    } elseif ($dateTo !== '') {
+        $dateRangeInfo = "Delimitación temporal: Hasta {$dateTo}";
+    }
+
     $siteBaseUrl = 'https://www.moratalla-murcia.com/moratalla';
     if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -1711,6 +2272,9 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     // Construir versión texto plano
     $plainBody  = "RESUMEN AUTOMÁTICO DE NOTICIAS - MORATALLA Y BANDA DE MÚSICA\r\n";
     $plainBody .= "Fecha y hora: {$dateStr} ({$slotLabel})\r\n";
+    if ($dateRangeInfo !== '') {
+        $plainBody .= "{$dateRangeInfo}\r\n";
+    }
     $plainBody .= "Estado actual: {$counts['new']} Nuevas Disponibles | {$counts['published']} Ya Publicadas | {$counts['discarded']} Descartadas\r\n";
     $plainBody .= "=====================================================================\r\n\r\n";
 
@@ -1719,11 +2283,22 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     } else {
         foreach ($items as $i => $it) {
             $num = $i + 1;
+            $datePlain = !empty($it['date_found'])
+                ? $it['pub_date']
+                : "[⚠️ Fecha no localizada en la fuente]";
+            $draftPrefillParams = "&prefill_url=" . urlencode($it['url'])
+                . "&prefill_title=" . urlencode($it['title'])
+                . "&prefill_source=" . urlencode($it['source'])
+                . "&prefill_img=" . urlencode($it['image_url'])
+                . "&prefill_date=" . urlencode($it['pub_date'])
+                . "&prefill_date_iso=" . urlencode($it['event_date_iso'] ?? '')
+                . "&date_found=" . (!empty($it['date_found']) ? '1' : '0');
+
             $plainBody .= "{$num}. [{$it['topic_badge']}] {$it['title']}\r\n";
-            $plainBody .= "   Fuente: {$it['source']} | Fecha: {$it['pub_date']}\r\n";
+            $plainBody .= "   Fuente: {$it['source']} | Fecha: {$datePlain}\r\n";
             $plainBody .= "   Resumen: {$it['summary']}\r\n";
             $plainBody .= "   Enlace original: {$it['url']}\r\n";
-            $plainBody .= "   Redactar con IA: {$adminPanelUrl}&prefill_url=" . urlencode($it['url']) . "&prefill_title=" . urlencode($it['title']) . "\r\n\r\n";
+            $plainBody .= "   Redactar con IA: {$adminPanelUrl}{$draftPrefillParams}\r\n\r\n";
         }
     }
 
@@ -1747,12 +2322,17 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     $plainBody .= "Gestionar, publicar o descartar noticias en el Panel de Administración:\r\n{$adminPanelUrl}\r\n";
 
     // Barra de estadísticas sincronizada con el proceso de noticias del panel
+    $dateFilterHtml = ($dateRangeInfo !== '')
+        ? "<div style='margin-top:8px; font-size:12px; color:#475569;'><span style='background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 8px; border-radius:10px; font-weight:700;'>📅 {$dateRangeInfo}</span></div>"
+        : "";
+
     $statsHeaderHtml = "
         <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#334155;'>
             <div style='font-weight:bold; color:#1e293b; margin-bottom:6px;'>📊 Estado sincronizado con el Gestor de Noticias IA:</div>
             <span style='display:inline-block; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 10px; border-radius:14px; font-weight:bold; margin-right:6px; margin-bottom:4px;'>🟢 {$counts['new']} Nuevas disponibles</span>
             <span style='display:inline-block; background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; padding:4px 10px; border-radius:14px; font-weight:bold; margin-right:6px; margin-bottom:4px;'>🔵 {$counts['published']} Ya publicadas en web</span>
             <span style='display:inline-block; background:#e2e8f0; color:#475569; border:1px solid #cbd5e1; padding:4px 10px; border-radius:14px; font-weight:bold; margin-bottom:4px;'>⚪ {$counts['discarded']} Descartadas</span>
+            {$dateFilterHtml}
         </div>";
 
     // Construir versión HTML con imágenes y tarjetas
@@ -1777,7 +2357,10 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
                 . '&prefill_url=' . urlencode($it['url'])
                 . '&prefill_title=' . urlencode($it['title'])
                 . '&prefill_source=' . urlencode($it['source'])
-                . '&prefill_img=' . urlencode($it['image_url']);
+                . '&prefill_img=' . urlencode($it['image_url'])
+                . '&prefill_date=' . urlencode($it['pub_date'])
+                . '&prefill_date_iso=' . urlencode($it['event_date_iso'] ?? '')
+                . '&date_found=' . (!empty($it['date_found']) ? '1' : '0');
             $safeDirectDraftUrl = htmlspecialchars($directDraftUrl, ENT_QUOTES, 'UTF-8');
 
             $directDiscardUrl = $adminPanelUrl
@@ -1790,6 +2373,10 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
             $statusPill = ($it['process_status'] === 'published')
                 ? "<span style='display:inline-block; background:#d1fae5; color:#065f46; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>YA PUBLICADA EN WEB</span>"
                 : "<span style='display:inline-block; background:#ede9fe; color:#5b21b6; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>NUEVA DISPONIBLE</span>";
+
+            $dateBadgeHtml = !empty($it['date_found'])
+                ? "<span style='color:#059669; font-weight:700;'>📅 {$safeDate}</span>"
+                : "<span style='display:inline-block; background:#fef3c7; color:#92400e; font-size:11px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #fde68a;'>⚠️ Fecha no localizada</span>";
 
             $imgBlock = '';
             if (!empty($safeImg)) {
@@ -1808,7 +2395,7 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
                     <div style='margin-bottom:8px;'>
                         <span style='display:inline-block; background:#1b4332; color:#ffffff; font-size:11px; font-weight:bold; padding:3px 10px; border-radius:12px; margin-right:6px;'>{$safeTopic}</span>
                         {$statusPill}
-                        <span style='font-size:12px; color:#64748b; margin-left:6px;'><strong>{$safeSource}</strong> &bull; {$safeDate}</span>
+                        <span style='font-size:12px; color:#64748b; margin-left:6px;'><strong>{$safeSource}</strong> &bull; {$dateBadgeHtml}</span>
                     </div>
                     <h3 style='margin:0 0 10px 0; font-size:18px; line-height:1.35; color:#1b4332;'>
                         <a href='{$safeUrl}' target='_blank' style='color:#1b4332; text-decoration:none;'>{$safeTitle}</a>

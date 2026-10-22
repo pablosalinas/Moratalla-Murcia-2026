@@ -20,6 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_1', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime1, $autoTime1]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_2', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime2, $autoTime2]);
 
+        $newsDateFrom = isset($_POST['news_search_date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_from'])) ? trim($_POST['news_search_date_from']) : '';
+        $newsDateTo = isset($_POST['news_search_date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_to'])) ? trim($_POST['news_search_date_to']) : '';
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_from', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateFrom, $newsDateFrom]);
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_to', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateTo, $newsDateTo]);
+
         $adminEmail = isset($_POST['admin_email']) ? trim($_POST['admin_email']) : '';
         if (!empty($adminEmail)) {
             $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('admin_email', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$adminEmail, $adminEmail]);
@@ -82,6 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_1', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime1, $autoTime1]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_2', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime2, $autoTime2]);
+
+        $newsDateFrom = isset($_POST['news_search_date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_from'])) ? trim($_POST['news_search_date_from']) : '';
+        $newsDateTo = isset($_POST['news_search_date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_to'])) ? trim($_POST['news_search_date_to']) : '';
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_from', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateFrom, $newsDateFrom]);
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_to', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateTo, $newsDateTo]);
         
         $message = "Configuración actualizada con éxito.";
     }
@@ -104,6 +114,8 @@ $currentCycleLimit = isset($settings['celebration_cycle_limit']) ? $settings['ce
 $currentAutoNewsTime1 = isset($settings['auto_news_time_1']) && preg_match('/^\d{2}:\d{2}$/', $settings['auto_news_time_1']) ? $settings['auto_news_time_1'] : '00:00';
 $currentAutoNewsTime2 = isset($settings['auto_news_time_2']) && preg_match('/^\d{2}:\d{2}$/', $settings['auto_news_time_2']) ? $settings['auto_news_time_2'] : '00:00';
 $currentAutoNewsStatus = $settings['auto_news_last_status'] ?? 'Sin envíos registrados todavía.';
+$currentNewsDateFrom = isset($settings['news_search_date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $settings['news_search_date_from']) ? $settings['news_search_date_from'] : '';
+$currentNewsDateTo = isset($settings['news_search_date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $settings['news_search_date_to']) ? $settings['news_search_date_to'] : '';
 
 adminHeader("Configuración General");
 ?>
@@ -212,6 +224,46 @@ adminHeader("Configuración General");
                 </div>
             </div>
 
+            <!-- Rango de Fechas para Delimitar la Búsqueda de Noticias (Automática y Administración) -->
+            <div style="background: white; padding: 1.1rem; border-radius: 8px; border: 1px solid #a7f3d0; margin-bottom: 1.1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 0.6rem;">
+                    <label style="font-weight: 700; color: #065f46; font-size: 0.95rem; margin: 0;">
+                        <i class="far fa-calendar-alt"></i> Delimitación de Fechas de Búsqueda (Desde / Hasta)
+                    </label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" onclick="setNewsDateRangePreset('7d')" class="btn btn-sm" style="background: #f1f5f9; color: #065f46; border: 1px solid #cbd5e1; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">
+                            Últimos 7 días
+                        </button>
+                        <button type="button" onclick="setNewsDateRangePreset('30d')" class="btn btn-sm" style="background: #f1f5f9; color: #065f46; border: 1px solid #cbd5e1; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">
+                            Últimos 30 días
+                        </button>
+                        <button type="button" onclick="setNewsDateRangePreset('month')" class="btn btn-sm" style="background: #f1f5f9; color: #065f46; border: 1px solid #cbd5e1; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">
+                            Este Mes
+                        </button>
+                        <button type="button" onclick="setNewsDateRangePreset('clear')" class="btn btn-sm" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">
+                            <i class="fas fa-times"></i> Sin límite de fechas
+                        </button>
+                    </div>
+                </div>
+                <p style="color: #047857; font-size: 0.82rem; margin-top: 0; margin-bottom: 0.8rem; line-height: 1.4;">
+                    Delimita el rango de fechas en el que deben haberse publicado las noticias encontradas. Aplica con los mismos criterios tanto a la <strong>búsqueda automática</strong> que se envía por correo como a la búsqueda de noticias en <strong>Administración</strong>. Si se dejan en blanco, la búsqueda no tendrá límite temporal.
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <label for="news_search_date_from" style="display: block; font-size: 0.82rem; font-weight: 700; color: #065f46; margin-bottom: 0.3rem;">
+                            <i class="fas fa-calendar-day"></i> Fecha Desde:
+                        </label>
+                        <input type="date" name="news_search_date_from" id="news_search_date_from" value="<?php echo htmlspecialchars($currentNewsDateFrom); ?>" style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #6ee7b7; border-radius: 6px; font-size: 0.95rem; font-weight: 600; color: #064e3b;">
+                    </div>
+                    <div>
+                        <label for="news_search_date_to" style="display: block; font-size: 0.82rem; font-weight: 700; color: #065f46; margin-bottom: 0.3rem;">
+                            <i class="fas fa-calendar-check"></i> Fecha Hasta:
+                        </label>
+                        <input type="date" name="news_search_date_to" id="news_search_date_to" value="<?php echo htmlspecialchars($currentNewsDateTo); ?>" style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #6ee7b7; border-radius: 6px; font-size: 0.95rem; font-weight: 600; color: #064e3b;">
+                    </div>
+                </div>
+            </div>
+
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: white; padding: 0.8rem 1rem; border-radius: 8px; border: 1px dashed #6ee7b7;">
                 <div style="font-size: 0.84rem; color: #065f46;">
                     <strong><i class="fas fa-info-circle"></i> Estado del proceso automático:</strong>
@@ -270,9 +322,39 @@ adminHeader("Configuración General");
 <script>
     const range = document.querySelector('input[type="range"]');
     const span = document.querySelector('span[style*="min-width: 50px"]');
-    range.addEventListener('input', () => {
-        span.textContent = range.value + 's';
-    });
+    if (range && span) {
+        range.addEventListener('input', () => {
+            span.textContent = range.value + 's';
+        });
+    }
+
+    function setNewsDateRangePreset(preset) {
+        const fromInput = document.getElementById('news_search_date_from');
+        const toInput = document.getElementById('news_search_date_to');
+        if (!fromInput || !toInput) return;
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const formatYMD = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        if (preset === 'clear') {
+            fromInput.value = '';
+            toInput.value = '';
+        } else if (preset === '7d') {
+            const fromD = new Date();
+            fromD.setDate(fromD.getDate() - 7);
+            fromInput.value = formatYMD(fromD);
+            toInput.value = formatYMD(now);
+        } else if (preset === '30d') {
+            const fromD = new Date();
+            fromD.setDate(fromD.getDate() - 30);
+            fromInput.value = formatYMD(fromD);
+            toInput.value = formatYMD(now);
+        } else if (preset === 'month') {
+            const fromD = new Date(now.getFullYear(), now.getMonth(), 1);
+            fromInput.value = formatYMD(fromD);
+            toInput.value = formatYMD(now);
+        }
+    }
 </script>
 
 <?php adminFooter(); ?>
