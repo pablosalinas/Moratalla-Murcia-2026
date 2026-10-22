@@ -56,7 +56,9 @@ $executed = $pdo->query("SELECT migration FROM `_migrations` WHERE status = 'suc
 $failed = $pdo->query("SELECT migration FROM `_migrations` WHERE status = 'failed'")->fetchAll(PDO::FETCH_COLUMN);
 
 $migrationsDir = __DIR__ . '/migrations';
-$files = is_dir($migrationsDir) ? glob($migrationsDir . '/*.sql') : [];
+$sqlFiles = is_dir($migrationsDir) ? glob($migrationsDir . '/*.sql') : [];
+$phpFiles = is_dir($migrationsDir) ? glob($migrationsDir . '/*.php') : [];
+$files = array_merge($sqlFiles, $phpFiles);
 sort($files);
 
 $pending = 0;
@@ -78,8 +80,27 @@ foreach ($files as $file) {
 
     $pending++;
     output("[>>] Ejecutando: $migrationName ...");
+
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    if ($ext === 'php') {
+        try {
+            include $file;
+            $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'success', NULL)");
+            $stmt->execute([$migrationName]);
+            output("[✓] $migrationName (PHP) — OK.");
+        } catch (Exception $e) {
+            $errors++;
+            $errorMsg = $e->getMessage();
+            output("[✗] ERROR en $migrationName: $errorMsg");
+            $stmt = $pdo->prepare("REPLACE INTO `_migrations` (migration, status, error_message) VALUES (?, 'failed', ?)");
+            $stmt->execute([$migrationName, $errorMsg]);
+        }
+        continue;
+    }
     
     $sql = file_get_contents($file);
+    // Eliminar BOM UTF-8 si existe
+    $sql = preg_replace('/^\xEF\xBB\xBF/', '', $sql);
     
     // Eliminar comentarios
     $sql = preg_replace('/^\s*--.*$/m', '', $sql);

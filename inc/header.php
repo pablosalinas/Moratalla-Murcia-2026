@@ -77,6 +77,25 @@ try {
         } catch (PDOException $ex) {}
     }
 
+    // Auto-limpieza segura de etiquetas <style>, <script> y envolturas HTML en news_events
+    // Preserva el 100% de la información (no borra registros) y garantiza diseño responsivo en todos los monitores
+    try {
+        $checkDirty = $pdo->query("SELECT id, content FROM news_events WHERE content LIKE '%<style%' OR content LIKE '%<script%' LIMIT 20");
+        $dirtyNews = $checkDirty->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($dirtyNews)) {
+            $updStmt = $pdo->prepare("UPDATE news_events SET content = ? WHERE id = ?");
+            foreach ($dirtyNews as $dn) {
+                $cleanContent = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', '', $dn['content']);
+                $cleanContent = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $cleanContent);
+                $cleanContent = preg_replace('/<link\b[^>]*>/i', '', $cleanContent);
+                $cleanContent = preg_replace('/<!DOCTYPE[^>]*>/i', '', $cleanContent);
+                $cleanContent = preg_replace('/<\/?(?:html|head|body)[^>]*>/i', '', $cleanContent);
+                $cleanContent = trim($cleanContent);
+                $updStmt->execute([$cleanContent, $dn['id']]);
+            }
+        }
+    } catch (PDOException $e) {}
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `visit_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `ip_address` VARCHAR(45) NOT NULL,

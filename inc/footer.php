@@ -394,6 +394,20 @@
     let currentCarouselIndex = 0;
     let newsCarouselInterval;
 
+    function sanitizeNewsModalContent(html) {
+        if (!html || typeof html !== 'string') return '';
+        // 1. Eliminar cualquier etiqueta <style>...</style> para evitar que altere el layout global del sitio
+        let clean = html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+        // 2. Eliminar scripts por seguridad
+        clean = clean.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+        // 3. Eliminar etiquetas link
+        clean = clean.replace(/<link\b[^>]*>/gi, '');
+        // 4. Eliminar doctype y etiquetas de página completa
+        clean = clean.replace(/<!DOCTYPE[^>]*>/gi, '');
+        clean = clean.replace(/<\/?(?:html|head|body)[^>]*>/gi, '');
+        return clean;
+    }
+
     function openNewsModal(data) {
         const modal = document.getElementById('newsDetailModal');
         const modalImageContainer = document.getElementById('modalImageContainer');
@@ -449,7 +463,7 @@
         const oldTopBtn = document.getElementById('modalTopCarouselBtn');
         if (oldTopBtn) oldTopBtn.remove();
         
-        modalText.innerHTML = data.content;
+        modalText.innerHTML = sanitizeNewsModalContent(data.content);
         
         // Cargar galería
         galleryContainer.innerHTML = '';
@@ -567,13 +581,37 @@
 
     function closeNewsModalDirect(fromPopState = false) {
         const modal = document.getElementById('newsDetailModal');
-        modal.classList.remove('active');
+        if (modal) modal.classList.remove('active');
+
+        // Restaurar estilos globales del body y html para asegurar respuesta total en cualquier monitor
         document.body.style.overflow = '';
+        document.body.style.maxWidth = '';
+        document.body.style.margin = '';
+        document.body.style.padding = '';
+        document.body.style.width = '';
+        if (document.documentElement) {
+            document.documentElement.style.maxWidth = '';
+            document.documentElement.style.margin = '';
+            document.documentElement.style.padding = '';
+            document.documentElement.style.width = '';
+        }
+
         const modalNewsVid = document.getElementById('modalNewsVideo');
         if (modalNewsVid) {
             modalNewsVid.pause();
             modalNewsVid.src = '';
         }
+
+        // Limpiar el contenido del modal para evitar residuos en memoria o DOM
+        const modalText = document.getElementById('modalText');
+        if (modalText) modalText.innerHTML = '';
+        const modalImageContainer = document.getElementById('modalImageContainer');
+        if (modalImageContainer) modalImageContainer.innerHTML = '';
+        const galleryContainer = document.getElementById('modalGalleryContainer');
+        if (galleryContainer) galleryContainer.innerHTML = '';
+        const oldTopBtn = document.getElementById('modalTopCarouselBtn');
+        if (oldTopBtn) oldTopBtn.remove();
+
         handleModalClose(fromPopState === true);
     }
 
@@ -726,13 +764,24 @@
         handleModalClose(fromPopState === true);
     }
     
-    // Navegación con teclado para carrusel de noticias
+    // Navegación con teclado para carrusel de noticias y modal de noticias
     document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('newsCarouselOverlay');
+            if (overlay && overlay.classList.contains('active')) {
+                closeNewsCarouselDirect();
+                return;
+            }
+            const newsModal = document.getElementById('newsDetailModal');
+            if (newsModal && newsModal.classList.contains('active')) {
+                closeNewsModalDirect();
+                return;
+            }
+        }
         const overlay = document.getElementById('newsCarouselOverlay');
         if (overlay && overlay.classList.contains('active')) {
             if (e.key === 'ArrowRight') nextNewsCarousel();
             if (e.key === 'ArrowLeft') prevNewsCarousel();
-            if (e.key === 'Escape') closeNewsCarouselDirect();
         }
     });
     </script>

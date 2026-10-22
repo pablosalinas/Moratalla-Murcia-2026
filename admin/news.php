@@ -118,6 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'] ?? '';
         $title = trim($_POST['title'] ?? '');
         $content = trim($_POST['content'] ?? '');
+        // Sanitizar contenido: eliminar etiquetas <style>, <script>, <link> y envolturas doctype/html/body
+        // para asegurar que las noticias no alteren la maqueta responsiva ni inyecten estilos globales
+        $content = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', '', $content);
+        $content = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $content);
+        $content = preg_replace('/<link\b[^>]*>/i', '', $content);
+        $content = preg_replace('/<!DOCTYPE[^>]*>/i', '', $content);
+        $content = preg_replace('/<\/?(?:html|head|body)[^>]*>/i', '', $content);
+        $content = trim($content);
         $image_caption = trim($_POST['image_caption'] ?? '');
         $image_author = trim($_POST['image_author'] ?? '');
         $event_date = $_POST['event_date'] ?? null;
