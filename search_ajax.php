@@ -8,9 +8,9 @@ header('Content-Type: application/json; charset=utf-8');
 $pdo = getDB();
 
 $rawQuery = trim($_GET['q'] ?? $_POST['q'] ?? '');
-$mode = strtoupper(trim($_GET['mode'] ?? $_POST['mode'] ?? 'OR'));
-if ($mode !== 'AND') {
-    $mode = 'OR'; // Por defecto OR
+$mode = strtoupper(trim($_GET['mode'] ?? $_POST['mode'] ?? 'AND'));
+if ($mode !== 'OR') {
+    $mode = 'AND'; // Por defecto AND (contiene todas las palabras)
 }
 
 $scope = strtolower(trim($_GET['scope'] ?? $_POST['scope'] ?? 'web'));

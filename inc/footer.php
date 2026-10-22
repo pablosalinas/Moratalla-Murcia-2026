@@ -997,15 +997,15 @@
 
                     <div class="gs-mode-box">
                         <span class="gs-mode-title"><i class="fas fa-filter"></i> Filtro de palabras:</span>
-                        <label class="gs-mode-option active" id="modalLblModeOr">
-                            <input type="radio" name="modal_search_mode" value="OR" checked onchange="syncSearchMode('OR'); executeGlobalSearch();">
+                        <label class="gs-mode-option active" id="modalLblModeAnd">
+                            <input type="radio" name="modal_search_mode" value="AND" checked onchange="syncSearchMode('AND'); executeGlobalSearch();">
                             <span class="gs-check-mark">✓</span>
-                            <span>Contiene <u>cualquiera</u> de las palabras (Por defecto)</span>
+                            <span>Contiene <u>todas</u> las palabras (Por defecto)</span>
                         </label>
-                        <label class="gs-mode-option" id="modalLblModeAnd">
-                            <input type="radio" name="modal_search_mode" value="AND" onchange="syncSearchMode('AND'); executeGlobalSearch();">
+                        <label class="gs-mode-option" id="modalLblModeOr">
+                            <input type="radio" name="modal_search_mode" value="OR" onchange="syncSearchMode('OR'); executeGlobalSearch();">
                             <span class="gs-check-mark">✓</span>
-                            <span>Contiene <u>todas</u> las palabras</span>
+                            <span>Contiene <u>cualquiera</u> de las palabras</span>
                         </label>
                     </div>
                     <div id="gsSummaryCounter" class="gs-summary-counter"></div>
@@ -1016,10 +1016,10 @@
                     <span>Explorar rápido:</span>
                     <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'noticias')">📰 Noticias</button>
                     <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'eventos')">📅 Eventos</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Asociación Club Peña', 'asociaciones')">🤝 Asociaciones</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Artesanía Esparto Pintura', 'artesanos')">🏺 Artesanos</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Casa Rural Hotel', 'alojamientos')">🛏️ Alojamientos</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Restaurante Bar', 'restauracion')">🍽️ Restauración</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Asociación', 'asociaciones')">🤝 Asociaciones</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Artesanía', 'artesanos')">🏺 Artesanos</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Casa Rural', 'alojamientos')">🛏️ Alojamientos</button>
+                    <button type="button" onclick="openGlobalSearchWithPreset('Restaurante', 'restauracion')">🍽️ Restauración</button>
                     <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'citas')">💬 Citas</button>
                 </div>
 
@@ -1042,7 +1042,7 @@
                 <div class="gs-empty-state">
                     <i class="fas fa-compass" style="font-size: 2.6rem; color: #2d6a4f; margin-bottom: 0.8rem;"></i>
                     <h4>Explora todo el contenido de Moratalla o busca en Internet Global</h4>
-                    <p>Por defecto se busca dentro de <strong>moratalla-murcia.com</strong> mostrando los contenidos que incluyan <strong>cualquiera de las palabras</strong>. También puedes marcar <strong>todas las palabras</strong> o buscar en <strong>Internet Global</strong>.</p>
+                    <p>Por defecto se busca dentro de <strong>moratalla-murcia.com</strong> mostrando los contenidos que incluyan <strong>todas las palabras</strong>. También puedes marcar <strong>cualquiera de las palabras</strong> o buscar en <strong>Internet Global</strong>.</p>
                 </div>
             </div>
         </div>
@@ -1452,7 +1452,7 @@
     </style>
 
     <script>
-    let gsCurrentMode = 'OR';    // Por defecto: contiene cualquiera de las palabras
+    let gsCurrentMode = 'AND';   // Por defecto: contiene todas las palabras
     let gsCurrentScope = 'web';  // Por defecto: busca en la web moratalla-murcia.com
     let gsCurrentGroup = 'all';
     let gsCachedResults = [];
@@ -1460,7 +1460,7 @@
     let gsDebounceTimer = null;
 
     function syncSearchMode(mode) {
-        gsCurrentMode = (mode === 'AND') ? 'AND' : 'OR';
+        gsCurrentMode = (mode === 'OR') ? 'OR' : 'AND';
 
         document.querySelectorAll('input[name="modal_search_mode"]').forEach(r => {
             r.checked = (r.value === gsCurrentMode);
@@ -1584,7 +1584,7 @@
         clearBtn.style.display = q.length > 0 ? 'inline-block' : 'none';
 
         if (q.length < 2) {
-            container.innerHTML = '<div class="gs-empty-state"><i class="fas fa-keyboard" style="font-size:2.2rem; color:#2d6a4f; margin-bottom:0.6rem;"></i><h4>Escribe al menos 2 caracteres para buscar</h4><p>Por defecto busca en <strong>moratalla-murcia.com</strong> mostrando contenidos que incluyan <strong>cualquiera de las palabras</strong>.</p></div>';
+            container.innerHTML = '<div class="gs-empty-state"><i class="fas fa-keyboard" style="font-size:2.2rem; color:#2d6a4f; margin-bottom:0.6rem;"></i><h4>Escribe al menos 2 caracteres para buscar</h4><p>Por defecto busca en <strong>moratalla-murcia.com</strong> mostrando contenidos que incluyan <strong>todas las palabras</strong>.</p></div>';
             counterEl.textContent = '';
             return;
         }
