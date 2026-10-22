@@ -156,7 +156,7 @@ adminHeader("Configuración General");
             <small style="color: #666; display: block; margin-top: 0.5rem;">Por seguridad, la contraseña nunca se muestra en pantalla ni en el código fuente. Se almacena cifrada con AES-256 en la base de datos. Déjalo en blanco para mantener la contraseña actual.</small>
         </div>
 
-        <div style="margin-bottom: 2.5rem; background: #f5f3ff; padding: 1.2rem; border-radius: 10px; border: 1px solid #ddd6fe;">
+        <div id="gemini_config" style="margin-bottom: 2.5rem; background: #f5f3ff; padding: 1.2rem; border-radius: 10px; border: 1px solid #ddd6fe;">
             <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; font-weight: 600; color: #4c1d95;">
                 <span><i class="fas fa-robot"></i> Clave API de Google Gemini (IA para Noticias Automáticas)</span>
                 <?php if ($hasEncryptedGemini): ?>

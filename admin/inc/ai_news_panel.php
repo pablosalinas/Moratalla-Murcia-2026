@@ -163,13 +163,13 @@ $defaultDateTo = $dateSettings['news_search_date_to'] ?? '';
                 <i class="fas fa-magic" style="color: #7c3aed;"></i>
                 <span>Localizador y Generador Supervisado de Noticias (Google Gemini IA)</span>
                 <?php if ($hasGeminiKeyConfigured): ?>
-                    <span class="ai-badge-pill" id="geminiKeyStatusBadge" style="background: #d1fae5; color: #065f46;">
+                    <span class="ai-badge-pill" id="geminiKeyStatusBadge" style="background: #d1fae5; color: #065f46;" title="Clave activa en Configuración">
                         <i class="fas fa-check-circle"></i> Gemini IA Activo
                     </span>
                 <?php else: ?>
-                    <span class="ai-badge-pill" id="geminiKeyStatusBadge" style="background: #fef3c7; color: #92400e;">
-                        <i class="fas fa-key"></i> Clave Gemini Pendiente
-                    </span>
+                    <a href="settings.php#gemini_config" class="ai-badge-pill" id="geminiKeyStatusBadge" style="background: #fef3c7; color: #92400e; text-decoration: none;" title="Configurar clave en Ajustes">
+                        <i class="fas fa-cog"></i> Configurar Clave en Ajustes
+                    </a>
                 <?php endif; ?>
             </h4>
             <p style="color: #5b21b6; font-size: 0.83rem; margin: 0.3rem 0 0 0;">
@@ -177,28 +177,12 @@ $defaultDateTo = $dateSettings['news_search_date_to'] ?? '';
             </p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-            <button type="button" onclick="toggleGeminiKeyModal()" class="btn btn-sm" style="background: white; color: #4c1d95; border: 1px solid #c4b5fd; font-size: 0.8rem; padding: 0.45rem 0.8rem;">
-                <i class="fas fa-key"></i> Configurar Clave Gemini
-            </button>
+            <a href="settings.php#gemini_config" class="btn btn-sm" style="background: white; color: #4c1d95; border: 1px solid #c4b5fd; font-size: 0.8rem; padding: 0.45rem 0.8rem; text-decoration: none;" title="Ver o modificar clave en Configuración General">
+                <i class="fas fa-cog"></i> Configuración IA
+            </a>
             <button type="button" id="toggleAiBodyBtn" onclick="toggleAiAssistantBody()" class="btn btn-sm" style="background: #6d28d9; color: white; font-size: 0.85rem; padding: 0.5rem 1rem;">
                 <i class="fas <?php echo $autoOpenAiPanel ? 'fa-chevron-up' : 'fa-search'; ?>"></i>
                 <span><?php echo $autoOpenAiPanel ? 'Ocultar Buscador IA' : 'Abrir Buscador IA'; ?></span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Mini panel para configurar clave API de Google Gemini sin salir de la página -->
-    <div id="geminiKeyInlineBox" style="display: none; margin-top: 1rem; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #c4b5fd;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <strong style="color: #4c1d95; font-size: 0.9rem;"><i class="fas fa-lock"></i> Clave API de Google Gemini (Se guarda cifrada con AES-256)</strong>
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.8rem; color: #6d28d9; font-weight: 700;">
-                <i class="fas fa-external-link-alt"></i> Obtener clave gratis en Google AI Studio
-            </a>
-        </div>
-        <div style="display: flex; gap: 8px;">
-            <input type="password" id="inlineGeminiApiKeyInput" placeholder="Pega aquí tu clave API de Google Gemini (AIzaSy...)" style="flex: 1; padding: 0.6rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;">
-            <button type="button" onclick="saveInlineGeminiKey()" class="btn btn-sm" style="background: #059669; color: white; padding: 0 1rem;">
-                <i class="fas fa-save"></i> Guardar Clave
             </button>
         </div>
     </div>
@@ -429,39 +413,6 @@ function toggleAiAssistantBody() {
         body.style.display = 'none';
         btn.innerHTML = '<i class="fas fa-search"></i> <span>Abrir Buscador IA</span>';
     }
-}
-
-function toggleGeminiKeyModal() {
-    const box = document.getElementById('geminiKeyInlineBox');
-    box.style.display = (box.style.display === 'none') ? 'block' : 'none';
-}
-
-function saveInlineGeminiKey() {
-    const keyInput = document.getElementById('inlineGeminiApiKeyInput');
-    const val = keyInput.value.trim();
-    if (!val) {
-        alert('Introduce una clave API de Google Gemini válida.');
-        return;
-    }
-    const fd = new FormData();
-    fd.append('ajax_action', 'save_gemini_key');
-    fd.append('gemini_api_key', val);
-
-    fetch('ai_news_ajax.php', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                keyInput.value = '';
-                document.getElementById('geminiKeyInlineBox').style.display = 'none';
-                const badge = document.getElementById('geminiKeyStatusBadge');
-                badge.style.background = '#d1fae5';
-                badge.style.color = '#065f46';
-                badge.innerHTML = '<i class="fas fa-check-circle"></i> Gemini IA Activo';
-                alert('Clave API de Google Gemini guardada y encriptada (AES-256) correctamente.');
-            } else {
-                alert(data.error || 'No se pudo guardar la clave.');
-            }
-        });
 }
 
 function quickSearchTopic(topic) {
