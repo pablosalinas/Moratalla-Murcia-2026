@@ -390,10 +390,6 @@ function renderHorizontalMenu() {
                 $html .= "<li><a href='" . htmlspecialchars($e['url']) . "' target='_blank' rel='noopener'>{$iconHtml}" . htmlspecialchars($e['title']) . "</a></li>";
             }
 
-            if ($parentId === 0) {
-                $html .= "<li><a href='javascript:void(0);' onclick='if(typeof openGlobalSearchModal === \"function\"){ openGlobalSearchModal(); } else { window.location.href=\"index.php?buscar=\"; }' style='color: #fde68a; font-weight: 800;'><i class='fas fa-search' style='margin-right:6px;'></i>Buscador</a></li>";
-            }
-
             $html .= "</ul>";
             return $html;
         };
@@ -402,7 +398,7 @@ function renderHorizontalMenu() {
         echo $menuRenderedHtml;
     } catch (\Throwable $e) {
         file_put_contents(__DIR__ . '/../error_menu.log', date('Y-m-d H:i:s') . ' ' . $e->getMessage() . PHP_EOL, FILE_APPEND);
-        echo '<ul class="nav-menu container" id="main-nav"><li><a href="index.php">Inicio</a></li><li><a href="category.php?id=1">Asociaciones</a></li><li><a href="javascript:void(0);" onclick="if(typeof openGlobalSearchModal === \'function\') openGlobalSearchModal();"><i class="fas fa-search"></i> Buscador</a></li></ul>';
+        echo '<ul class="nav-menu container" id="main-nav"><li><a href="index.php">Inicio</a></li><li><a href="category.php?id=1">Asociaciones</a></li></ul>';
     }
 }
 ?>
@@ -523,11 +519,41 @@ function renderHorizontalMenu() {
         @media (max-width: 1024px) {
             .nav-container { display: none; }
         }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
         @media (max-width: 768px) {
-            .header-top { padding: 0 1.5rem; }
+            .header-top { padding: 0 1rem !important; height: 76px; gap: 8px; }
+            .main-header { min-height: 76px; }
+            .logo { min-width: 0; flex: 1; overflow: hidden; }
+            .logo img.main-site-logo { height: 52px; flex-shrink: 0; }
+            .logo-text { font-size: clamp(0.95rem, 3.8vw, 1.3rem) !important; margin-left: 10px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .header-right { gap: 6px; }
+            .btn-header-search, .btn-tts {
+                margin-right: 0 !important;
+                padding: 8px 10px !important;
+                border-radius: 8px !important;
+                min-width: 38px;
+                min-height: 38px;
+                justify-content: center;
+            }
+            .mobile-toggle {
+                width: 38px;
+                height: 38px;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            }
             .main-banner-swiper { aspect-ratio: 16 / 9; height: auto; min-height: 200px; }
         }
         @media (max-width: 480px) {
+            .header-top { padding: 0 0.75rem !important; }
+            .logo img.main-site-logo { height: 46px; }
+            .logo-text { font-size: clamp(0.85rem, 3.6vw, 1.1rem) !important; margin-left: 8px !important; }
             .main-banner-swiper { aspect-ratio: 4 / 3; height: auto; min-height: 250px; }
         }
 
@@ -578,10 +604,10 @@ function renderHorizontalMenu() {
                 </div>
             </a>
             <div class="header-right">
-                <button type="button" onclick="if(typeof openGlobalSearchModal === 'function'){ openGlobalSearchModal(); } else { window.location.href='index.php?buscar='; }" title="Abrir Buscador Global (Ctrl+K)" style="background: var(--primary); border: 2px solid var(--primary); color: #ffffff; padding: 5px 12px; border-radius: 5px; cursor: pointer; margin-right: 10px; display: flex; align-items: center; gap: 6px; font-weight: bold;">
+                <button type="button" class="btn-header-search" onclick="if(typeof openGlobalSearchModal === 'function'){ openGlobalSearchModal(); } else { window.location.href='index.php?buscar='; }" title="Abrir Buscador Global (Ctrl+K)" style="background: var(--primary); border: 2px solid var(--primary); color: #ffffff; padding: 5px 12px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: bold;">
                     <i class="fas fa-search"></i> <span class="hide-mobile">Buscar</span>
                 </button>
-                <button id="tts-toggle" class="btn-tts" title="Activar/Desactivar lectura en voz alta" style="background: none; border: 2px solid var(--primary); color: var(--primary); padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-right: 15px; display: flex; align-items: center; gap: 5px; font-weight: bold;">
+                <button id="tts-toggle" class="btn-tts" title="Activar/Desactivar lectura en voz alta" style="background: none; border: 2px solid var(--primary); color: var(--primary); padding: 5px 10px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: bold;">
                     <i class="fas fa-volume-up"></i> <span class="hide-mobile">Leer Voz Alta</span>
                 </button>
                 <button class="mobile-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>

@@ -364,10 +364,12 @@
         const c1 = document.getElementById('newsCarouselOverlay');
         const c2 = document.getElementById('newsDetailModal');
         const c3 = document.getElementById('bannerModal');
+        const c4 = document.getElementById('globalSearchModal');
         
         const anyOpen = (c1 && c1.classList.contains('active')) ||
                         (c2 && c2.classList.contains('active')) ||
-                        (c3 && c3.style.display === 'flex');
+                        (c3 && c3.style.display === 'flex') ||
+                        (c4 && c4.style.display === 'flex');
                         
         if (!anyOpen && isModalOpen && !fromPopState) {
             isModalOpen = false;
@@ -383,6 +385,7 @@
             if (typeof closeNewsCarouselDirect === 'function') closeNewsCarouselDirect(true);
             if (typeof closeNewsModalDirect === 'function') closeNewsModalDirect(true);
             if (typeof closeBannerModal === 'function') closeBannerModal(true);
+            if (typeof closeGlobalSearchModal === 'function') closeGlobalSearchModal(true);
         }
     });
     // -----------------------------------------------------------------
@@ -966,75 +969,82 @@
                 <div class="gs-dialog-input-row">
                     <div class="gs-dialog-input-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="modalGlobalSearchInput" placeholder="Escribe aquí lo que buscas (ej: tambor castillo, casa rural, restaurante, cita...)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); executeGlobalSearch();}">
+                        <input type="search" id="modalGlobalSearchInput" placeholder="Escribe aquí lo que buscas (ej: tambor, casa rural, restaurante...)" autocomplete="off" enterkeyhint="search" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur(); executeGlobalSearch();}">
                         <button type="button" id="gsClearBtn" onclick="clearGlobalSearchInput()" style="display:none;" title="Limpiar texto">&times;</button>
                     </div>
-                    <button type="button" onclick="executeGlobalSearch()" class="gs-dialog-search-btn">
-                        <i class="fas fa-search"></i> Buscar
+                    <button type="button" onclick="document.getElementById('modalGlobalSearchInput').blur(); executeGlobalSearch();" class="gs-dialog-search-btn">
+                        <i class="fas fa-search"></i> <span class="gs-btn-text">Buscar</span>
+                    </button>
+                    <button type="button" id="gsMobileFilterToggle" class="gs-mobile-filter-btn" onclick="toggleGsMobileFilters()" title="Mostrar/Ocultar opciones de filtrado" aria-expanded="false">
+                        <i class="fas fa-sliders-h"></i> <span class="gs-filter-btn-label">Filtros</span>
                     </button>
                 </div>
 
-                <!-- Selección de Ámbito y Filtro de Palabras (sin letreros OR/AND, solo las aclaraciones) -->
-                <div class="gs-dialog-filter-bar">
-                    <div class="gs-mode-box">
-                        <span class="gs-mode-title"><i class="fas fa-globe"></i> Dónde buscar:</span>
-                        <label class="gs-mode-option active" id="modalLblScopeWeb">
-                            <input type="radio" name="modal_search_scope" value="web" checked onchange="syncSearchScope('web'); executeGlobalSearch();">
-                            <span class="gs-check-mark">✓</span>
-                            <span>🌐 <strong>Web moratalla-murcia</strong> (Por defecto)</span>
-                        </label>
-                        <label class="gs-mode-option" id="modalLblScopeInternet">
-                            <input type="radio" name="modal_search_scope" value="internet" onchange="syncSearchScope('internet'); executeGlobalSearch();">
-                            <span class="gs-check-mark">✓</span>
-                            <span>🌍 <strong>Internet Global</strong></span>
-                        </label>
-                        <label class="gs-mode-option" id="modalLblScopeBoth">
-                            <input type="radio" name="modal_search_scope" value="both" onchange="syncSearchScope('both'); executeGlobalSearch();">
-                            <span class="gs-check-mark">✓</span>
-                            <span>🔄 <strong>Web + Internet</strong></span>
-                        </label>
+                <div id="gsCollapsibleFilters" class="gs-collapsible-filters">
+                    <!-- Selección de Ámbito y Filtro de Palabras (sin letreros OR/AND, solo las aclaraciones) -->
+                    <div class="gs-dialog-filter-bar">
+                        <div class="gs-mode-box">
+                            <span class="gs-mode-title"><i class="fas fa-globe"></i> Dónde buscar:</span>
+                            <label class="gs-mode-option active" id="modalLblScopeWeb">
+                                <input type="radio" name="modal_search_scope" value="web" checked onchange="syncSearchScope('web'); executeGlobalSearch();">
+                                <span class="gs-check-mark">✓</span>
+                                <span>🌐 <strong>Web moratalla-murcia</strong> <span class="gs-hide-xs">(Por defecto)</span></span>
+                            </label>
+                            <label class="gs-mode-option" id="modalLblScopeInternet">
+                                <input type="radio" name="modal_search_scope" value="internet" onchange="syncSearchScope('internet'); executeGlobalSearch();">
+                                <span class="gs-check-mark">✓</span>
+                                <span>🌍 <strong>Internet Global</strong></span>
+                            </label>
+                            <label class="gs-mode-option" id="modalLblScopeBoth">
+                                <input type="radio" name="modal_search_scope" value="both" onchange="syncSearchScope('both'); executeGlobalSearch();">
+                                <span class="gs-check-mark">✓</span>
+                                <span>🔄 <strong>Web + Internet</strong></span>
+                            </label>
+                        </div>
+
+                        <div class="gs-mode-box">
+                            <span class="gs-mode-title"><i class="fas fa-filter"></i> Filtro de palabras:</span>
+                            <label class="gs-mode-option active" id="modalLblModeAnd">
+                                <input type="radio" name="modal_search_mode" value="AND" checked onchange="syncSearchMode('AND'); executeGlobalSearch();">
+                                <span class="gs-check-mark">✓</span>
+                                <span>Contiene <u>todas</u> las palabras <span class="gs-hide-xs">(Por defecto)</span></span>
+                            </label>
+                            <label class="gs-mode-option" id="modalLblModeOr">
+                                <input type="radio" name="modal_search_mode" value="OR" onchange="syncSearchMode('OR'); executeGlobalSearch();">
+                                <span class="gs-check-mark">✓</span>
+                                <span>Contiene <u>cualquiera</u> de las palabras</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="gs-mode-box">
-                        <span class="gs-mode-title"><i class="fas fa-filter"></i> Filtro de palabras:</span>
-                        <label class="gs-mode-option active" id="modalLblModeAnd">
-                            <input type="radio" name="modal_search_mode" value="AND" checked onchange="syncSearchMode('AND'); executeGlobalSearch();">
-                            <span class="gs-check-mark">✓</span>
-                            <span>Contiene <u>todas</u> las palabras (Por defecto)</span>
-                        </label>
-                        <label class="gs-mode-option" id="modalLblModeOr">
-                            <input type="radio" name="modal_search_mode" value="OR" onchange="syncSearchMode('OR'); executeGlobalSearch();">
-                            <span class="gs-check-mark">✓</span>
-                            <span>Contiene <u>cualquiera</u> de las palabras</span>
-                        </label>
+                    <!-- Accesos rápidos dentro del diálogo -->
+                    <div class="gs-quick-presets-row">
+                        <span>Explorar rápido:</span>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'noticias')">📰 Noticias</button>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'eventos')">📅 Eventos</button>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Asociación', 'asociaciones')">🤝 Asociaciones</button>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Artesanía', 'artesanos')">🏺 Artesanos</button>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Casa Rural', 'alojamientos')">🛏️ Alojamientos</button>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Restaurante', 'restauracion')">🍽️ Restauración</button>
+                        <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'citas')">💬 Citas</button>
+                    </div>
+                </div>
+
+                <!-- Pestañas de filtrado por sección y contador -->
+                <div class="gs-tabs-summary-row">
+                    <div class="gs-category-tabs" id="gsCategoryTabs">
+                        <button type="button" class="gs-tab active" data-group="all" onclick="setGlobalSearchGroup('all')">📋 Todos <span id="gsCount_all">0</span></button>
+                        <button type="button" class="gs-tab" data-group="noticias" onclick="setGlobalSearchGroup('noticias')">📰 Noticias <span id="gsCount_noticias">0</span></button>
+                        <button type="button" class="gs-tab" data-group="eventos" onclick="setGlobalSearchGroup('eventos')">📅 Eventos <span id="gsCount_eventos">0</span></button>
+                        <button type="button" class="gs-tab" data-group="asociaciones" onclick="setGlobalSearchGroup('asociaciones')">🤝 Asociaciones <span id="gsCount_asociaciones">0</span></button>
+                        <button type="button" class="gs-tab" data-group="artesanos" onclick="setGlobalSearchGroup('artesanos')">🏺 Artesanos <span id="gsCount_artesanos">0</span></button>
+                        <button type="button" class="gs-tab" data-group="alojamientos" onclick="setGlobalSearchGroup('alojamientos')">🛏️ Alojamientos <span id="gsCount_alojamientos">0</span></button>
+                        <button type="button" class="gs-tab" data-group="restauracion" onclick="setGlobalSearchGroup('restauracion')">🍽️ Restauración <span id="gsCount_restauracion">0</span></button>
+                        <button type="button" class="gs-tab" data-group="citas" onclick="setGlobalSearchGroup('citas')">💬 Citas <span id="gsCount_citas">0</span></button>
+                        <button type="button" class="gs-tab" data-group="paginas" onclick="setGlobalSearchGroup('paginas')">📄 Otras Secciones <span id="gsCount_paginas">0</span></button>
+                        <button type="button" class="gs-tab" data-group="internet" onclick="setGlobalSearchGroup('internet')">🌍 Internet Global <span id="gsCount_internet">0</span></button>
                     </div>
                     <div id="gsSummaryCounter" class="gs-summary-counter"></div>
-                </div>
-
-                <!-- Accesos rápidos dentro del diálogo -->
-                <div class="gs-quick-presets-row">
-                    <span>Explorar rápido:</span>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'noticias')">📰 Noticias</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'eventos')">📅 Eventos</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Asociación', 'asociaciones')">🤝 Asociaciones</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Artesanía', 'artesanos')">🏺 Artesanos</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Casa Rural', 'alojamientos')">🛏️ Alojamientos</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Restaurante', 'restauracion')">🍽️ Restauración</button>
-                    <button type="button" onclick="openGlobalSearchWithPreset('Moratalla', 'citas')">💬 Citas</button>
-                </div>
-
-                <!-- Pestañas de filtrado por sección -->
-                <div class="gs-category-tabs" id="gsCategoryTabs">
-                    <button type="button" class="gs-tab active" data-group="all" onclick="setGlobalSearchGroup('all')">📋 Todos <span id="gsCount_all">0</span></button>
-                    <button type="button" class="gs-tab" data-group="noticias" onclick="setGlobalSearchGroup('noticias')">📰 Noticias <span id="gsCount_noticias">0</span></button>
-                    <button type="button" class="gs-tab" data-group="eventos" onclick="setGlobalSearchGroup('eventos')">📅 Eventos <span id="gsCount_eventos">0</span></button>
-                    <button type="button" class="gs-tab" data-group="asociaciones" onclick="setGlobalSearchGroup('asociaciones')">🤝 Asociaciones <span id="gsCount_asociaciones">0</span></button>
-                    <button type="button" class="gs-tab" data-group="artesanos" onclick="setGlobalSearchGroup('artesanos')">🏺 Artesanos <span id="gsCount_artesanos">0</span></button>
-                    <button type="button" class="gs-tab" data-group="alojamientos" onclick="setGlobalSearchGroup('alojamientos')">🛏️ Alojamientos <span id="gsCount_alojamientos">0</span></button>
-                    <button type="button" class="gs-tab" data-group="restauracion" onclick="setGlobalSearchGroup('restauracion')">🍽️ Restauración <span id="gsCount_restauracion">0</span></button>
-                    <button type="button" class="gs-tab" data-group="citas" onclick="setGlobalSearchGroup('citas')">💬 Citas <span id="gsCount_citas">0</span></button>
-                    <button type="button" class="gs-tab" data-group="paginas" onclick="setGlobalSearchGroup('paginas')">📄 Otras Secciones <span id="gsCount_paginas">0</span></button>
-                    <button type="button" class="gs-tab" data-group="internet" onclick="setGlobalSearchGroup('internet')">🌍 Internet Global <span id="gsCount_internet">0</span></button>
                 </div>
             </div>
 
@@ -1298,11 +1308,39 @@
             color: #ffffff;
             border-color: #2d6a4f;
         }
+        .gs-mobile-filter-btn {
+            display: none;
+            background: #ffffff;
+            color: #1b4332;
+            border: 2px solid #cbd5e1;
+            padding: 0 0.85rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .gs-mobile-filter-btn.active {
+            background: #ecfdf5;
+            border-color: #1b4332;
+            color: #1b4332;
+        }
+        .gs-tabs-summary-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
         .gs-category-tabs {
             display: flex;
             gap: 6px;
             overflow-x: auto;
             padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
         }
         .gs-tab {
             background: #ffffff;
@@ -1318,6 +1356,7 @@
             align-items: center;
             gap: 5px;
             transition: all 0.15s;
+            flex-shrink: 0;
         }
         .gs-tab span {
             background: #f1f5f9;
@@ -1337,7 +1376,9 @@
         }
         .gs-modal-body {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 1.1rem 1.4rem;
             background: #ffffff;
         }
@@ -1427,12 +1468,14 @@
             font-weight: 800;
             color: #0f172a;
             line-height: 1.3;
+            word-break: break-word;
         }
         .gs-result-snippet {
             margin: 0;
             font-size: 0.86rem;
             color: #475569;
             line-height: 1.5;
+            word-break: break-word;
         }
         .gs-highlight {
             background: #fef08a;
@@ -1441,12 +1484,202 @@
             border-radius: 3px;
             font-weight: 700;
         }
-        @media (max-width: 640px) {
+
+        /* Responsive para Tablets y Móviles */
+        @media (max-width: 768px) {
+            .gs-modal-overlay {
+                padding: 0;
+                align-items: stretch;
+                justify-content: stretch;
+            }
+            .gs-modal-dialog {
+                max-width: 100%;
+                width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                max-height: 100vh;
+                max-height: 100dvh;
+                border-radius: 0;
+                border: none;
+            }
+            .gs-modal-header {
+                padding: 0.75rem 1rem;
+                gap: 0.6rem;
+            }
+            .gs-modal-header h3 {
+                font-size: 1rem;
+                line-height: 1.25;
+            }
+            .gs-modal-header p {
+                display: none;
+            }
+            .gs-close-btn {
+                width: 34px;
+                height: 34px;
+                font-size: 1.35rem;
+            }
+            .gs-modal-controls {
+                padding: 0.7rem 0.85rem 0.55rem;
+            }
+            .gs-dialog-input-row {
+                gap: 6px;
+                margin-bottom: 0.55rem;
+            }
+            .gs-dialog-input-box {
+                padding: 0 10px;
+                gap: 8px;
+                border-radius: 10px;
+            }
+            .gs-dialog-input-box input {
+                font-size: 16px; /* Evita zoom automático en iOS/Android */
+                padding: 0.58rem 0;
+            }
+            .gs-dialog-search-btn {
+                padding: 0 0.9rem;
+                border-radius: 10px;
+                font-size: 0.85rem;
+            }
+            .gs-mobile-filter-btn {
+                display: inline-flex;
+                border-radius: 10px;
+                padding: 0 0.75rem;
+            }
+            .gs-collapsible-filters {
+                display: none;
+                padding-top: 0.25rem;
+                margin-bottom: 0.45rem;
+                border-top: 1px dashed #cbd5e1;
+            }
+            .gs-collapsible-filters.open {
+                display: block;
+            }
+            .gs-dialog-filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                margin-bottom: 0.55rem;
+            }
+            .gs-mode-box {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding-bottom: 2px;
+            }
+            .gs-mode-box::-webkit-scrollbar {
+                display: none;
+            }
+            .gs-mode-title {
+                flex-shrink: 0;
+                font-size: 0.74rem;
+            }
+            .gs-mode-option {
+                flex-shrink: 0;
+                padding: 4px 8px;
+                font-size: 0.74rem;
+            }
+            .gs-hide-xs {
+                display: none;
+            }
+            .gs-quick-presets-row {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                margin-bottom: 0.25rem;
+                padding-bottom: 2px;
+            }
+            .gs-quick-presets-row::-webkit-scrollbar {
+                display: none;
+            }
+            .gs-quick-presets-row span,
+            .gs-quick-presets-row button {
+                flex-shrink: 0;
+            }
+            .gs-category-tabs {
+                scrollbar-width: none;
+                padding-bottom: 2px;
+            }
+            .gs-category-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .gs-tab {
+                padding: 4px 9px;
+                font-size: 0.74rem;
+            }
+            .gs-summary-counter {
+                font-size: 0.75rem;
+                padding: 2px 2px 0;
+            }
+            .gs-modal-body {
+                padding: 0.75rem 0.85rem 1.2rem;
+            }
+            .gs-empty-state {
+                padding: 1.5rem 0.75rem;
+            }
+            .gs-empty-state h4 {
+                font-size: 0.98rem;
+            }
+            .gs-empty-state p {
+                font-size: 0.83rem;
+            }
+            .gs-results-list {
+                gap: 0.6rem;
+            }
+            .gs-result-card {
+                padding: 0.75rem 0.85rem;
+                gap: 0.75rem;
+                border-radius: 12px;
+            }
+            .gs-result-thumb {
+                width: 60px;
+                height: 52px;
+                border-radius: 8px;
+            }
+            .gs-result-icon-box {
+                width: 44px;
+                height: 44px;
+                border-radius: 10px;
+                font-size: 1.15rem;
+            }
+            .gs-result-badge {
+                font-size: 0.64rem;
+                padding: 2px 7px;
+            }
+            .gs-result-sub {
+                font-size: 0.72rem;
+            }
+            .gs-result-title {
+                font-size: 0.93rem;
+            }
+            .gs-result-snippet {
+                font-size: 0.8rem;
+                line-height: 1.4;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
             .gs-floating-trigger {
                 bottom: 16px;
                 right: 16px;
-                padding: 0.65rem 1rem;
-                font-size: 0.85rem;
+                padding: 0.62rem 1rem;
+                font-size: 0.84rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .gs-dialog-search-btn .gs-btn-text {
+                display: none;
+            }
+            .gs-dialog-search-btn {
+                padding: 0 0.85rem;
+            }
+            .gs-mobile-filter-btn .gs-filter-btn-label {
+                display: none;
+            }
+            .gs-mobile-filter-btn {
+                padding: 0 0.75rem;
             }
         }
     </style>
@@ -1458,6 +1691,16 @@
     let gsCachedResults = [];
     let gsCachedWords = [];
     let gsDebounceTimer = null;
+
+    function toggleGsMobileFilters(forceState) {
+        const panel = document.getElementById('gsCollapsibleFilters');
+        const btn = document.getElementById('gsMobileFilterToggle');
+        if (!panel || !btn) return;
+        const isOpen = (typeof forceState === 'boolean') ? forceState : !panel.classList.contains('open');
+        panel.classList.toggle('open', isOpen);
+        btn.classList.toggle('active', isOpen);
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
 
     function syncSearchMode(mode) {
         gsCurrentMode = (mode === 'OR') ? 'OR' : 'AND';
@@ -1502,8 +1745,16 @@
         const modal = document.getElementById('globalSearchModal');
         const modalInput = document.getElementById('modalGlobalSearchInput');
         if (!modal) return;
+
+        // Cerrar menú móvil si estuviera desplegado
+        const navContainer = document.querySelector('.nav-container');
+        if (navContainer && navContainer.classList.contains('active')) {
+            navContainer.classList.remove('active');
+        }
+
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (typeof handleModalOpen === 'function') handleModalOpen();
 
         if (initialGroup) {
             setGlobalSearchGroup(initialGroup, false);
@@ -1514,17 +1765,24 @@
         } else if (modalInput.value.trim() !== '') {
             executeGlobalSearch();
         }
-        setTimeout(() => modalInput.focus(), 80);
+        // En móviles, enfocar el input solo si no se abrió mediante un acceso rápido con consulta predefinida
+        if (initialQuery === '' || window.innerWidth > 768) {
+            setTimeout(() => modalInput.focus(), 80);
+        }
     }
 
-    function closeGlobalSearchModal() {
+    function closeGlobalSearchModal(fromPopState = false) {
         const modal = document.getElementById('globalSearchModal');
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
+        if (typeof handleModalClose === 'function') handleModalClose(fromPopState === true);
     }
 
     function openGlobalSearchWithPreset(queryText, groupName) {
         syncSearchScope('web');
+        if (window.innerWidth <= 768) {
+            toggleGsMobileFilters(false);
+        }
         openGlobalSearchModal(queryText, groupName);
     }
 
