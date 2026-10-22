@@ -226,6 +226,7 @@ $autoOpenAiPanel = (isset($_GET['open_ai']) && $_GET['open_ai'] == '1');
             <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 0.9rem;">
                 <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Temas rápidos:</span>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Moratalla Murcia')">📰 General Moratalla</button>
+                <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Banda de Música de Moratalla')">🎵 Banda de Música</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Ayuntamiento de Moratalla')">🏛️ Ayuntamiento</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Turismo Cultura Castillo Moratalla')">🏰 Turismo y Patrimonio</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Fiestas Tambor Encierros Moratalla')">🥁 Fiestas y Tradiciones</button>
@@ -990,6 +991,42 @@ function escapeHtml(str) {
 document.addEventListener('DOMContentLoaded', function() {
     searchInternetNews();
     searchArchivePhotos();
+
+    const params = new URLSearchParams(window.location.search);
+    const prefillUrl = params.get('prefill_url') || '';
+    const prefillTitle = params.get('prefill_title') || '';
+    const prefillSource = params.get('prefill_source') || '';
+    const prefillImg = params.get('prefill_img') || '';
+    const quickAction = params.get('quick_action') || '';
+
+    if (prefillUrl || prefillTitle) {
+        if (quickAction === 'discard') {
+            const fd = new FormData();
+            fd.append('ajax_action', 'change_news_status');
+            fd.append('target_status', 'discarded');
+            fd.append('url', prefillUrl);
+            fd.append('title', prefillTitle);
+            fd.append('source', prefillSource);
+            fetch('ai_news_ajax.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(() => {
+                    searchInternetNews();
+                    const banner = document.getElementById('supervisedDraftReadyBanner');
+                    if (banner) {
+                        banner.style.display = 'block';
+                        banner.innerHTML = '<i class="fas fa-ban"></i> <strong>Noticia descartada desde el boletín de correo:</strong> «' + escapeHtml(prefillTitle || prefillUrl) + '» ha quedado registrada en la pestaña <strong>⚪ Descartadas</strong> para no volver a repetirla.';
+                    }
+                });
+        } else {
+            runDraftPreparation({
+                url: prefillUrl,
+                title: prefillTitle,
+                snippet: '',
+                source: prefillSource,
+                rss_image: prefillImg
+            });
+        }
+    }
 });
 <?php endif; ?>
 </script>

@@ -1,0 +1,18 @@
+name: Auto News Digest Cron
+
+on:
+  schedule:
+    # Se ejecuta automáticamente cada 15 minutos sin intervención humana
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-and-send-news:
+    name: 📰 Comprobar horarios y enviar resumen de noticias
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⏰ Disparar verificador de horarios en el servidor
+        run: |
+          curl -f -s -S "${{ secrets.SITE_URL }}/cron_daily_news.php" || true
+          curl -f -s -S "${{ secrets.SITE_URL }}/moratalla/cron_daily_news.php" || true

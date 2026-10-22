@@ -24,12 +24,22 @@ function ensureAiNewsTrackingSchema($pdo) {
             source_name VARCHAR(150) NULL,
             status VARCHAR(30) NOT NULL DEFAULT 'published',
             news_event_id INT NULL,
+            snippet_summary TEXT NULL,
+            rss_image VARCHAR(700) NULL,
             processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_url_hash (url_hash),
             INDEX idx_title_norm (title_norm),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     } catch (Exception $e) {}
+
+    try {
+        $pdo->query("SELECT snippet_summary FROM ai_processed_news LIMIT 1");
+    } catch (Exception $e) {
+        try {
+            $pdo->exec("ALTER TABLE ai_processed_news ADD COLUMN snippet_summary TEXT NULL AFTER news_event_id, ADD COLUMN rss_image VARCHAR(700) NULL AFTER snippet_summary");
+        } catch (Exception $e2) {}
+    }
 
     try {
         $pdo->query("SELECT source_url FROM news_events LIMIT 1");
@@ -111,9 +121,9 @@ function areNewsTitlesRedundant($normA, $normB) {
 }
 
 /**
- * Registra una noticia como procesada (publicada o descartada)
+ * Registra una noticia en `ai_processed_news` (disponible, publicada o descartada)
  */
-function markNewsAsProcessed($pdo, $sourceUrl, $originalTitle, $sourceName = '', $status = 'published', $newsEventId = null) {
+function markNewsAsProcessed($pdo, $sourceUrl, $originalTitle, $sourceName = '', $status = 'published', $newsEventId = null, $snippetSummary = null, $rssImage = null) {
     ensureAiNewsTrackingSchema($pdo);
     $sourceUrl = trim((string)$sourceUrl);
     $originalTitle = trim((string)$originalTitle);
@@ -123,29 +133,42 @@ function markNewsAsProcessed($pdo, $sourceUrl, $originalTitle, $sourceName = '',
     $urlHash = hash('sha256', $normUrl);
     $titleNorm = mb_substr(normalizeNewsTitleForDedupe($originalTitle), 0, 250);
 
-    $stmt = $pdo->prepare("SELECT id FROM ai_processed_news WHERE url_hash = ? OR (title_norm != '' AND title_norm = ?) LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, status FROM ai_processed_news WHERE url_hash = ? OR (title_norm != '' AND title_norm = ?) LIMIT 1");
     $stmt->execute([$urlHash, $titleNorm]);
-    $existingId = $stmt->fetchColumn();
+    $existingRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($existingId) {
-        $upd = $pdo->prepare("UPDATE ai_processed_news SET status = ?, news_event_id = COALESCE(?, news_event_id), processed_at = NOW() WHERE id = ?");
-        return $upd->execute([$status, $newsEventId ?: null, $existingId]);
+    if ($existingRow) {
+        $existingId = (int)$existingRow['id'];
+        // Si se está pre-registrando desde el buscador automático ('available'), no pisar un estado 'published' o 'discarded' previo
+        $finalStatus = $status;
+        if ($status === 'available' && in_array($existingRow['status'], ['published', 'discarded'], true)) {
+            $finalStatus = $existingRow['status'];
+        }
+        $upd = $pdo->prepare("UPDATE ai_processed_news SET
+            status = ?,
+            news_event_id = COALESCE(?, news_event_id),
+            snippet_summary = COALESCE(?, snippet_summary),
+            rss_image = COALESCE(?, rss_image),
+            source_name = COALESCE(NULLIF(?, ''), source_name),
+            processed_at = NOW()
+            WHERE id = ?");
+        return $upd->execute([$finalStatus, $newsEventId ?: null, $snippetSummary ?: null, $rssImage ?: null, $sourceName, $existingId]);
     } else {
-        $ins = $pdo->prepare("INSERT INTO ai_processed_news (source_url, url_hash, title_original, title_norm, source_name, status, news_event_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        return $ins->execute([$sourceUrl, $urlHash, $originalTitle, $titleNorm, $sourceName, $status, $newsEventId ?: null]);
+        $ins = $pdo->prepare("INSERT INTO ai_processed_news (source_url, url_hash, title_original, title_norm, source_name, status, news_event_id, snippet_summary, rss_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        return $ins->execute([$sourceUrl, $urlHash, $originalTitle, $titleNorm, $sourceName, $status, $newsEventId ?: null, $snippetSummary ?: null, $rssImage ?: null]);
     }
 }
 
 /**
- * Permite restaurar una noticia previamente descartada/procesada
+ * Permite restaurar una noticia previamente descartada/procesada a estado disponible (sin borrarla de la base de datos)
  */
 function unmarkProcessedNews($pdo, $urlHashOrId) {
     ensureAiNewsTrackingSchema($pdo);
     if (is_numeric($urlHashOrId)) {
-        $stmt = $pdo->prepare("DELETE FROM ai_processed_news WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE ai_processed_news SET status = 'available', processed_at = NOW() WHERE id = ?");
         return $stmt->execute([(int)$urlHashOrId]);
     }
-    $stmt = $pdo->prepare("DELETE FROM ai_processed_news WHERE url_hash = ?");
+    $stmt = $pdo->prepare("UPDATE ai_processed_news SET status = 'available', processed_at = NOW() WHERE url_hash = ?");
     return $stmt->execute([$urlHashOrId]);
 }
 
@@ -205,6 +228,12 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                     $item['matched_news_id'] = $pr['real_news_id'] ?: $pr['news_event_id'];
                     $item['matched_title'] = $pr['published_title'] ?: $pr['title_original'];
                 }
+                if (empty($item['snippet']) && !empty($pr['snippet_summary'])) {
+                    $item['snippet'] = $pr['snippet_summary'];
+                }
+                if (empty($item['rss_image']) && !empty($pr['rss_image'])) {
+                    $item['rss_image'] = $pr['rss_image'];
+                }
                 break;
             }
         }
@@ -228,8 +257,8 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
     }
     unset($item);
 
-    // Incorporar también las noticias guardadas en `ai_processed_news` (descartadas, publicadas o reconducidas previamente)
-    // que no estén en el feed actual, para que siempre puedan verse y reconducirse desde los botones de filtro
+    // Incorporar también las noticias guardadas en `ai_processed_news` (disponibles del boletín automático, descartadas o publicadas)
+    // que no estén en el feed actual, para que siempre puedan verse, redactarse y reconducirse desde los botones de filtro
     foreach ($processedRows as $pr) {
         $prId = (int)$pr['id'];
         if (isset($matchedRecordIds[$prId])) continue;
@@ -242,12 +271,12 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
         $items[] = [
             'title'               => $pr['title_original'] ?: ($pr['published_title'] ?: 'Noticia registrada'),
             'url'                 => $pr['source_url'] ?: '',
-            'snippet'             => '',
+            'snippet'             => $pr['snippet_summary'] ?: '',
             'source'              => $pr['source_name'] ?: 'Historial IA',
             'pub_date'            => $ts ? date('d/m/Y H:i', $ts) : 'Registrada',
             'event_date_iso'      => $ts ? date('Y-m-d', $ts) : date('Y-m-d'),
             'timestamp'           => $ts ?: 0,
-            'rss_image'           => '',
+            'rss_image'           => $pr['rss_image'] ?: '',
             'url_hash'            => $pr['url_hash'],
             'process_status'      => $st,
             'matched_news_id'     => $pr['real_news_id'] ?: $pr['news_event_id'],
@@ -1396,4 +1425,567 @@ function searchLocalMoratallaArchive($pdo, $searchQuery = '', $limit = 24) {
     } catch (Exception $e) {}
 
     return $results;
+}
+
+/**
+ * Obtiene la configuración actual de los horarios de búsqueda automática diaria de noticias
+ */
+function getAutoNewsDigestConfig($pdo) {
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('auto_news_time_1', 'auto_news_time_2', 'auto_news_last_run_1', 'auto_news_last_run_2', 'auto_news_last_status', 'admin_email')");
+    $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+
+    $time1 = isset($rows['auto_news_time_1']) && preg_match('/^\d{2}:\d{2}$/', trim($rows['auto_news_time_1']))
+        ? trim($rows['auto_news_time_1'])
+        : '00:00';
+    $time2 = isset($rows['auto_news_time_2']) && preg_match('/^\d{2}:\d{2}$/', trim($rows['auto_news_time_2']))
+        ? trim($rows['auto_news_time_2'])
+        : '00:00';
+
+    $mailCfg = getMailConfig($pdo);
+    $recipient = !empty($rows['admin_email']) ? trim($rows['admin_email']) : $mailCfg['admin_email'];
+
+    return [
+        'time_1'        => $time1,
+        'time_2'        => $time2,
+        'last_run_1'    => $rows['auto_news_last_run_1'] ?? '',
+        'last_run_2'    => $rows['auto_news_last_run_2'] ?? '',
+        'last_status'   => $rows['auto_news_last_status'] ?? '',
+        'recipient'     => $recipient
+    ];
+}
+
+/**
+ * Busca noticias combinadas de Moratalla y de la Banda de Música de Moratalla,
+ * las registra en `ai_processed_news` para que queden disponibles en el proceso de gestión del panel,
+ * enriquece las noticias con su resumen e imagen y devuelve el listado completo más las conteos por estado
+ * (Disponibles, Ya Publicadas y Descartadas).
+ */
+function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
+    ensureAiNewsTrackingSchema($pdo);
+
+    $queries = [
+        'Moratalla Murcia',
+        'Banda de Música de Moratalla'
+    ];
+
+    $combined = [];
+    $seenNormTitles = [];
+    $seenUrlHashes = [];
+
+    foreach ($queries as $q) {
+        $batch = searchMoratallaNews($pdo, $q, 24);
+        foreach ($batch as $it) {
+            $normTitle = normalizeNewsTitleForDedupe($it['title'] ?? '');
+            $urlHash = $it['url_hash'] ?? hash('sha256', normalizeUrlForHash($it['url'] ?? $it['title']));
+
+            if (isset($seenUrlHashes[$urlHash])) {
+                continue;
+            }
+            $isDup = false;
+            foreach ($seenNormTitles as $prevNorm) {
+                if (areNewsTitlesRedundant($normTitle, $prevNorm)) {
+                    $isDup = true;
+                    break;
+                }
+            }
+            if ($isDup) continue;
+
+            $seenUrlHashes[$urlHash] = true;
+            $seenNormTitles[] = $normTitle;
+            $it['matched_query'] = (stripos($q, 'Banda') !== false || stripos($it['title'], 'banda') !== false || stripos($it['snippet'] ?? '', 'banda') !== false)
+                ? '🎵 Banda de Música de Moratalla'
+                : '📰 Actualidad Moratalla';
+            $combined[] = $it;
+        }
+    }
+
+    // Separar por estado para mantener sincronizado el flujo de Nuevas Disponibles, Publicadas y Descartadas
+    $newAvailable = [];
+    $publishedList = [];
+    $discardedList = [];
+
+    foreach ($combined as $item) {
+        $st = $item['process_status'] ?? 'new';
+        if ($st === 'published') {
+            $publishedList[] = $item;
+        } elseif ($st === 'discarded') {
+            $discardedList[] = $item;
+        } else {
+            // Solo enriquecer como nuevas las que provienen de prensa con URL activa
+            if (($item['source'] ?? '') !== 'Historial IA' && !empty($item['url'])) {
+                $newAvailable[] = $item;
+            }
+        }
+    }
+
+    // Ordenar las nuevas por más recientes
+    usort($newAvailable, function ($a, $b) {
+        return ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0);
+    });
+
+    $selected = array_slice($newAvailable, 0, $maxItemsToEnrich);
+    // Si no hubiera nuevas disponibles en este momento, tomar las últimas publicadas con enlace para que el boletín muestre contexto
+    if (empty($selected)) {
+        foreach ($publishedList as $pubIt) {
+            if (!empty($pubIt['url'])) {
+                $selected[] = $pubIt;
+            }
+            if (count($selected) >= min(4, $maxItemsToEnrich)) break;
+        }
+    }
+
+    // Enriquecer cada noticia con su texto extraído, imagen principal y resumen
+    $enrichedItems = [];
+    foreach ($selected as $idx => $item) {
+        $art = extractArticleContentAndImages(
+            $item['url'] ?? '',
+            $item['title'] ?? '',
+            $item['snippet'] ?? '',
+            $item['rss_image'] ?? '',
+            $item['source'] ?? ''
+        );
+
+        $imageUrl = '';
+        if (!empty($art['original_images'][0]['url'])) {
+            $imageUrl = $art['original_images'][0]['url'];
+        } elseif (!empty($item['rss_image'])) {
+            $imageUrl = $item['rss_image'];
+        } else {
+            // Imagen de respaldo institucional de Moratalla
+            $imageUrl = 'https://www.moratalla-murcia.com/moratalla/uploads/theme/moratalla.jpg';
+        }
+
+        // Construir resumen claro (entre 2 y 4 frases) a partir del cuerpo extraído
+        $rawBody = trim($art['body_text'] ?? '');
+        $summary = '';
+        if (mb_strlen($rawBody) > 40) {
+            $paragraphs = preg_split('/\n\s*\n/', $rawBody);
+            $cleanParas = [];
+            foreach ($paragraphs as $p) {
+                $p = trim(preg_replace('/\s+/u', ' ', $p));
+                if (mb_strlen($p) >= 35) {
+                    $cleanParas[] = $p;
+                }
+                if (count($cleanParas) >= 2) break;
+            }
+            $summary = implode(' ', $cleanParas);
+        }
+        if ($summary === '') {
+            $summary = trim($item['snippet'] ?? '') ?: $item['title'];
+        }
+        if (mb_strlen($summary) > 420) {
+            $summary = mb_substr($summary, 0, 417) . '...';
+        }
+
+        $resolvedUrl = !empty($art['resolved_url']) ? $art['resolved_url'] : ($item['url'] ?? '');
+
+        $enrichedItems[] = [
+            'title'           => $art['title'] ?: $item['title'],
+            'source'          => $art['source_name'] ?: ($item['source'] ?: 'Prensa Digital'),
+            'pub_date'        => $item['pub_date'] ?? date('d/m/Y H:i'),
+            'url'             => $resolvedUrl,
+            'original_url'    => $item['url'] ?? $resolvedUrl,
+            'image_url'       => $imageUrl,
+            'summary'         => $summary,
+            'topic_badge'     => $item['matched_query'] ?? '📰 Moratalla',
+            'process_status'  => $item['process_status'] ?? 'new',
+            'matched_news_id' => $item['matched_news_id'] ?? null,
+            'matched_title'   => $item['matched_title'] ?? null
+        ];
+    }
+
+    // Si hay clave Gemini configurada, mejorar los resúmenes en una sola llamada rápida por lote
+    $apiKey = getGeminiApiKey($pdo);
+    if (!empty($apiKey) && !empty($enrichedItems)) {
+        $batchInput = [];
+        foreach ($enrichedItems as $i => $ei) {
+            $batchInput[] = [
+                'index'   => $i,
+                'title'   => $ei['title'],
+                'source'  => $ei['source'],
+                'content' => $ei['summary']
+            ];
+        }
+        $batchPrompt = "Eres un asistente periodístico de Moratalla (Murcia). Para cada una de las siguientes noticias en JSON, redacta un resumen claro, atractivo y directo en español de 2 a 3 frases (máximo 55 palabras por noticia) ceñido estrictamente a los hechos de esa noticia. Devuelve EXCLUSIVAMENTE un array JSON de objetos con el formato [{\"index\": 0, \"summary\": \"...\"}].\n\nNoticias:\n" . json_encode($batchInput, JSON_UNESCAPED_UNICODE);
+
+        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . urlencode($apiKey);
+        $payload = json_encode([
+            'contents' => [['parts' => [['text' => $batchPrompt]]]],
+            'generationConfig' => [
+                'temperature' => 0.3,
+                'maxOutputTokens' => 1500,
+                'responseMimeType' => 'application/json'
+            ]
+        ]);
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT        => 20,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        $resp = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 200 && $httpCode < 300 && !empty($resp)) {
+            $dec = @json_decode($resp, true);
+            $txt = $dec['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            if (!empty($txt)) {
+                $txt = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($txt));
+                $arr = @json_decode($txt, true);
+                if (is_array($arr)) {
+                    foreach ($arr as $row) {
+                        $idx = isset($row['index']) ? (int)$row['index'] : -1;
+                        if ($idx >= 0 && isset($enrichedItems[$idx]) && !empty($row['summary'])) {
+                            $enrichedItems[$idx]['summary'] = trim($row['summary']);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Registrar todas las noticias nuevas enriquecidas en `ai_processed_news` con estado 'available'
+    // junto con su resumen e imagen extraída, para que al entrar al panel Admin ya estén incorporadas en el proceso
+    foreach ($enrichedItems as $ei) {
+        if (($ei['process_status'] ?? 'new') === 'new') {
+            markNewsAsProcessed(
+                $pdo,
+                $ei['url'] ?: $ei['original_url'],
+                $ei['title'],
+                $ei['source'],
+                'available',
+                null,
+                $ei['summary'],
+                $ei['image_url']
+            );
+        }
+    }
+
+    return [
+        'enriched'  => $enrichedItems,
+        'published' => array_slice($publishedList, 0, 10),
+        'discarded' => array_slice($discardedList, 0, 10),
+        'counts'    => [
+            'new'       => count($newAvailable),
+            'published' => count($publishedList),
+            'discarded' => count($discardedList)
+        ]
+    ];
+}
+
+/**
+ * Envía el boletín diario con resumen e imágenes al correo electrónico configurado en administración
+ */
+function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorDetail = null) {
+    $cfg = getMailConfig($pdo);
+    $digestCfg = getAutoNewsDigestConfig($pdo);
+
+    $recipientEmail = $digestCfg['recipient'] ?: $cfg['admin_email'];
+    if (empty($recipientEmail)) {
+        $errorDetail = "No hay correo electrónico de administrador configurado.";
+        return false;
+    }
+
+    $digestData = collectAndSummarizeMoratallaDigestNews($pdo, 8);
+    $items = $digestData['enriched'] ?? [];
+    $publishedItems = $digestData['published'] ?? [];
+    $discardedItems = $digestData['discarded'] ?? [];
+    $counts = $digestData['counts'] ?? ['new' => count($items), 'published' => count($publishedItems), 'discarded' => count($discardedItems)];
+
+    $dateStr = date('d/m/Y H:i');
+    $totalItems = count($items);
+
+    $siteBaseUrl = 'https://www.moratalla-murcia.com/moratalla';
+    if (!empty($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $siteBaseUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . rtrim(BASE_URL, '/');
+    }
+    $adminPanelUrl = $siteBaseUrl . '/admin/news.php?action=add&open_ai=1';
+
+    $subject = "📰 Resumen Diario de Noticias de Moratalla y Banda de Música ({$totalItems} nuevas) - " . date('d/m/Y');
+
+    // Construir versión texto plano
+    $plainBody  = "RESUMEN AUTOMÁTICO DE NOTICIAS - MORATALLA Y BANDA DE MÚSICA\r\n";
+    $plainBody .= "Fecha y hora: {$dateStr} ({$slotLabel})\r\n";
+    $plainBody .= "Estado actual: {$counts['new']} Nuevas Disponibles | {$counts['published']} Ya Publicadas | {$counts['discarded']} Descartadas\r\n";
+    $plainBody .= "=====================================================================\r\n\r\n";
+
+    if (empty($items)) {
+        $plainBody .= "En este horario no se han detectado noticias nuevas pendientes en la red sobre Moratalla o la Banda de Música de Moratalla.\r\n\r\n";
+    } else {
+        foreach ($items as $i => $it) {
+            $num = $i + 1;
+            $plainBody .= "{$num}. [{$it['topic_badge']}] {$it['title']}\r\n";
+            $plainBody .= "   Fuente: {$it['source']} | Fecha: {$it['pub_date']}\r\n";
+            $plainBody .= "   Resumen: {$it['summary']}\r\n";
+            $plainBody .= "   Enlace original: {$it['url']}\r\n";
+            $plainBody .= "   Redactar con IA: {$adminPanelUrl}&prefill_url=" . urlencode($it['url']) . "&prefill_title=" . urlencode($it['title']) . "\r\n\r\n";
+        }
+    }
+
+    if (!empty($publishedItems)) {
+        $plainBody .= "YA PUBLICADAS EN LA WEB (Detectadas y filtradas para evitar duplicados):\r\n";
+        foreach (array_slice($publishedItems, 0, 5) as $pubIt) {
+            $plainBody .= " - [PUBLICADA] " . ($pubIt['title'] ?? '') . " (" . ($pubIt['source'] ?? '') . ")\r\n";
+        }
+        $plainBody .= "\r\n";
+    }
+
+    if (!empty($discardedItems)) {
+        $plainBody .= "DESCARTADAS ANTERIORMENTE (Omitidas del bloque principal, recuperables en el panel):\r\n";
+        foreach (array_slice($discardedItems, 0, 5) as $discIt) {
+            $plainBody .= " - [DESCARTADA] " . ($discIt['title'] ?? '') . " (" . ($discIt['source'] ?? '') . ")\r\n";
+        }
+        $plainBody .= "\r\n";
+    }
+
+    $plainBody .= "---------------------------------------------------------------------\r\n";
+    $plainBody .= "Gestionar, publicar o descartar noticias en el Panel de Administración:\r\n{$adminPanelUrl}\r\n";
+
+    // Barra de estadísticas sincronizada con el proceso de noticias del panel
+    $statsHeaderHtml = "
+        <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#334155;'>
+            <div style='font-weight:bold; color:#1e293b; margin-bottom:6px;'>📊 Estado sincronizado con el Gestor de Noticias IA:</div>
+            <span style='display:inline-block; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 10px; border-radius:14px; font-weight:bold; margin-right:6px; margin-bottom:4px;'>🟢 {$counts['new']} Nuevas disponibles</span>
+            <span style='display:inline-block; background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; padding:4px 10px; border-radius:14px; font-weight:bold; margin-right:6px; margin-bottom:4px;'>🔵 {$counts['published']} Ya publicadas en web</span>
+            <span style='display:inline-block; background:#e2e8f0; color:#475569; border:1px solid #cbd5e1; padding:4px 10px; border-radius:14px; font-weight:bold; margin-bottom:4px;'>⚪ {$counts['discarded']} Descartadas</span>
+        </div>";
+
+    // Construir versión HTML con imágenes y tarjetas
+    $cardsHtml = $statsHeaderHtml;
+    if (empty($items)) {
+        $cardsHtml .= "
+            <div style='background:#f8faf9; border:1px dashed #cbd5e1; border-radius:12px; padding:28px; text-align:center; color:#475569;'>
+                <p style='font-size:16px; margin:0 0 8px 0; font-weight:bold; color:#1b4332;'>Sin novedades pendientes en este turno</p>
+                <p style='font-size:14px; margin:0;'>Se ha realizado la búsqueda automática de <strong>Moratalla</strong> y <strong>Banda de Música de Moratalla</strong>, pero no han aparecido titulares nuevos distintos de los ya publicados o descartados.</p>
+            </div>";
+    } else {
+        foreach ($items as $it) {
+            $safeTitle = htmlspecialchars($it['title'], ENT_QUOTES, 'UTF-8');
+            $safeSource = htmlspecialchars($it['source'], ENT_QUOTES, 'UTF-8');
+            $safeDate = htmlspecialchars($it['pub_date'], ENT_QUOTES, 'UTF-8');
+            $safeSummary = nl2br(htmlspecialchars($it['summary'], ENT_QUOTES, 'UTF-8'));
+            $safeUrl = htmlspecialchars($it['url'], ENT_QUOTES, 'UTF-8');
+            $safeImg = htmlspecialchars($it['image_url'], ENT_QUOTES, 'UTF-8');
+            $safeTopic = htmlspecialchars($it['topic_badge'], ENT_QUOTES, 'UTF-8');
+
+            $directDraftUrl = $adminPanelUrl
+                . '&prefill_url=' . urlencode($it['url'])
+                . '&prefill_title=' . urlencode($it['title'])
+                . '&prefill_source=' . urlencode($it['source'])
+                . '&prefill_img=' . urlencode($it['image_url']);
+            $safeDirectDraftUrl = htmlspecialchars($directDraftUrl, ENT_QUOTES, 'UTF-8');
+
+            $directDiscardUrl = $adminPanelUrl
+                . '&quick_action=discard'
+                . '&prefill_url=' . urlencode($it['url'])
+                . '&prefill_title=' . urlencode($it['title'])
+                . '&prefill_source=' . urlencode($it['source']);
+            $safeDirectDiscardUrl = htmlspecialchars($directDiscardUrl, ENT_QUOTES, 'UTF-8');
+
+            $statusPill = ($it['process_status'] === 'published')
+                ? "<span style='display:inline-block; background:#d1fae5; color:#065f46; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>YA PUBLICADA EN WEB</span>"
+                : "<span style='display:inline-block; background:#ede9fe; color:#5b21b6; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>NUEVA DISPONIBLE</span>";
+
+            $imgBlock = '';
+            if (!empty($safeImg)) {
+                $imgBlock = "
+                    <div style='width:100%; max-height:240px; overflow:hidden; background:#e2e8f0;'>
+                        <a href='{$safeUrl}' target='_blank' style='text-decoration:none; display:block;'>
+                            <img src='{$safeImg}' alt='{$safeTitle}' style='width:100%; height:210px; object-fit:cover; display:block; border:0;'>
+                        </a>
+                    </div>";
+            }
+
+            $cardsHtml .= "
+            <div style='background:#ffffff; border:1px solid #d8e2dc; border-radius:12px; overflow:hidden; margin-bottom:22px; box-shadow:0 3px 10px rgba(0,0,0,0.05);'>
+                {$imgBlock}
+                <div style='padding:18px 20px;'>
+                    <div style='margin-bottom:8px;'>
+                        <span style='display:inline-block; background:#1b4332; color:#ffffff; font-size:11px; font-weight:bold; padding:3px 10px; border-radius:12px; margin-right:6px;'>{$safeTopic}</span>
+                        {$statusPill}
+                        <span style='font-size:12px; color:#64748b; margin-left:6px;'><strong>{$safeSource}</strong> &bull; {$safeDate}</span>
+                    </div>
+                    <h3 style='margin:0 0 10px 0; font-size:18px; line-height:1.35; color:#1b4332;'>
+                        <a href='{$safeUrl}' target='_blank' style='color:#1b4332; text-decoration:none;'>{$safeTitle}</a>
+                    </h3>
+                    <p style='margin:0 0 16px 0; font-size:14px; line-height:1.6; color:#334155;'>
+                        {$safeSummary}
+                    </p>
+                    <div>
+                        <a href='{$safeDirectDraftUrl}' target='_blank' style='display:inline-block; background:#6d28d9; color:#ffffff; text-decoration:none; font-size:13px; font-weight:bold; padding:8px 14px; border-radius:6px; margin-right:6px; margin-bottom:6px;'>✨ Redactar y Publicar en Admin</a>
+                        <a href='{$safeUrl}' target='_blank' style='display:inline-block; background:#2d6a4f; color:#ffffff; text-decoration:none; font-size:13px; font-weight:bold; padding:8px 14px; border-radius:6px; margin-right:6px; margin-bottom:6px;'>Leer original &rarr;</a>
+                        <a href='{$safeDirectDiscardUrl}' target='_blank' style='display:inline-block; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; text-decoration:none; font-size:12px; font-weight:bold; padding:7px 12px; border-radius:6px; margin-bottom:6px;'>🚫 Descartar</a>
+                    </div>
+                </div>
+            </div>";
+        }
+    }
+
+    // Bloque resumen de noticias ya publicadas o descartadas para facilitar el control sin duplicar
+    if (!empty($publishedItems) || !empty($discardedItems)) {
+        $cardsHtml .= "<div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px 18px; margin-top:10px;'>";
+        $cardsHtml .= "<h4 style='margin:0 0 10px 0; font-size:14px; color:#1e293b;'>🗂️ Control de Noticias Ya Publicadas o Descartadas (Incorporadas en el Buscador IA)</h4>";
+
+        if (!empty($publishedItems)) {
+            $cardsHtml .= "<div style='margin-bottom:10px;'><div style='font-size:12px; font-weight:bold; color:#065f46; margin-bottom:4px;'>🔵 Ya publicadas en la web (filtradas automáticamente):</div><ul style='margin:0; padding-left:18px; font-size:12px; color:#334155;'>";
+            foreach (array_slice($publishedItems, 0, 5) as $pubIt) {
+                $pTitle = htmlspecialchars($pubIt['title'] ?? '', ENT_QUOTES, 'UTF-8');
+                $pSource = htmlspecialchars($pubIt['source'] ?? '', ENT_QUOTES, 'UTF-8');
+                $editLink = !empty($pubIt['matched_news_id'])
+                    ? " — <a href='{$siteBaseUrl}/admin/news.php?action=edit&id=" . (int)$pubIt['matched_news_id'] . "' target='_blank' style='color:#059669; font-weight:bold;'>Editar en web</a>"
+                    : "";
+                $cardsHtml .= "<li style='margin-bottom:3px;'>{$pTitle} <span style='color:#64748b;'>({$pSource})</span>{$editLink}</li>";
+            }
+            $cardsHtml .= "</ul></div>";
+        }
+
+        if (!empty($discardedItems)) {
+            $cardsHtml .= "<div><div style='font-size:12px; font-weight:bold; color:#475569; margin-bottom:4px;'>⚪ Descartadas anteriormente (puedes recuperarlas desde la pestaña «Descartadas» del panel):</div><ul style='margin:0; padding-left:18px; font-size:12px; color:#64748b;'>";
+            foreach (array_slice($discardedItems, 0, 5) as $discIt) {
+                $dTitle = htmlspecialchars($discIt['title'] ?? '', ENT_QUOTES, 'UTF-8');
+                $dSource = htmlspecialchars($discIt['source'] ?? '', ENT_QUOTES, 'UTF-8');
+                $cardsHtml .= "<li style='margin-bottom:3px;'>{$dTitle} <span>({$dSource})</span></li>";
+            }
+            $cardsHtml .= "</ul></div>";
+        }
+
+        $cardsHtml .= "</div>";
+    }
+
+    $safeAdminUrl = htmlspecialchars($adminPanelUrl, ENT_QUOTES, 'UTF-8');
+    $safeSlot = htmlspecialchars($slotLabel, ENT_QUOTES, 'UTF-8');
+
+    $htmlBody = "<!DOCTYPE html><html lang='es'><body style='margin:0; padding:20px; font-family: Arial, Helvetica, sans-serif; background:#f1f5f3; color:#1e293b;'>
+        <div style='max-width:660px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:2px solid #2d6a4f; box-shadow:0 8px 24px rgba(0,0,0,0.08);'>
+            <div style='background:linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%); color:#ffffff; padding:22px 26px;'>
+                <div style='font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#d4af37; font-weight:bold; margin-bottom:4px;'>Boletín Automático Desatendido &bull; {$safeSlot}</div>
+                <h2 style='margin:0; font-size:22px; line-height:1.3;'>Noticias de Moratalla y Banda de Música</h2>
+                <p style='margin:6px 0 0 0; font-size:13px; opacity:0.9;'>Resumen diario generado el {$dateStr} para <strong>moratalla-murcia.com</strong></p>
+            </div>
+            <div style='padding:24px;'>
+                {$cardsHtml}
+                <div style='text-align:center; margin-top:26px; padding-top:20px; border-top:1px solid #e2e8f0;'>
+                    <a href='{$safeAdminUrl}' target='_blank' style='display:inline-block; background:#6d28d9; color:#ffffff; text-decoration:none; font-size:14px; font-weight:bold; padding:12px 24px; border-radius:8px;'>Ir al Panel de Noticias / Eventos (Admin)</a>
+                    <p style='font-size:12px; color:#64748b; margin-top:14px; margin-bottom:0;'>
+                        Puedes modificar o desactivar los 2 horarios diarios de este envío automático (poniendo 00:00) desde <strong>Configuración General</strong> en el panel de administración.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </body></html>";
+
+    $attempts = [
+        ['port' => $cfg['smtp_port'], 'enc' => $cfg['smtp_encryption']],
+    ];
+    if ((int)$cfg['smtp_port'] === 587) {
+        $attempts[] = ['port' => 465, 'enc' => 'ssl'];
+    } else {
+        $attempts[] = ['port' => 587, 'enc' => 'tls'];
+    }
+
+    $errors = [];
+    foreach ($attempts as $attempt) {
+        try {
+            smtpSendRaw(
+                $cfg['smtp_host'],
+                $attempt['port'],
+                $attempt['enc'],
+                $cfg['smtp_user'],
+                $cfg['smtp_pass'],
+                $cfg['smtp_user'],
+                "Buscador IA Moratalla-Murcia",
+                $recipientEmail,
+                $cfg['smtp_user'],
+                "Moratalla-Murcia Admin",
+                $subject,
+                $plainBody,
+                $htmlBody
+            );
+            return true;
+        } catch (Exception $e) {
+            $errors[] = "[{$cfg['smtp_host']}:{$attempt['port']}/{$attempt['enc']}] " . $e->getMessage();
+        }
+    }
+
+    $errorDetail = implode(" | ", $errors);
+    @file_put_contents(dirname(__DIR__, 2) . '/error_mail.log', date('Y-m-d H:i:s') . " [AUTO-NEWS] - " . $errorDetail . PHP_EOL, FILE_APPEND);
+    return false;
+}
+
+/**
+ * Evalúa si alguno de los 2 horarios configurados (distintos de 00:00) ya ha llegado en el día de hoy
+ * y aún no se ha ejecutado hoy. Si corresponde, ejecuta la búsqueda y envía el correo.
+ */
+function checkAndRunScheduledNewsDigest($pdo, $forceRun = false) {
+    date_default_timezone_set('Europe/Madrid');
+    $cfg = getAutoNewsDigestConfig($pdo);
+    $today = date('Y-m-d');
+    $nowHm = date('H:i');
+
+    $upsertSetting = function ($key, $val) use ($pdo) {
+        $stmt = $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$key, $val, $val]);
+    };
+
+    if ($forceRun) {
+        $err = null;
+        $ok = sendMoratallaNewsDigestEmail($pdo, "Envío Manual / Prueba ({$nowHm})", $err);
+        $statusText = $ok
+            ? ("Último envío manual con éxito el " . date('d/m/Y H:i') . " a " . $cfg['recipient'])
+            : ("Error en envío (" . date('d/m/Y H:i') . "): " . ($err ?: 'Fallo SMTP'));
+        $upsertSetting('auto_news_last_status', $statusText);
+        return [
+            'executed' => true,
+            'success'  => $ok,
+            'message'  => $statusText
+        ];
+    }
+
+    $slotsToCheck = [
+        1 => ['time' => $cfg['time_1'], 'last_run' => $cfg['last_run_1'], 'key_run' => 'auto_news_last_run_1'],
+        2 => ['time' => $cfg['time_2'], 'last_run' => $cfg['last_run_2'], 'key_run' => 'auto_news_last_run_2']
+    ];
+
+    $results = [];
+    foreach ($slotsToCheck as $slotNum => $slot) {
+        $schedTime = trim($slot['time']);
+        if ($schedTime === '' || $schedTime === '00:00') {
+            continue;
+        }
+        // Si ya se ejecutó hoy en este horario, omitir
+        if ($slot['last_run'] === $today) {
+            continue;
+        }
+        // Si la hora actual en España ya alcanzó o superó la hora programada
+        if ($nowHm >= $schedTime) {
+            // Marcar inmediatamente como ejecutado hoy para evitar envíos duplicados concurrentes
+            $upsertSetting($slot['key_run'], $today);
+
+            $err = null;
+            $ok = sendMoratallaNewsDigestEmail($pdo, "Horario {$slotNum} ({$schedTime})", $err);
+            $statusText = $ok
+                ? ("Último envío automático (Horario {$slotNum} - {$schedTime}) completado el " . date('d/m/Y H:i') . " a " . $cfg['recipient'])
+                : ("Error en Horario {$slotNum} ({$schedTime}) el " . date('d/m/Y H:i') . ": " . ($err ?: 'Fallo SMTP'));
+            $upsertSetting('auto_news_last_status', $statusText);
+
+            $results[] = [
+                'slot'    => $slotNum,
+                'time'    => $schedTime,
+                'success' => $ok,
+                'message' => $statusText
+            ];
+        }
+    }
+
+    return [
+        'executed' => !empty($results),
+        'runs'     => $results,
+        'now_hm'   => $nowHm,
+        'config'   => $cfg
+    ];
 }
