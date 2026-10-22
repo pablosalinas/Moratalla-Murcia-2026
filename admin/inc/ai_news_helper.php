@@ -61,7 +61,65 @@ function ensureAiNewsTrackingSchema($pdo) {
 }
 
 /**
+ * Convierte cualquier fecha válida a formato español estrictamente Día/Mes/Año (DD/MM/YYYY o DD/MM/YYYY HH:MM).
+ */
+function formatDateToSpanish($dateStr, $includeTime = false) {
+    $dateStr = trim((string)$dateStr);
+    if ($dateStr === '' || $dateStr === 'Fecha no localizada') return $dateStr;
+
+    // Caso 1: Viene en formato ISO YYYY-MM-DD o YYYY-MM-DD HH:MM
+    if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/', $dateStr, $m)) {
+        $out = str_pad($m[3], 2, '0', STR_PAD_LEFT) . '/' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '/' . $m[1];
+        if ($includeTime && isset($m[4]) && $m[4] !== '00') {
+            $out .= ' ' . str_pad($m[4], 2, '0', STR_PAD_LEFT) . ':' . str_pad($m[5] ?? '00', 2, '0', STR_PAD_LEFT);
+        }
+        return $out;
+    }
+
+    // Caso 2: Ya viene en formato español DD/MM/YYYY o DD-MM-YYYY
+    if (preg_match('/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/', $dateStr, $m)) {
+        $out = str_pad($m[1], 2, '0', STR_PAD_LEFT) . '/' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '/' . $m[3];
+        if ($includeTime && isset($m[4]) && $m[4] !== '00') {
+            $out .= ' ' . str_pad($m[4], 2, '0', STR_PAD_LEFT) . ':' . str_pad($m[5] ?? '00', 2, '0', STR_PAD_LEFT);
+        }
+        return $out;
+    }
+
+    $ts = parseSpanishDateStringToTimestamp($dateStr);
+    if ($ts) {
+        $hasTime = ($includeTime && date('H:i', $ts) !== '00:00' && date('H:i', $ts) !== '12:00');
+        return $hasTime ? date('d/m/Y H:i', $ts) : date('d/m/Y', $ts);
+    }
+
+    return $dateStr;
+}
+
+/**
+ * Normaliza cualquier fecha a formato estándar YYYY-MM-DD (para consultas SQL y comparaciones).
+ * Respeta siempre que si viene con barras o guiones, el primer número es el DÍA y el segundo el MES (nomenclatura española).
+ */
+function normalizeDateToYmd($str) {
+    $str = trim((string)$str);
+    if ($str === '') return '';
+
+    // Si viene en formato español DD/MM/YYYY o DD-MM-YYYY o DD.MM.YYYY
+    if (preg_match('/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/', $str, $m)) {
+        return $m[3] . '-' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    }
+
+    // Si viene en formato ISO YYYY-MM-DD o YYYY/MM/DD
+    if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/', $str, $m)) {
+        return $m[1] . '-' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '-' . str_pad($m[3], 2, '0', STR_PAD_LEFT);
+    }
+
+    $ts = parseSpanishDateStringToTimestamp($str);
+    return $ts ? date('Y-m-d', $ts) : '';
+}
+
+/**
  * Parsea cadenas de fecha en español o estándares (ISO, RFC) a timestamp UNIX.
+ * Respeta ESTRICTAMENTE la nomenclatura española (Día/Mes/Año) y NUNCA interpreta
+ * barras o guiones como Mes/Día/Año (formato anglosajón).
  * Devuelve null si no es una fecha válida o reconocible (NUNCA devuelve la fecha actual por defecto).
  */
 function parseSpanishDateStringToTimestamp($str) {
@@ -70,7 +128,6 @@ function parseSpanishDateStringToTimestamp($str) {
 
     // Descartar frases o etiquetas no temporales
     if (preg_match('/^(reciente|hoy|ayer|hace|desconocid|sin fecha|fecha no)/i', $str)) {
-        // Solo interpretar 'ayer' o 'hace X' si se requiere expresamente; para evitar fechas falsas, descartar o evaluar relativo
         if (preg_match('/hace\s+(\d+)\s+hora/iu', $str, $hm)) {
             return time() - ((int)$hm[1] * 3600);
         }
@@ -83,46 +140,57 @@ function parseSpanishDateStringToTimestamp($str) {
         return null;
     }
 
-    // Intento 1: strtotime directo
-    $ts = @strtotime($str);
-    if ($ts !== false && $ts > 946684800 && $ts < (time() + 86400 * 365)) {
-        return $ts;
-    }
-
-    // Meses en español
+    // 1. Formato español en texto: '12 de octubre de 2026' o '12 de octubre 2026, 17:30'
     $months = [
-        'enero' => '01', 'febrero' => '02', 'marzo' => '03', 'abril' => '04',
-        'mayo' => '05', 'junio' => '06', 'julio' => '07', 'agosto' => '08',
-        'septiembre' => '09', 'setiembre' => '09', 'octubre' => '10',
-        'noviembre' => '11', 'diciembre' => '12'
+        'enero' => 1, 'febrero' => 2, 'marzo' => 3, 'abril' => 4,
+        'mayo' => 5, 'junio' => 6, 'julio' => 7, 'agosto' => 8,
+        'septiembre' => 9, 'setiembre' => 9, 'octubre' => 10,
+        'noviembre' => 11, 'diciembre' => 12
     ];
-
-    // Formato '12 de octubre de 2026' o '12 de octubre 2026, 17:30'
     if (preg_match('/(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+(?:de\s+)?(\d{4})(?:\s*,?\s*(\d{1,2}):(\d{2}))?/iu', $str, $m)) {
-        $day = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+        $day = (int)$m[1];
         $monthName = mb_strtolower($m[2], 'UTF-8');
-        $year = $m[3];
-        $hour = isset($m[4]) ? str_pad($m[4], 2, '0', STR_PAD_LEFT) : '12';
-        $min = isset($m[5]) ? str_pad($m[5], 2, '0', STR_PAD_LEFT) : '00';
-
-        if (isset($months[$monthName])) {
-            $month = $months[$monthName];
-            $iso = "$year-$month-$day $hour:$min:00";
-            $ts = @strtotime($iso);
-            if ($ts !== false) return $ts;
+        $year = (int)$m[3];
+        $hour = isset($m[4]) ? (int)$m[4] : 12;
+        $min = isset($m[5]) ? (int)$m[5] : 0;
+        if (isset($months[$monthName]) && checkdate($months[$monthName], $day, $year)) {
+            return mktime($hour, $min, 0, $months[$monthName], $day, $year);
         }
     }
 
-    // Formato DD/MM/YYYY o DD-MM-YYYY
-    if (preg_match('/(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/', $str, $m)) {
-        $day = str_pad($m[1], 2, '0', STR_PAD_LEFT);
-        $month = str_pad($m[2], 2, '0', STR_PAD_LEFT);
-        $year = $m[3];
-        $hour = isset($m[4]) ? str_pad($m[4], 2, '0', STR_PAD_LEFT) : '12';
-        $min = isset($m[5]) ? str_pad($m[5], 2, '0', STR_PAD_LEFT) : '00';
-        $iso = "$year-$month-$day $hour:$min:00";
-        $ts = @strtotime($iso);
-        if ($ts !== false) return $ts;
+    // 2. Formato ESPAÑOL numérico obligatorio Día/Mes/Año: DD/MM/YYYY o DD-MM-YYYY o DD.MM.YYYY
+    // IMPORTANTE: En España, el primer número es el DÍA y el segundo es el MES. Nunca MM/DD/YYYY.
+    if (preg_match('/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})(?:\s*,?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/', $str, $m)) {
+        $day = (int)$m[1];
+        $month = (int)$m[2];
+        $year = (int)$m[3];
+        $hour = isset($m[4]) ? (int)$m[4] : 12;
+        $min = isset($m[5]) ? (int)$m[5] : 0;
+        $sec = isset($m[6]) ? (int)$m[6] : 0;
+        if (checkdate($month, $day, $year)) {
+            return mktime($hour, $min, $sec, $month, $day, $year);
+        }
+    }
+
+    // 3. Formato ISO estándar: Año-Mes-Día (YYYY-MM-DD o YYYY/MM/DD con hora opcional)
+    if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/', $str, $m)) {
+        $year = (int)$m[1];
+        $month = (int)$m[2];
+        $day = (int)$m[3];
+        $hour = isset($m[4]) ? (int)$m[4] : 12;
+        $min = isset($m[5]) ? (int)$m[5] : 0;
+        $sec = isset($m[6]) ? (int)$m[6] : 0;
+        if (checkdate($month, $day, $year)) {
+            return mktime($hour, $min, $sec, $month, $day, $year);
+        }
+    }
+
+    // 4. Fechas de feeds RSS / RFC (ej: 'Wed, 21 Oct 2026 19:04:00 GMT' o '21 Oct 2026')
+    // Reemplazamos barras por guiones para que strtotime nunca intente interpretar m/d/y inglés si quedaran números
+    $safeStr = str_replace('/', '-', $str);
+    $ts = @strtotime($safeStr);
+    if ($ts !== false && $ts > 946684800 && $ts < (time() + 86400 * 365)) {
+        return $ts;
     }
 
     return null;
@@ -304,11 +372,11 @@ function detectArticlePublicationDate($html, $url, $fallbackRssPubDate = '') {
  * - Si $allowUndated es false, se descarta (para búsquedas estrictas automáticas y filtrado por rango).
  */
 function isNewsItemInDateRange($item, $dateFrom = '', $dateTo = '', $allowUndated = false) {
-    $dateFrom = trim((string)($dateFrom ?? ''));
-    $dateTo   = trim((string)($dateTo ?? ''));
+    $dateFromYmd = normalizeDateToYmd($dateFrom);
+    $dateToYmd   = normalizeDateToYmd($dateTo);
 
     // Sin delimitación temporal activa
-    if ($dateFrom === '' && $dateTo === '') {
+    if ($dateFromYmd === '' && $dateToYmd === '') {
         return true;
     }
 
@@ -322,31 +390,26 @@ function isNewsItemInDateRange($item, $dateFrom = '', $dateTo = '', $allowUndate
         return (bool)$allowUndated;
     }
 
-    // Extraer año-mes-día YYYY-MM-DD
+    // Extraer año-mes-día YYYY-MM-DD respetando siempre día/mes/año
     $itemYmd = '';
     if (!empty($dateIso)) {
-        if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $dateIso, $m)) {
-            $itemYmd = $m[1];
-        }
+        $itemYmd = normalizeDateToYmd($dateIso);
     }
     if ($itemYmd === '' && $timestamp > 0) {
         $itemYmd = date('Y-m-d', $timestamp);
     }
     if ($itemYmd === '' && !empty($pubDate) && $pubDate !== 'Fecha no localizada') {
-        $parsed = detectArticlePublicationDate('', '', $pubDate);
-        if ($parsed['found'] && !empty($parsed['date_iso'])) {
-            $itemYmd = substr($parsed['date_iso'], 0, 10);
-        }
+        $itemYmd = normalizeDateToYmd($pubDate);
     }
 
     if ($itemYmd === '') {
         return (bool)$allowUndated;
     }
 
-    if ($dateFrom !== '' && $itemYmd < $dateFrom) {
+    if ($dateFromYmd !== '' && $itemYmd < $dateFromYmd) {
         return false;
     }
-    if ($dateTo !== '' && $itemYmd > $dateTo) {
+    if ($dateToYmd !== '' && $itemYmd > $dateToYmd) {
         return false;
     }
 
@@ -1664,7 +1727,7 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin bloques markdown ```json) co
       "quote": "Cita textual breve solo si aparece literalmente en la noticia original, o cadena vacía"
     }
   ],
-  "event_date": "Fecha real de la noticia o acontecimiento en formato YYYY-MM-DD, o null si no se localiza ninguna fecha",
+  "event_date": "Fecha real de la noticia o acontecimiento en formato español día/mes/año DD/MM/YYYY (ej: 21/10/2026), o null si no se localiza ninguna fecha",
   "date_found": true,
   "date_status_message": "Explicación breve de la fecha localizada (ej: 'Fecha de la noticia localizada: DD/MM/YYYY' o 'Fecha de la noticia no localizada en el texto original')",
   "category_id": "ID numérico de la categoría más adecuada de la lista proporcionada, o cadena vacía",
@@ -1683,23 +1746,28 @@ PROMPT;
             $parsed = detectArticlePublicationDate('', '', $evDate);
             if ($parsed['found']) {
                 $draft['event_date'] = $parsed['date_iso'];
+                $draft['event_date_formatted'] = $parsed['date_fmt'];
                 $draft['date_found'] = true;
-                $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . date('d/m/Y', strtotime($parsed['date_iso']));
+                $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . $parsed['date_fmt'];
             } elseif (!empty($articleInfo['date_found'])) {
                 $draft['event_date'] = $articleInfo['published_date_iso'];
+                $draft['event_date_formatted'] = formatDateToSpanish($articleInfo['published_date']);
                 $draft['date_found'] = true;
-                $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . ($articleInfo['published_date'] ?: date('d/m/Y', strtotime($articleInfo['published_date_iso'])));
+                $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . $draft['event_date_formatted'];
             } else {
                 $draft['event_date'] = '';
+                $draft['event_date_formatted'] = '';
                 $draft['date_found'] = false;
                 $draft['date_status_message'] = 'Fecha no localizada en la fuente de origen';
             }
         } elseif (!empty($articleInfo['date_found'])) {
             $draft['event_date'] = $articleInfo['published_date_iso'];
+            $draft['event_date_formatted'] = formatDateToSpanish($articleInfo['published_date']);
             $draft['date_found'] = true;
-            $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . ($articleInfo['published_date'] ?: date('d/m/Y', strtotime($articleInfo['published_date_iso'])));
+            $draft['date_status_message'] = 'Fecha de la noticia localizada: ' . $draft['event_date_formatted'];
         } else {
             $draft['event_date'] = '';
+            $draft['event_date_formatted'] = '';
             $draft['date_found'] = false;
             $draft['date_status_message'] = 'Fecha no localizada en la fuente de origen';
         }
@@ -2251,13 +2319,15 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
 
     $dateFrom = $digestData['date_from'] ?? ($digestCfg['date_from'] ?? '');
     $dateTo   = $digestData['date_to'] ?? ($digestCfg['date_to'] ?? '');
+    $dateFromFmt = formatDateToSpanish($dateFrom);
+    $dateToFmt   = formatDateToSpanish($dateTo);
     $dateRangeInfo = '';
     if ($dateFrom !== '' && $dateTo !== '') {
-        $dateRangeInfo = "Delimitación temporal: Desde {$dateFrom} hasta {$dateTo}";
+        $dateRangeInfo = "Delimitación temporal: Desde {$dateFromFmt} hasta {$dateToFmt}";
     } elseif ($dateFrom !== '') {
-        $dateRangeInfo = "Delimitación temporal: Desde {$dateFrom}";
+        $dateRangeInfo = "Delimitación temporal: Desde {$dateFromFmt}";
     } elseif ($dateTo !== '') {
-        $dateRangeInfo = "Delimitación temporal: Hasta {$dateTo}";
+        $dateRangeInfo = "Delimitación temporal: Hasta {$dateToFmt}";
     }
 
     $siteBaseUrl = 'https://www.moratalla-murcia.com/moratalla';
@@ -2284,7 +2354,7 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
         foreach ($items as $i => $it) {
             $num = $i + 1;
             $datePlain = !empty($it['date_found'])
-                ? $it['pub_date']
+                ? formatDateToSpanish($it['pub_date'], true)
                 : "[⚠️ Fecha no localizada en la fuente]";
             $draftPrefillParams = "&prefill_url=" . urlencode($it['url'])
                 . "&prefill_title=" . urlencode($it['title'])
@@ -2347,7 +2417,7 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
         foreach ($items as $it) {
             $safeTitle = htmlspecialchars($it['title'], ENT_QUOTES, 'UTF-8');
             $safeSource = htmlspecialchars($it['source'], ENT_QUOTES, 'UTF-8');
-            $safeDate = htmlspecialchars($it['pub_date'], ENT_QUOTES, 'UTF-8');
+            $safeDate = htmlspecialchars(formatDateToSpanish($it['pub_date'], true), ENT_QUOTES, 'UTF-8');
             $safeSummary = nl2br(htmlspecialchars($it['summary'], ENT_QUOTES, 'UTF-8'));
             $safeUrl = htmlspecialchars($it['url'], ENT_QUOTES, 'UTF-8');
             $safeImg = htmlspecialchars($it['image_url'], ENT_QUOTES, 'UTF-8');

@@ -20,8 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_1', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime1, $autoTime1]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_2', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime2, $autoTime2]);
 
-        $newsDateFrom = isset($_POST['news_search_date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_from'])) ? trim($_POST['news_search_date_from']) : '';
-        $newsDateTo = isset($_POST['news_search_date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_to'])) ? trim($_POST['news_search_date_to']) : '';
+        $newsDateFrom = isset($_POST['news_search_date_from']) ? (normalizeDateToYmd($_POST['news_search_date_from']) ?? '') : '';
+        $newsDateTo = isset($_POST['news_search_date_to']) ? (normalizeDateToYmd($_POST['news_search_date_to']) ?? '') : '';
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_from', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateFrom, $newsDateFrom]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_to', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateTo, $newsDateTo]);
 
@@ -88,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_1', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime1, $autoTime1]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('auto_news_time_2', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$autoTime2, $autoTime2]);
 
-        $newsDateFrom = isset($_POST['news_search_date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_from'])) ? trim($_POST['news_search_date_from']) : '';
-        $newsDateTo = isset($_POST['news_search_date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($_POST['news_search_date_to'])) ? trim($_POST['news_search_date_to']) : '';
+        $newsDateFrom = isset($_POST['news_search_date_from']) ? (normalizeDateToYmd($_POST['news_search_date_from']) ?? '') : '';
+        $newsDateTo = isset($_POST['news_search_date_to']) ? (normalizeDateToYmd($_POST['news_search_date_to']) ?? '') : '';
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_from', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateFrom, $newsDateFrom]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_to', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateTo, $newsDateTo]);
         
@@ -251,13 +251,13 @@ adminHeader("Configuración General");
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                     <div>
                         <label for="news_search_date_from" style="display: block; font-size: 0.82rem; font-weight: 700; color: #065f46; margin-bottom: 0.3rem;">
-                            <i class="fas fa-calendar-day"></i> Fecha Desde:
+                            <i class="fas fa-calendar-day"></i> Fecha Desde (Día/Mes/Año):
                         </label>
                         <input type="date" name="news_search_date_from" id="news_search_date_from" value="<?php echo htmlspecialchars($currentNewsDateFrom); ?>" style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #6ee7b7; border-radius: 6px; font-size: 0.95rem; font-weight: 600; color: #064e3b;">
                     </div>
                     <div>
                         <label for="news_search_date_to" style="display: block; font-size: 0.82rem; font-weight: 700; color: #065f46; margin-bottom: 0.3rem;">
-                            <i class="fas fa-calendar-check"></i> Fecha Hasta:
+                            <i class="fas fa-calendar-check"></i> Fecha Hasta (Día/Mes/Año):
                         </label>
                         <input type="date" name="news_search_date_to" id="news_search_date_to" value="<?php echo htmlspecialchars($currentNewsDateTo); ?>" style="width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #6ee7b7; border-radius: 6px; font-size: 0.95rem; font-weight: 600; color: #064e3b;">
                     </div>

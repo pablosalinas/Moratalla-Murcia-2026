@@ -155,12 +155,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (empty($event_date)) {
             $event_date = null;
+        } else {
+            $parsedTs = parseSpanishDateStringToTimestamp($event_date);
+            if ($parsedTs) {
+                $event_date = date('Y-m-d', $parsedTs);
+            }
         }
         if (empty($start_date)) {
             $start_date = null;
+        } else {
+            $parsedStartTs = parseSpanishDateStringToTimestamp($start_date);
+            if ($parsedStartTs) {
+                $start_date = (strlen(trim($start_date)) > 10) ? date('Y-m-d H:i:s', $parsedStartTs) : date('Y-m-d', $parsedStartTs);
+            }
         }
         if (empty($end_date)) {
             $end_date = null;
+        } else {
+            $parsedEndTs = parseSpanishDateStringToTimestamp($end_date);
+            if ($parsedEndTs) {
+                $end_date = (strlen(trim($end_date)) > 10) ? date('Y-m-d H:i:s', $parsedEndTs) : date('Y-m-d', $parsedEndTs);
+            }
         }
         if (empty($category_id)) {
             $category_id = null;
@@ -290,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Registrar la noticia en el control anti-redundancia (ai_processed_news) para no volver a ofrecerla como pendiente
             if (!empty($source_url) || !empty($ai_original_title)) {
-                $pubDateFormatted = !empty($event_date) ? date('d/m/Y', strtotime($event_date)) : null;
+                $pubDateFormatted = !empty($event_date) ? formatDateToSpanish($event_date) : null;
                 markNewsAsProcessed($pdo, $source_url ?: $title, $ai_original_title ?: $title, $ai_source_name, 'published', $news_id, null, null, $pubDateFormatted, $event_date);
             }
 
@@ -534,7 +549,7 @@ adminHeader("Noticias y Eventos");
                                 <?php endif; ?>
                             </td>
                             <td style="padding: 1rem; color: var(--text-light); font-size: 0.9rem;">
-                                <?php echo $row['event_date'] ? date('d/m/Y', strtotime($row['event_date'])) : '<span style="color: var(--gray-400); font-style: italic;">No es evento</span>'; ?>
+                                <?php echo $row['event_date'] ? formatDateToSpanish($row['event_date']) : '<span style="color: var(--gray-400); font-style: italic;">No es evento</span>'; ?>
                             </td>
                             <td style="padding: 1rem;">
                                 <?php if ($row['is_active_home']): ?>
@@ -648,7 +663,7 @@ adminHeader("Noticias y Eventos");
             
             <div style="margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div>
-                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Fecha de la Noticia / Evento</label>
+                    <label style="display:block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">Fecha de la Noticia / Evento (Día/Mes/Año)</label>
                     <input type="date" name="event_date" id="newsEventDateInput" value="<?php echo htmlspecialchars($news_data['event_date'] ?? ''); ?>" style="width:100%; padding:0.8rem; border:1px solid var(--gray-300); border-radius:8px; font-size: 1rem; background: white;">
                     <div id="aiDateDetectionNotice" style="margin-top: 6px;"></div>
                     <small style="color: #666; display: block; margin-top: 0.4rem;">Indica la fecha real en la que ocurrió o se publicó la noticia (la IA la detecta del artículo original; si no se localiza, debes indicarla aquí).</small>

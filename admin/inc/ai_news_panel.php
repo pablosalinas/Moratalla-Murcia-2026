@@ -258,10 +258,10 @@ $defaultDateTo = $dateSettings['news_search_date_to'] ?? '';
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
                     <!-- Rango Desde / Hasta delimitado -->
                     <div style="display: flex; align-items: center; gap: 5px; background: #f0fdf4; padding: 3px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">
-                        <span style="font-size: 0.78rem; font-weight: 700; color: #166534;" title="Delimitar período de búsqueda"><i class="far fa-calendar-alt"></i> Delimitar:</span>
-                        <input type="date" id="aiNewsDateFrom" value="<?php echo htmlspecialchars($defaultDateFrom); ?>" onchange="onDateRangeChange()" title="Fecha Desde" style="padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.78rem; background: #ffffff; color: #14532d; font-weight: 600;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: #166534;" title="Delimitar período de búsqueda (Día/Mes/Año)"><i class="far fa-calendar-alt"></i> Delimitar (Día/Mes/Año):</span>
+                        <input type="date" id="aiNewsDateFrom" value="<?php echo htmlspecialchars($defaultDateFrom); ?>" onchange="onDateRangeChange()" title="Fecha Desde (Día/Mes/Año)" style="padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.78rem; background: #ffffff; color: #14532d; font-weight: 600;">
                         <span style="font-size: 0.75rem; color: #166534; font-weight: 600;">hasta</span>
-                        <input type="date" id="aiNewsDateTo" value="<?php echo htmlspecialchars($defaultDateTo); ?>" onchange="onDateRangeChange()" title="Fecha Hasta" style="padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.78rem; background: #ffffff; color: #14532d; font-weight: 600;">
+                        <input type="date" id="aiNewsDateTo" value="<?php echo htmlspecialchars($defaultDateTo); ?>" onchange="onDateRangeChange()" title="Fecha Hasta (Día/Mes/Año)" style="padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px; font-size: 0.78rem; background: #ffffff; color: #14532d; font-weight: 600;">
                         <button type="button" onclick="clearDateRangeInputs()" class="btn btn-sm" style="padding: 2px 6px; font-size: 0.72rem; background: #ffffff; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer;" title="Limpiar rango de fechas (Sin límite)">
                             <i class="fas fa-times"></i>
                         </button>
@@ -413,6 +413,30 @@ function toggleAiAssistantBody() {
         body.style.display = 'none';
         btn.innerHTML = '<i class="fas fa-search"></i> <span>Abrir Buscador IA</span>';
     }
+}
+
+function formatSpanishDate(str) {
+    if (!str || str === 'Fecha no localizada') return str || '';
+    str = String(str).trim();
+    // Si viene como YYYY-MM-DD o YYYY-MM-DD HH:MM
+    const mIso = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (mIso) {
+        const d = String(mIso[3]).padStart(2, '0');
+        const mo = String(mIso[2]).padStart(2, '0');
+        const y = mIso[1];
+        const time = (mIso[4] && mIso[4] !== '00') ? ` ${String(mIso[4]).padStart(2, '0')}:${mIso[5]}` : '';
+        return `${d}/${mo}/${y}${time}`;
+    }
+    // Si viene como DD/MM/YYYY
+    const mEs = str.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (mEs) {
+        const d = String(mEs[1]).padStart(2, '0');
+        const mo = String(mEs[2]).padStart(2, '0');
+        const y = mEs[3];
+        const time = (mEs[4] && mEs[4] !== '00') ? ` ${String(mEs[4]).padStart(2, '0')}:${mEs[5]}` : '';
+        return `${d}/${mo}/${y}${time}`;
+    }
+    return str;
 }
 
 function quickSearchTopic(topic) {
@@ -611,12 +635,24 @@ function renderFoundNewsList() {
                 const d = new Date(it.timestamp * 1000);
                 const pad = n => String(n).padStart(2, '0');
                 itemYmd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            } else if (it.pub_date) {
+                const mEs = String(it.pub_date).match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+                if (mEs) {
+                    itemYmd = `${mEs[3]}-${String(mEs[2]).padStart(2, '0')}-${String(mEs[1]).padStart(2, '0')}`;
+                }
             }
             if (!itemYmd) {
                 return false;
             }
-            if (dFrom && itemYmd < dFrom) return false;
-            if (dTo && itemYmd > dTo) return false;
+            let normFrom = dFrom;
+            let normTo = dTo;
+            const mFrom = dFrom.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+            if (mFrom) normFrom = `${mFrom[3]}-${String(mFrom[2]).padStart(2, '0')}-${String(mFrom[1]).padStart(2, '0')}`;
+            const mTo = dTo.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+            if (mTo) normTo = `${mTo[3]}-${String(mTo[2]).padStart(2, '0')}-${String(mTo[1]).padStart(2, '0')}`;
+
+            if (normFrom && itemYmd < normFrom) return false;
+            if (normTo && itemYmd > normTo) return false;
         }
 
         // 3. Filtro por Selección Rápida de Fecha
@@ -710,7 +746,7 @@ function renderFoundNewsList() {
             : '';
 
         const dateHtml = it.date_found
-            ? '<span style="font-size:0.75rem; color:#1e293b; font-weight:700;"><i class="far fa-calendar-alt" style="color:#059669;"></i> ' + escapeHtml(it.pub_date) + '</span>'
+            ? '<span style="font-size:0.75rem; color:#1e293b; font-weight:700;"><i class="far fa-calendar-alt" style="color:#059669;"></i> ' + escapeHtml(formatSpanishDate(it.pub_date)) + '</span>'
             : '<span style="font-size:0.73rem; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:2px 7px; border-radius:4px; font-weight:700;" title="No se pudo localizar la fecha de publicación en el medio original (no se aplica la fecha de hoy)"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i> Fecha no localizada</span>';
 
         return '<div class="' + cardClass + '">' +
@@ -838,8 +874,9 @@ function runDraftPreparation(itemData) {
             if (eventDateInput) {
                 if (draft.date_found && draft.event_date) {
                     eventDateInput.value = draft.event_date;
+                    const dateSpanish = draft.event_date_formatted || formatSpanishDate(draft.event_date);
                     if (dateNoticeBox) {
-                        dateNoticeBox.innerHTML = '<div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:6px 10px; border-radius:6px; font-size:0.82rem; font-weight:600;"><i class="fas fa-check-circle" style="color:#059669;"></i> Fecha real de la noticia localizada en el artículo original: <strong>' + escapeHtml(draft.event_date) + '</strong> (' + escapeHtml(draft.date_status_message || '') + '). NUNCA se usa la fecha de hoy.</div>';
+                        dateNoticeBox.innerHTML = '<div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:6px 10px; border-radius:6px; font-size:0.82rem; font-weight:600;"><i class="fas fa-check-circle" style="color:#059669;"></i> Fecha real de la noticia localizada en el artículo original: <strong>' + escapeHtml(dateSpanish) + '</strong> (Día/Mes/Año) (' + escapeHtml(draft.date_status_message || '') + '). NUNCA se usa la fecha de hoy.</div>';
                         dateNoticeBox.style.display = 'block';
                     }
                 } else {
@@ -904,8 +941,9 @@ function runDraftPreparation(itemData) {
             // Mostrar aviso de supervisión
             const banner = document.getElementById('supervisedDraftReadyBanner');
             if (banner) {
+                const dateSpanish = draft.event_date_formatted || formatSpanishDate(draft.event_date);
                 let dateBadgeText = (draft.date_found && draft.event_date)
-                    ? '<div style="margin-top:6px; font-size:0.83rem; color:#065f46;"><i class="fas fa-calendar-check"></i> <strong>Fecha de la noticia localizada:</strong> ' + escapeHtml(draft.event_date) + ' (' + escapeHtml(draft.date_status_message || '') + '). No es la fecha de hoy.</div>'
+                    ? '<div style="margin-top:6px; font-size:0.83rem; color:#065f46;"><i class="fas fa-calendar-check"></i> <strong>Fecha de la noticia localizada:</strong> ' + escapeHtml(dateSpanish) + ' (Día/Mes/Año) (' + escapeHtml(draft.date_status_message || '') + '). No es la fecha de hoy.</div>'
                     : '<div style="margin-top:6px; font-size:0.83rem; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:4px 8px; border-radius:4px;"><i class="fas fa-exclamation-triangle"></i> <strong>Aviso sobre la fecha:</strong> No se ha podido localizar la fecha de publicación en el medio original. Debes indicarla manualmente en el campo «Fecha de la Noticia / Evento».</div>';
 
                 banner.style.display = 'block';
