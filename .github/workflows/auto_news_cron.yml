@@ -14,5 +14,9 @@ jobs:
     steps:
       - name: ⏰ Disparar verificador de horarios en el servidor
         run: |
-          curl -f -s -S "${{ secrets.SITE_URL }}/cron_daily_news.php" || true
-          curl -f -s -S "${{ secrets.SITE_URL }}/moratalla/cron_daily_news.php" || true
+          TARGET_URL="${{ secrets.SITE_URL }}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://www.moratalla-murcia.com"
+          fi
+          curl -f -s -S -L "$TARGET_URL/cron_daily_news.php" || true
+          curl -f -s -S -L "$TARGET_URL/moratalla/cron_daily_news.php" || true

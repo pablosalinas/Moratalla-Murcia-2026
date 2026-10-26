@@ -85,6 +85,18 @@ function adminFooter() {
     ?>
             </div>
         </main>
+        <script>
+        // Verificacion desatendida de tareas programadas (resumen diario de noticias Moratalla)
+        (function() {
+            if (typeof window !== 'undefined' && window.fetch) {
+                setTimeout(function() {
+                    try {
+                        fetch('../cron_daily_news.php', { method: 'GET', cache: 'no-store', keepalive: true }).catch(function(){});
+                    } catch(e) {}
+                }, 1500);
+            }
+        })();
+        </script>
     </body>
     </html>
     <?php

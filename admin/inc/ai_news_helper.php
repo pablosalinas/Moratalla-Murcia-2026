@@ -790,8 +790,7 @@ function aiHttpGet($url, $timeout = 12, &$finalUrl = null) {
         return @file_get_contents($url, false, $ctx);
     }
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
+    $opts = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_MAXREDIRS      => 6,
@@ -800,12 +799,19 @@ function aiHttpGet($url, $timeout = 12, &$finalUrl = null) {
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_SSL_VERIFYHOST => false,
         CURLOPT_ENCODING       => '',
+        CURLOPT_AUTOREFERER    => true,
         CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         CURLOPT_HTTPHEADER     => [
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language: es-ES,es;q=0.9,en;q=0.8'
         ]
-    ]);
+    ];
+    if (stripos($url, 'google.com') !== false) {
+        $opts[CURLOPT_COOKIE] = 'SOCS=CAESHAgBEhJnd3NfMjAyNDA5MDQtMF9SQzIaAmVuIAEaBgiA_L22Bg; CONSENT=PENDING+999';
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, $opts);
     $body = curl_exec($ch);
     $finalUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL) ?: $url;
     curl_close($ch);
@@ -816,10 +822,10 @@ function aiHttpGet($url, $timeout = 12, &$finalUrl = null) {
  * Busca noticias recientes en internet sobre Moratalla combinando Bing News RSS y Google News RSS.
  * Permite delimitar el rango de fechas con $dateFrom y $dateTo (por defecto lee la configuración en settings).
  */
-function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25, $dateFrom = null, $dateTo = null) {
+function searchMoratallaNews($pdo, $query = 'Moratalla Murcia y Banda de Música de Moratalla', $maxResults = 30, $dateFrom = null, $dateTo = null) {
     $query = trim($query);
     if ($query === '') {
-        $query = 'Moratalla Murcia';
+        $query = 'Moratalla Murcia y Banda de Música de Moratalla';
     }
 
     if ($dateFrom === null || $dateTo === null) {
@@ -831,25 +837,56 @@ function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25
 
     // Comprobar si es una búsqueda combinada de Moratalla + Banda de Música
     $isCombined = (
-        stripos($query, 'banda') !== false &&
-        stripos($query, 'moratalla') !== false &&
-        (stripos($query, ' y ') !== false || stripos($query, '+') !== false || stripos($query, 'combinad') !== false)
+        $query === 'Moratalla Murcia y Banda de Música de Moratalla' ||
+        (
+            stripos($query, 'banda') !== false &&
+            stripos($query, 'moratalla') !== false &&
+            (stripos($query, ' y ') !== false || stripos($query, '+') !== false || stripos($query, 'combinad') !== false)
+        )
     );
 
-    $fetchBatchSize = max(35, $maxResults * 2);
+    $fetchBatchSize = max(40, $maxResults * 2);
 
     if ($isCombined) {
         $subA = searchMoratallaNewsSingleQuery($pdo, 'Moratalla Murcia', $fetchBatchSize, false);
         $subB = searchMoratallaNewsSingleQuery($pdo, 'Banda de Música de Moratalla', $fetchBatchSize, false);
         $combined = [];
         $seen = [];
-        foreach (array_merge($subA, $subB) as $it) {
+        $seenNormTitles = [];
+
+        foreach ($subA as $it) {
             $h = $it['url_hash'] ?? hash('sha256', normalizeUrlForHash($it['url'] ?: $it['title']));
+            $norm = normalizeNewsTitleForDedupe($it['title']);
             if (!isset($seen[$h])) {
                 $seen[$h] = true;
+                $seenNormTitles[] = $norm;
+                $it['topic_badge'] = (stripos($it['title'], 'banda') !== false || stripos($it['snippet'] ?? '', 'banda') !== false)
+                    ? '🎵 Banda de Música de Moratalla'
+                    : '📰 Actualidad Moratalla';
                 $combined[] = $it;
             }
         }
+
+        foreach ($subB as $it) {
+            $h = $it['url_hash'] ?? hash('sha256', normalizeUrlForHash($it['url'] ?: $it['title']));
+            $norm = normalizeNewsTitleForDedupe($it['title']);
+            if (!isset($seen[$h])) {
+                $isDup = false;
+                foreach ($seenNormTitles as $prevNorm) {
+                    if (areNewsTitlesRedundant($norm, $prevNorm)) {
+                        $isDup = true;
+                        break;
+                    }
+                }
+                if (!$isDup) {
+                    $seen[$h] = true;
+                    $seenNormTitles[] = $norm;
+                    $it['topic_badge'] = '🎵 Banda de Música de Moratalla';
+                    $combined[] = $it;
+                }
+            }
+        }
+
         $annotated = annotateNewsWithProcessedStatus($pdo, $combined);
 
         // Si hay rango de fechas configurado, filtrar estrictamente
@@ -870,6 +907,13 @@ function searchMoratallaNews($pdo, $query = 'Moratalla Murcia', $maxResults = 25
     }
 
     $items = searchMoratallaNewsSingleQuery($pdo, $query, $fetchBatchSize, false);
+    foreach ($items as &$it) {
+        $it['topic_badge'] = (stripos($it['title'], 'banda') !== false || stripos($it['snippet'] ?? '', 'banda') !== false)
+            ? '🎵 Banda de Música de Moratalla'
+            : '📰 Actualidad Moratalla';
+    }
+    unset($it);
+
     $annotated = annotateNewsWithProcessedStatus($pdo, $items);
 
     if (!empty($dateFrom) || !empty($dateTo)) {
@@ -1030,9 +1074,19 @@ function searchMoratallaNewsSingleQuery($pdo, $query, $maxResults = 25, $doAnnot
  * verificando siempre que corresponda exactamente a la noticia seleccionada.
  */
 function resolveRealArticleUrl($url, $title = '', $source = '') {
+    // Si viene con parámetro de redirección de Bing u otro servicio (?url=...)
+    if (preg_match('/[?&]url=([^&]+)/i', $url, $m)) {
+        $candidateDecoded = urldecode($m[1]);
+        if (stripos($candidateDecoded, 'google.com') === false && stripos($candidateDecoded, 'bing.com') === false && preg_match('#^https?://#i', $candidateDecoded)) {
+            return $candidateDecoded;
+        }
+    }
+
     if (stripos($url, 'news.google.com') === false) {
         return $url;
     }
+
+    $cookie = 'SOCS=CAESHAgBEhJnd3NfMjAyNDA5MDQtMF9SQzIaAmVuIAEaBgiA_L22Bg; CONSENT=PENDING+999';
 
     // 1. Intentar decodificación directa del token base64 si contiene URL en claro
     if (preg_match('#/articles/([A-Za-z0-9_-]+)#', $url, $m)) {
@@ -1049,36 +1103,68 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
         }
 
         // 2. Decodificación oficial de Google News (tokens AU_yqL...) mediante batchexecute Fbv4je
-        $gnPageHtml = aiHttpGet('https://news.google.com/rss/articles/' . $artId, 8);
-        if (empty($gnPageHtml) || strpos($gnPageHtml, 'data-n-a-sg') === false) {
-            $gnPageHtml = aiHttpGet('https://news.google.com/articles/' . $artId, 8);
+        // Añadimos cookie SOCS para evitar redirecciones al consentimiento de Google
+        $ch = curl_init('https://news.google.com/articles/' . $artId . '?hl=es-ES&gl=ES&ceid=ES%3Aes');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 6,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_COOKIE         => $cookie
+        ]);
+        $gnPageHtml = curl_exec($ch);
+        $effUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        curl_close($ch);
+
+        if (!empty($effUrl) && stripos($effUrl, 'google.com') === false) {
+            return $effUrl;
         }
-        if (!empty($gnPageHtml) &&
-            preg_match('/data-n-a-ts="([^"]+)"/', $gnPageHtml, $tsM) &&
-            preg_match('/data-n-a-sg="([^"]+)"/', $gnPageHtml, $sgM)) {
-            $ts = $tsM[1];
-            $sg = $sgM[1];
-            $innerReq = '["garturlreq",[["es","ES",["FINANCE_TOP_INDICES","WEB_TEST_1_0_0"],null,null,1,1,"ES:es",null,180,null,null,null,null,null,0,null,null,[1608992183,723341000]],"es","ES",1,[2,3,4,8],1,0,"655000234",0,0,null,0],"' . addslashes($artId) . '",' . addslashes($ts) . ',"' . addslashes($sg) . '"]';
-            $fReq = json_encode([[['Fbv4je', $innerReq, null, 'generic']]]);
-            $ch = curl_init('https://news.google.com/_/DotsSplashUi/data/batchexecute?rpcids=Fbv4je');
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => 'f.req=' . urlencode($fReq),
-                CURLOPT_HTTPHEADER     => [
-                    'Content-Type: application/x-www-form-urlencoded;charset=UTF-8',
-                    'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                ],
-                CURLOPT_TIMEOUT        => 8,
-                CURLOPT_SSL_VERIFYPEER => false
-            ]);
-            $batchResp = curl_exec($ch);
-            curl_close($ch);
-            if (!empty($batchResp) && preg_match('/\["garturlres","(https?:[^"]+)"/', $batchResp, $resM)) {
-                $decodedUrl = json_decode('"' . $resM[1] . '"');
-                if (!empty($decodedUrl) && stripos($decodedUrl, 'google.com') === false) {
-                    return $decodedUrl;
+
+        if (!empty($gnPageHtml)) {
+            preg_match('/data-n-a-ts="([^"]+)"/', $gnPageHtml, $tsM);
+            preg_match('/data-n-a-sg="([^"]+)"/', $gnPageHtml, $sgM);
+
+            $ts = $tsM[1] ?? '';
+            $sg = $sgM[1] ?? '';
+
+            if ($ts !== '' && $sg !== '') {
+                $innerReq = '["garturlreq",[["es","ES",["FINANCE_TOP_INDICES","WEB_TEST_1_0_0"],null,null,1,1,"ES:es",null,180,null,null,null,null,null,0,null,null,[1608992183,723341000]],"es","ES",1,[2,3,4,8],1,0,"655000234",0,0,null,0],"' . addslashes($artId) . '",' . addslashes($ts) . ',"' . addslashes($sg) . '"]';
+                $fReq = json_encode([[['Fbv4je', $innerReq, null, 'generic']]]);
+                $ch = curl_init('https://news.google.com/_/DotsSplashUi/data/batchexecute?rpcids=Fbv4je');
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => 'f.req=' . urlencode($fReq),
+                    CURLOPT_HTTPHEADER     => [
+                        'Content-Type: application/x-www-form-urlencoded;charset=UTF-8',
+                        'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    ],
+                    CURLOPT_COOKIE         => $cookie,
+                    CURLOPT_TIMEOUT        => 8,
+                    CURLOPT_CONNECTTIMEOUT => 4,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => false
+                ]);
+                $batchResp = curl_exec($ch);
+                curl_close($ch);
+
+                if (!empty($batchResp)) {
+                    if (preg_match('/garturlres\\\\?",\\\\?"(https?:[^\\\\"]+)/i', $batchResp, $resM) ||
+                        preg_match('/\["garturlres","(https?:[^"]+)"/', $batchResp, $resM)) {
+                        $candUrl = stripslashes($resM[1]);
+                        if (stripos($candUrl, 'google.com') === false) {
+                            return $candUrl;
+                        }
+                    }
                 }
+            }
+
+            if (preg_match('/<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']/i', $gnPageHtml, $canM) && stripos($canM[1], 'google.com') === false) {
+                return $canM[1];
             }
         }
     }
@@ -1086,7 +1172,8 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
     // 3. Buscar el titular en Bing News/Web SOLO si el título del resultado coincide con la noticia seleccionada
     if (!empty($title)) {
         $normTarget = normalizeNewsTitleForDedupe($title);
-        $searchQuery = '"' . $title . '" ' . ($source ?: 'Moratalla');
+        $cleanSearchTitle = preg_replace('/^\[.*?\]\s*|\s*-\s*[^-]+$/u', '', $title);
+        $searchQuery = '"' . trim($cleanSearchTitle) . '" ' . ($source ?: 'Moratalla');
         $bingUrl = 'https://www.bing.com/news/search?q=' . urlencode($searchQuery) . '&format=rss&mkt=es-ES';
         $bingXml = aiHttpGet($bingUrl, 8);
         if (!empty($bingXml)) {
@@ -1108,7 +1195,7 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
             }
         }
 
-        $bingWebUrl = 'https://www.bing.com/search?q=' . urlencode($title . ' ' . $source) . '&format=rss';
+        $bingWebUrl = 'https://www.bing.com/search?q=' . urlencode(trim($cleanSearchTitle) . ' ' . $source) . '&format=rss';
         $bingWebXml = aiHttpGet($bingWebUrl, 8);
         if (!empty($bingWebXml)) {
             libxml_use_internal_errors(true);
@@ -1253,67 +1340,134 @@ function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnip
             }
         }
 
-        // 3. Imágenes del artículo
-        $imgNodes = $xpath->query('//article//img | //figure//img');
-        if ($imgNodes->length === 0) {
-            $imgNodes = $xpath->query('//main//img');
-        }
-        foreach ($imgNodes as $img) {
-            $src = $img->getAttribute('data-src') ?: $img->getAttribute('data-lazy-src') ?: $img->getAttribute('src');
-            $alt = trim($img->getAttribute('alt') ?: 'Imagen del artículo');
-            $w = (int)$img->getAttribute('width');
-            $h = (int)$img->getAttribute('height');
-            if (($w > 0 && $w < 180) || ($h > 0 && $h < 120)) continue;
-            if (!empty($src)) {
-                $addCandidateImg($src, mb_substr($alt, 0, 80));
+        // 3. Localizar el contenedor principal del cuerpo de la noticia
+        // Priorizamos selectores semánticos de WordPress (Elementor, Gutenberg, clásicos) y portales de noticias
+        $containerCandidates = [
+            '//*[contains(@class, "theme-post-content")]',
+            '//*[contains(@class, "entry-content")]',
+            '//*[contains(@class, "post-content")]',
+            '//*[contains(@class, "article-content")]',
+            '//*[contains(@class, "article__body")]',
+            '//*[contains(@class, "article-body")]',
+            '//*[contains(@class, "c-detail__body")]',
+            '//*[contains(@class, "story-body")]',
+            '//*[contains(@class, "story__content")]',
+            '//*[contains(@class, "cuerpo-noticia")]',
+            '//*[contains(@class, "cuerpo")]',
+            '//*[contains(@class, "news-text")]',
+            '//article[not(contains(@class, "grid") or contains(@class, "related") or contains(@class, "card") or contains(@class, "teaser"))]',
+            '//main',
+            '//*[@id="content" or @id="main-content" or @id="article-body"]'
+        ];
+
+        $mainContainer = null;
+        foreach ($containerCandidates as $cq) {
+            $matchedNodes = $xpath->query($cq);
+            foreach ($matchedNodes as $node) {
+                $pCount = $xpath->query('.//p', $node)->length;
+                if ($pCount >= 2) {
+                    $mainContainer = $node;
+                    break 2;
+                }
             }
-            if (count($images) >= 10) break;
         }
 
-        // 4. Eliminar menús, barras laterales y módulos de "noticias relacionadas" / "más leídas" para no contaminar el texto
-        $removeQuery = '//script | //style | //nav | //footer | //header | //aside | //form | //noscript | '
-                     . '//*[contains(@class,"related") or contains(@class,"relac") or contains(@class,"sidebar") or contains(@class,"widget") or contains(@class,"mas-leido") or contains(@class,"most-read") or contains(@class,"comments") or contains(@class,"newsletter") or contains(@class,"share") or contains(@class,"tags") or contains(@class,"recomend")]';
-        foreach ($xpath->query($removeQuery) as $rem) {
-            if ($rem->parentNode) {
-                $rem->parentNode->removeChild($rem);
+        // Si no se localizó ningún contenedor por clase estándar, buscar el elemento con mayor volumen de texto en párrafos
+        if (!$mainContainer) {
+            $bestLen = 0;
+            $allDivs = $xpath->query('//div | //article | //section');
+            foreach ($allDivs as $div) {
+                $cl = strtolower($div->getAttribute('class') . ' ' . $div->getAttribute('id'));
+                if (preg_match('/(footer|header|menu|nav|sidebar|widget-area|comments)/', $cl)) continue;
+                $pDirect = $xpath->query('.//p', $div);
+                if ($pDirect->length >= 2) {
+                    $txtLen = 0;
+                    foreach ($pDirect as $p) $txtLen += mb_strlen(trim($p->textContent));
+                    if ($txtLen > $bestLen && $txtLen > 300) {
+                        $bestLen = $txtLen;
+                        $mainContainer = $div;
+                    }
+                }
             }
         }
 
-        // Priorizar JSON-LD articleBody si existe, ya que contiene exclusivamente el texto limpio de la noticia seleccionada
-        if (mb_strlen($jsonLdArticleBody) >= 180) {
+        $targetContext = $mainContainer ?: $dom;
+
+        // 4. Capturar imágenes del artículo desde el contenedor principal y figure
+        $imgQueries = [
+            './/figure//img',
+            './/img[not(contains(@class,"logo") or contains(@class,"avatar") or contains(@class,"icon"))]'
+        ];
+        foreach ($imgQueries as $iq) {
+            $imgNodes = $xpath->query($iq, $targetContext);
+            foreach ($imgNodes as $img) {
+                $src = $img->getAttribute('data-src') ?: $img->getAttribute('data-lazy-src') ?: $img->getAttribute('src');
+                $alt = trim($img->getAttribute('alt') ?: 'Imagen del artículo');
+                $w = (int)$img->getAttribute('width');
+                $h = (int)$img->getAttribute('height');
+                if (($w > 0 && $w < 180) || ($h > 0 && $h < 120)) continue;
+                if (!empty($src)) {
+                    $addCandidateImg($src, mb_substr($alt, 0, 80));
+                }
+                if (count($images) >= 12) break 2;
+            }
+        }
+
+        // 5. Extraer párrafos, subtítulos (h2, h3) y citas (blockquote) del artículo
+        // Filtrar elementos de ruido sin borrar el contenedor de noticias
+        $blockNodes = $xpath->query('.//*[self::p or self::blockquote or self::h2 or self::h3 or self::li]', $targetContext);
+        $seenBlockTexts = [];
+
+        foreach ($blockNodes as $node) {
+            // Comprobar si el nodo o sus ancestros directos son de compartir, anuncios o cookies
+            $parent = $node->parentNode;
+            $parentCl = $parent ? strtolower($parent->getAttribute('class') . ' ' . $parent->getAttribute('id')) : '';
+            if (preg_match('/(share|rrss|redes|social|tags|sidebar|comment|banner|ad-|newsletter|relac|related)/i', $parentCl)) {
+                continue;
+            }
+
+            $tag = strtolower($node->nodeName);
+            $txt = trim(preg_replace('/\s+/u', ' ', $node->textContent));
+            if ($txt === '' || isset($seenBlockTexts[$txt])) continue;
+
+            // Ignorar avisos de cookies, suscripciones, pies legales o enlaces de compartir
+            if (preg_match('/(cookies|política de privacidad|todos los derechos reservados|suscríbete|iniciar sesión|regístrate gratis|boletín informativo|compartir en|comparte este artículo|lee también|te puede interesar|más información:|noticias relacionadas|recibe cada viernes)/iu', $txt)) {
+                continue;
+            }
+
+            if ($tag === 'blockquote') {
+                if (mb_strlen($txt) >= 20) {
+                    $seenBlockTexts[$txt] = true;
+                    $domExtractedBlocks[] = "«" . trim($txt, '«»""') . "»";
+                }
+            } elseif ($tag === 'h2' || $tag === 'h3') {
+                if (mb_strlen($txt) >= 10 && mb_strlen($txt) <= 120) {
+                    $seenBlockTexts[$txt] = true;
+                    $domExtractedBlocks[] = "### " . $txt;
+                }
+            } elseif ($tag === 'li') {
+                if (mb_strlen($txt) >= 20) {
+                    $seenBlockTexts[$txt] = true;
+                    $domExtractedBlocks[] = "• " . $txt;
+                }
+            } else {
+                if (mb_strlen($txt) >= 30) {
+                    $seenBlockTexts[$txt] = true;
+                    $domExtractedBlocks[] = $txt;
+                }
+            }
+
+            if (count($domExtractedBlocks) >= 45) break;
+        }
+
+        $domText = implode("\n\n", $domExtractedBlocks);
+
+        // Si el texto extraído del DOM tiene buena longitud, usarlo; de lo contrario recurrir a JSON-LD o metaDesc
+        if (mb_strlen($domText) >= mb_strlen($jsonLdArticleBody) && mb_strlen($domText) >= 200) {
+            $extractedText = $domText;
+        } elseif (mb_strlen($jsonLdArticleBody) >= 200) {
             $extractedText = $jsonLdArticleBody;
         } else {
-            $blockNodes = $xpath->query('//article//*[self::p or self::blockquote]');
-            if ($blockNodes->length < 2) {
-                $blockNodes = $xpath->query('//main//p | //p');
-            }
-
-            $seenBlockTexts = [];
-            foreach ($blockNodes as $node) {
-                $tag = strtolower($node->nodeName);
-                $txt = trim(preg_replace('/\s+/u', ' ', $node->textContent));
-                if ($txt === '' || isset($seenBlockTexts[$txt])) continue;
-
-                // Ignorar avisos de cookies, suscripciones, pies legales o enlaces a otras noticias
-                if (preg_match('/(cookies|política de privacidad|todos los derechos reservados|suscríbete|iniciar sesión|regístrate gratis|boletín informativo|compartir en|lee también|te puede interesar|más información:|noticias relacionadas)/iu', $txt)) {
-                    continue;
-                }
-
-                if ($tag === 'blockquote') {
-                    if (mb_strlen($txt) >= 30) {
-                        $seenBlockTexts[$txt] = true;
-                        $domExtractedBlocks[] = "«" . trim($txt, '«»""') . "»";
-                    }
-                } else {
-                    if (mb_strlen($txt) >= 40) {
-                        $seenBlockTexts[$txt] = true;
-                        $domExtractedBlocks[] = $txt;
-                    }
-                }
-                if (count($domExtractedBlocks) >= 30) break;
-            }
-
-            $domText = implode("\n\n", $domExtractedBlocks);
             $extractedText = $domText ?: ($jsonLdArticleBody ?: $metaDesc);
         }
     } else {
@@ -1339,7 +1493,7 @@ function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnip
     return [
         'resolved_url'       => $finalUrl,
         'title'              => $extractedTitle,
-        'body_text'          => mb_substr(trim($extractedText), 0, 12000),
+        'body_text'          => mb_substr(trim($extractedText), 0, 16000),
         'source_name'        => $detectedSource,
         'original_images'    => array_slice($images, 0, 10),
         'published_date'     => $dateInfo['found'] ? $dateInfo['date_fmt'] : 'Fecha no localizada',
@@ -1516,7 +1670,7 @@ function buildMoratallaCorporateNewsHtml(array $parts) {
 
 /**
  * Llamada de respaldo a motor IA gratuito (Pollinations OpenAI) cuando no hay clave Gemini configurada,
- * garantizando que la redacción sea siempre propia (IA), escueta y ceñida exclusivamente a la noticia.
+ * garantizando que la redacción sea siempre propia (IA), profunda y ceñida exclusivamente a la noticia.
  */
 function generateConciseAiDraftViaFreeLlm($prompt) {
     $ch = curl_init('https://text.pollinations.ai/openai');
@@ -1525,7 +1679,7 @@ function generateConciseAiDraftViaFreeLlm($prompt) {
         'messages' => [
             [
                 'role' => 'system',
-                'content' => 'Eres un redactor periodístico riguroso y conciso. Reescribes noticias con palabras propias de forma escueta, clara y directa, ciñéndote exclusivamente a los hechos del texto proporcionado sin añadir temas no relacionados ni mencionar portales propios. Respondes únicamente en JSON válido.'
+                'content' => 'Eres un redactor periodístico profesional y riguroso. Tu cometido es leer y analizar minuciosamente todo el texto capturado del artículo web para redactar un borrador periodístico completo, profundo y bien contextualizado con palabras propias de alta calidad, desglosando hechos, antecedentes, participantes, datos y consecuencias sin limitarte al titular. Respondes únicamente en JSON válido.'
             ],
             [
                 'role' => 'user',
@@ -1563,7 +1717,7 @@ function generateConciseAiDraftViaFreeLlm($prompt) {
 }
 
 /**
- * Procesador local limpio y escueto (solo en caso de fallo total de red con los motores IA):
+ * Procesador local limpio y contextualizado (solo en caso de fallo total de red con los motores IA):
  * Ciñe el contenido estrictamente a la noticia seleccionada sin añadir rellenos sobre fiestas ni otros temas.
  */
 function transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceName, $sourceUrl = '', $categories = [], $articleInfo = []) {
@@ -1604,26 +1758,42 @@ function transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceN
         $paragraphs[] = $rb;
     }
 
-    // Sintetizar de forma escueta (máximo 3 párrafos principales)
     $lead = !empty($paragraphs[0]) ? $paragraphs[0] : $cleanTitle;
-    $devParagraphs = count($paragraphs) > 1 ? array_slice($paragraphs, 1, 3) : [];
+    $remaining = count($paragraphs) > 1 ? array_slice($paragraphs, 1, 10) : [];
 
     $keyPoints = [];
-    foreach ($devParagraphs as $dp) {
+    foreach ($remaining as $dp) {
         $firstSentence = trim(preg_split('/(?<=[.!?])\s+/u', $dp)[0] ?? '');
-        if ($firstSentence !== '' && mb_strlen($firstSentence) <= 180 && count($keyPoints) < 3) {
+        if ($firstSentence !== '' && mb_strlen($firstSentence) >= 20 && mb_strlen($firstSentence) <= 180 && count($keyPoints) < 4) {
             $keyPoints[] = $firstSentence;
         }
     }
 
     $sections = [];
-    if (!empty($devParagraphs)) {
-        $sections[] = [
-            'heading'    => 'Detalles de la noticia',
-            'paragraphs' => $devParagraphs,
-            'items'      => [],
-            'quote'      => ''
-        ];
+    if (!empty($remaining)) {
+        if (count($remaining) <= 4) {
+            $sections[] = [
+                'heading'    => 'Desarrollo de los hechos',
+                'paragraphs' => $remaining,
+                'items'      => [],
+                'quote'      => ''
+            ];
+        } else {
+            $part1 = array_slice($remaining, 0, 3);
+            $part2 = array_slice($remaining, 3);
+            $sections[] = [
+                'heading'    => 'Desarrollo de los hechos',
+                'paragraphs' => $part1,
+                'items'      => [],
+                'quote'      => ''
+            ];
+            $sections[] = [
+                'heading'    => 'Detalles complementarios y contexto',
+                'paragraphs' => $part2,
+                'items'      => [],
+                'quote'      => ''
+            ];
+        }
     }
 
     $suggestedCatId = '';
@@ -1662,7 +1832,7 @@ function transformArticleLocallyToCorporateParts($titleOrig, $bodyOrig, $sourceN
 
 /**
  * Genera el borrador supervisado con el diseño visual corporativo,
- * redactado por IA con redacción propia, de forma escueta y ceñida exclusivamente a la noticia seleccionada.
+ * redactado por IA con redacción propia, de forma profunda, contextualizada y ceñida exclusivamente a la noticia seleccionada.
  */
 function generateSupervisedDraftWithGemini($pdo, $articleInfo, $categories = []) {
     $apiKey = getGeminiApiKey($pdo);
@@ -1687,16 +1857,26 @@ function generateSupervisedDraftWithGemini($pdo, $articleInfo, $categories = [])
         : "Fecha de publicación original: NO LOCALIZADA en la fuente. Si en el texto tampoco se menciona una fecha concreta de suceso, devuelve estrictamente null o \"\" en \"event_date\" y pon \"date_found\": false. NUNCA inventes la fecha actual.";
 
     $prompt = <<<PROMPT
-Eres un redactor periodístico profesional. Fecha actual de referencia: {$todayIso}.
+Eres un redactor periodístico profesional de dilatada experiencia. Fecha actual de referencia: {$todayIso}.
 
-Tu tarea es redactar con PALABRAS PROPIAS (redacción propia de IA, sin copiar literalmente frases del original) la siguiente noticia sobre Moratalla, de forma ESCUETA, DIRECTA, CLARA Y RIGUROSA.
+Tu misión es leer y analizar a fondo TODO el texto capturado de la noticia original para redactar un borrador periodístico completo, profundo y contextualizado con PALABRAS PROPIAS (redacción periodística original de alta calidad, sin copiar frases literales del texto de origen).
 
-REGLAS ESTRICTAS DE CONTENIDO:
-1. PROHIBIDO poner referencias a "Redacción de moratalla-murcia.com", "moratalla-murcia.com" o cualquier autorreferencia a nuestra web.
-2. PROHIBIDO hablar de fiestas, turismo, encierros, tambores, el castillo o cualquier otro tema que NO esté directamente en la noticia seleccionada. Cíñete 100% al asunto real de la noticia.
-3. REDACCIÓN PROPIA Y ESCUETA: Reescribe la noticia con vocabulario y estructura propios, pero manteniendo un estilo escueto, conciso y al grano (entre 1 y 3 párrafos bien redactados con los datos esenciales de la noticia: qué ha pasado, quién, cuándo, dónde y cifras o datos clave). No rellenes con paja ni frases genéricas sobre el municipio.
-4. Conserva con exactitud los datos reales (fechas, nombres, lugares, cifras) e indica el medio de donde se ha obtenido.
-5. CRITERIO ESTRICTO DE FECHA:
+DIRECTRICES FUNDAMENTALES DE REDACCIÓN:
+1. PROFUNDIDAD Y CONTEXTUALIZACIÓN:
+   - Prohibido quedarse solo en el titular o hacer un resumen telegráfico superficial.
+   - Lee todo el texto aportado y desarrolla la noticia en profundidad (entre 2 y 4 párrafos sustanciosos y bien hilados en las secciones).
+   - Explica con claridad: los antecedentes del asunto, los hechos ocurridos o la iniciativa presentada, quiénes intervienen (organismos, colectivos, personas o autoridades), las declaraciones o citas textuales si las hubiere, las fechas y lugares exactos, y el impacto o repercusiones para los vecinos de Moratalla y su comarca según el texto.
+2. RIGUROSIDAD Y FIDELIDAD A LOS HECHOS:
+   - Cíñete 100% al asunto real de la noticia. Conserva con exactitud los datos reales (fechas, nombres, lugares, cifras) sin inventar hechos no mencionados.
+   - PROHIBIDO poner referencias a "Redacción de moratalla-murcia.com", "moratalla-murcia.com" o autorreferencias a nuestra web.
+   - PROHIBIDO desviar la noticia hacia fiestas, turismo, encierros o el castillo si el texto original trata de otro tema (medio ambiente, obras, economía, sucesos, deportes, etc.).
+3. ESTRUCTURA PERIODÍSTICA DEL BORRADOR:
+   - Titular propio, informativo, riguroso y atractivo (máx 100 caracteres).
+   - Entradilla (lead) sólida de 2 a 3 frases (40 a 70 palabras) con redacción propia resumiendo el hecho central y su alcance.
+   - Claves de la noticia (key_points): entre 2 y 4 puntos esenciales con datos, cifras o conclusiones concretas del artículo.
+   - Secciones (sections): estructuradas con subtítulos periodísticos claros (heading) y párrafos desarrollados que agrupen la información de forma lógica.
+   - Cita textual (quote): si el artículo original contiene declaraciones relevantes entrecomilladas o directas de algún protagonista, reprodúcela fielmente en el campo "quote" de la sección correspondiente.
+4. CRITERIO ESTRICTO DE FECHA:
    - NUNCA asignes la fecha de hoy ({$todayIso}) por defecto, a menos que el texto afirme de forma indiscutible que ocurrió hoy.
    - Si la fecha de la noticia fue localizada ("{$articleDateIso}"), colócala en "event_date" y "date_found": true.
    - Si la noticia describe un suceso con una fecha concreta en el texto, usa esa fecha en "event_date" en formato YYYY-MM-DD y "date_found": true.
@@ -1706,7 +1886,7 @@ Noticia seleccionada:
 - Titular original: {$titleOrig}
 - Obtenido de (Fuente): {$sourceName}
 - {$dateDetectionPromptText}
-- Texto capturado de la noticia:
+- Texto completo capturado de la noticia original:
 {$bodyOrig}
 
 Categorías disponibles en la base de datos:
@@ -1715,28 +1895,37 @@ Categorías disponibles en la base de datos:
 Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin bloques markdown ```json) con esta estructura exacta:
 {
   "title": "Titular periodístico con redacción propia, claro y conciso, fiel a la noticia seleccionada (máx 100 caracteres)",
-  "topic_tag": "Etiqueta corta del tema real de esta noticia (ej: Actualidad Municipal, Sucesos, Infraestructuras, Medio Ambiente, Deportes, Cultura, Economía)",
-  "lead": "Entradilla concisa de 2 a 3 líneas (35 a 60 palabras) con redacción propia que resuma el hecho principal de la noticia.",
+  "topic_tag": "Etiqueta corta del tema real de esta noticia (ej: Actualidad Municipal, Medio Ambiente, Infraestructuras, Deportes, Cultura, Economía, Sucesos)",
+  "lead": "Entradilla periodística sólida de 2 a 3 frases con redacción propia resumiendo el hecho central y su alcance.",
   "key_points": [
-    "Dato clave 1 extraído exclusivamente de esta noticia",
-    "Dato clave 2 concreto de esta noticia"
+    "Dato clave 1 extraído de la noticia",
+    "Dato clave 2 con detalles concretos",
+    "Dato clave 3..."
   ],
   "sections": [
     {
-      "heading": "Subtítulo breve y directo sobre el contenido de la noticia",
+      "heading": "Subtítulo periodístico sobre el desarrollo de los hechos",
       "paragraphs": [
-        "Párrafo 1 con redacción propia, escueta y directa explicando los hechos principales...",
-        "Párrafo 2 conciso con los detalles o datos complementarios de la noticia (solo si el texto original aporta más información)..."
+        "Párrafo 1 profundizando en los hechos principales con redacción propia...",
+        "Párrafo 2 aportando contexto, antecedentes o detalles complementarios expuestos en el texto original..."
       ],
       "items": [],
-      "quote": "Cita textual breve solo si aparece literalmente en la noticia original, o cadena vacía"
+      "quote": "Cita textual si aparece en la noticia original, o cadena vacía"
+    },
+    {
+      "heading": "Subtítulo sobre el impacto, acuerdos o siguientes pasos",
+      "paragraphs": [
+        "Párrafo que detalle las repercusiones, acuerdos o participantes..."
+      ],
+      "items": [],
+      "quote": ""
     }
   ],
   "event_date": "Fecha real de la noticia o acontecimiento en formato español día/mes/año DD/MM/YYYY (ej: 21/10/2026), o null si no se localiza ninguna fecha",
   "date_found": true,
   "date_status_message": "Explicación breve de la fecha localizada (ej: 'Fecha de la noticia localizada: DD/MM/YYYY' o 'Fecha de la noticia no localizada en el texto original')",
   "category_id": "ID numérico de la categoría más adecuada de la lista proporcionada, o cadena vacía",
-  "icon": "Un único emoji acorde estrictamente al tema de la noticia (ej. 🏛️, 📰, ⚠️, 🌲, 🏆, 🎭, 🚧)",
+  "icon": "Un único emoji acorde estrictamente al tema de la noticia (ej. 🌲, 🏛️, 📰, ⚠️, 🏆, 🎭, 🚧)",
   "image_caption": "Pie de foto descriptivo y conciso sobre la noticia (máx 100 caracteres)",
   "ai_image_prompt": "Detailed photorealistic editorial news photography strictly illustrating: {$titleOrig}, in Moratalla, Murcia, Spain, natural lighting, no text",
   "archive_keywords": "1 o 2 palabras clave en español estrictamente relacionadas con el tema de la noticia"
@@ -2056,51 +2245,16 @@ function getAutoNewsDigestConfig($pdo) {
  * enriquece las noticias con su resumen e imagen y devuelve el listado completo más las conteos por estado
  * (Disponibles, Ya Publicadas y Descartadas).
  */
-function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
+function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 30) {
     ensureAiNewsTrackingSchema($pdo);
 
     $cfg = getAutoNewsDigestConfig($pdo);
     $dateFrom = $cfg['date_from'] ?? '';
     $dateTo   = $cfg['date_to'] ?? '';
 
-    $queries = [
-        'Moratalla Murcia',
-        'Banda de Música de Moratalla'
-    ];
-
-    $combined = [];
-    $seenNormTitles = [];
-    $seenUrlHashes = [];
-
-    foreach ($queries as $q) {
-        $batch = searchMoratallaNews($pdo, $q, 24, $dateFrom, $dateTo);
-        foreach ($batch as $it) {
-            if (!isNewsItemInDateRange($it, $dateFrom, $dateTo, false)) {
-                continue;
-            }
-            $normTitle = normalizeNewsTitleForDedupe($it['title'] ?? '');
-            $urlHash = $it['url_hash'] ?? hash('sha256', normalizeUrlForHash($it['url'] ?? $it['title']));
-
-            if (isset($seenUrlHashes[$urlHash])) {
-                continue;
-            }
-            $isDup = false;
-            foreach ($seenNormTitles as $prevNorm) {
-                if (areNewsTitlesRedundant($normTitle, $prevNorm)) {
-                    $isDup = true;
-                    break;
-                }
-            }
-            if ($isDup) continue;
-
-            $seenUrlHashes[$urlHash] = true;
-            $seenNormTitles[] = $normTitle;
-            $it['matched_query'] = (stripos($q, 'Banda') !== false || stripos($it['title'], 'banda') !== false || stripos($it['snippet'] ?? '', 'banda') !== false)
-                ? '🎵 Banda de Música de Moratalla'
-                : '📰 Actualidad Moratalla';
-            $combined[] = $it;
-        }
-    }
+    // Ejecutar la misma búsqueda unificada que se realiza por defecto en Administración
+    // utilizando idénticos criterios, filtros de fecha delimitada y descarte de duplicados
+    $combined = searchMoratallaNews($pdo, 'Moratalla Murcia y Banda de Música de Moratalla', $maxItemsToEnrich, $dateFrom, $dateTo);
 
     // Separar por estado para mantener sincronizado el flujo de Nuevas Disponibles, Publicadas y Descartadas
     $newAvailable = [];
@@ -2114,8 +2268,8 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
         } elseif ($st === 'discarded') {
             $discardedList[] = $item;
         } else {
-            // Solo enriquecer como nuevas las que provienen de prensa con URL activa
-            if (($item['source'] ?? '') !== 'Historial IA' && !empty($item['url'])) {
+            // Nuevas disponibles con URL o título identificable
+            if (!empty($item['url']) || !empty($item['title'])) {
                 $newAvailable[] = $item;
             }
         }
@@ -2126,87 +2280,51 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
         return ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0);
     });
 
-    $selected = array_slice($newAvailable, 0, $maxItemsToEnrich);
+    // Enviar todas las nuevas disponibles que cumplen el filtro
+    $selected = $newAvailable;
+
     // Si no hubiera nuevas disponibles en este momento, tomar las últimas publicadas con enlace para que el boletín muestre contexto
     if (empty($selected)) {
         foreach ($publishedList as $pubIt) {
             if (!empty($pubIt['url'])) {
                 $selected[] = $pubIt;
             }
-            if (count($selected) >= min(4, $maxItemsToEnrich)) break;
+            if (count($selected) >= 4) break;
         }
     }
 
-    // Enriquecer cada noticia con su texto extraído, imagen principal y resumen
+    // Construir la estructura completa de cada noticia respetando exactamente los datos de la búsqueda
     $enrichedItems = [];
     foreach ($selected as $idx => $item) {
-        $art = extractArticleContentAndImages(
-            $item['url'] ?? '',
-            $item['title'] ?? '',
-            $item['snippet'] ?? '',
-            $item['rss_image'] ?? '',
-            $item['source'] ?? '',
-            $item['pub_date'] ?? ''
-        );
+        $imageUrl = !empty($item['rss_image'])
+            ? $item['rss_image']
+            : 'https://www.moratalla-murcia.com/moratalla/uploads/theme/moratalla.jpg';
 
-        $imageUrl = '';
-        if (!empty($art['original_images'][0]['url'])) {
-            $imageUrl = $art['original_images'][0]['url'];
-        } elseif (!empty($item['rss_image'])) {
-            $imageUrl = $item['rss_image'];
-        } else {
-            // Imagen de respaldo institucional de Moratalla
-            $imageUrl = 'https://www.moratalla-murcia.com/moratalla/uploads/theme/moratalla.jpg';
-        }
-
-        // Construir resumen claro (entre 2 y 4 frases) a partir del cuerpo extraído
-        $rawBody = trim($art['body_text'] ?? '');
-        $summary = '';
-        if (mb_strlen($rawBody) > 40) {
-            $paragraphs = preg_split('/\n\s*\n/', $rawBody);
-            $cleanParas = [];
-            foreach ($paragraphs as $p) {
-                $p = trim(preg_replace('/\s+/u', ' ', $p));
-                if (mb_strlen($p) >= 35) {
-                    $cleanParas[] = $p;
-                }
-                if (count($cleanParas) >= 2) break;
-            }
-            $summary = implode(' ', $cleanParas);
-        }
+        $summary = trim($item['snippet'] ?? '');
         if ($summary === '') {
-            $summary = trim($item['snippet'] ?? '') ?: $item['title'];
+            $summary = $item['title'];
         }
         if (mb_strlen($summary) > 420) {
             $summary = mb_substr($summary, 0, 417) . '...';
         }
 
-        $resolvedUrl = !empty($art['resolved_url']) ? $art['resolved_url'] : ($item['url'] ?? '');
-
-        $dateFound = (!empty($art['date_found']) || !empty($item['date_found']));
-        $pubDateFinal = !empty($art['date_found'])
-            ? $art['published_date']
-            : (!empty($item['date_found']) ? $item['pub_date'] : 'Fecha no localizada');
-        $eventDateIsoFinal = !empty($art['date_found'])
-            ? $art['published_date_iso']
-            : (!empty($item['date_found']) ? $item['event_date_iso'] : '');
-
-        // Si una vez extraído el artículo completo su fecha real no entra en el rango configurado, se descarta del boletín
-        if (!isNewsItemInDateRange(['event_date_iso' => $eventDateIsoFinal, 'date_found' => $dateFound, 'pub_date' => $pubDateFinal], $dateFrom, $dateTo, false)) {
-            continue;
-        }
+        $topicBadge = !empty($item['topic_badge'])
+            ? $item['topic_badge']
+            : ((stripos($item['title'], 'banda') !== false || stripos($item['snippet'] ?? '', 'banda') !== false)
+                ? '🎵 Banda de Música de Moratalla'
+                : '📰 Actualidad Moratalla');
 
         $enrichedItems[] = [
-            'title'           => $art['title'] ?: $item['title'],
-            'source'          => $art['source_name'] ?: ($item['source'] ?: 'Prensa Digital'),
-            'pub_date'        => $pubDateFinal,
-            'event_date_iso'  => $eventDateIsoFinal,
-            'date_found'      => $dateFound,
-            'url'             => $resolvedUrl,
-            'original_url'    => $item['url'] ?? $resolvedUrl,
+            'title'           => $item['title'],
+            'source'          => $item['source'] ?: 'Prensa Digital',
+            'pub_date'        => $item['pub_date'] ?: 'Fecha no localizada',
+            'event_date_iso'  => $item['event_date_iso'] ?? '',
+            'date_found'      => !empty($item['date_found']),
+            'url'             => $item['url'] ?? '',
+            'original_url'    => $item['url'] ?? '',
             'image_url'       => $imageUrl,
             'summary'         => $summary,
-            'topic_badge'     => $item['matched_query'] ?? '📰 Moratalla',
+            'topic_badge'     => $topicBadge,
             'process_status'  => $item['process_status'] ?? 'new',
             'matched_news_id' => $item['matched_news_id'] ?? null,
             'matched_title'   => $item['matched_title'] ?? null
@@ -2232,7 +2350,7 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
             'contents' => [['parts' => [['text' => $batchPrompt]]]],
             'generationConfig' => [
                 'temperature' => 0.3,
-                'maxOutputTokens' => 1500,
+                'maxOutputTokens' => 2000,
                 'responseMimeType' => 'application/json'
             ]
         ]);
@@ -2267,8 +2385,8 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 8) {
         }
     }
 
-    // Registrar todas las noticias nuevas enriquecidas en `ai_processed_news` con estado 'available'
-    // junto con su resumen e imagen extraída, para que al entrar al panel Admin ya estén incorporadas en el proceso
+    // Registrar todas las noticias nuevas en `ai_processed_news` con estado 'available'
+    // junto con su resumen e imagen, para que queden incorporadas de forma idéntica en el panel Admin
     foreach ($enrichedItems as $ei) {
         if (($ei['process_status'] ?? 'new') === 'new') {
             markNewsAsProcessed(
@@ -2313,7 +2431,7 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
         return false;
     }
 
-    $digestData = collectAndSummarizeMoratallaDigestNews($pdo, 8);
+    $digestData = collectAndSummarizeMoratallaDigestNews($pdo, 30);
     $items = $digestData['enriched'] ?? [];
     $publishedItems = $digestData['published'] ?? [];
     $discardedItems = $digestData['discarded'] ?? [];
@@ -2635,12 +2753,22 @@ function checkAndRunScheduledNewsDigest($pdo, $forceRun = false) {
                 : ("Error en Horario {$slotNum} ({$schedTime}) el " . date('d/m/Y H:i') . ": " . ($err ?: 'Fallo SMTP'));
             $upsertSetting('auto_news_last_status', $statusText);
 
+            if (!$ok) {
+                // Si hubo un fallo de envío, liberar el slot para permitir reintento posterior
+                $upsertSetting($slot['key_run'], '');
+            }
+
             $results[] = [
                 'slot'    => $slotNum,
                 'time'    => $schedTime,
                 'success' => $ok,
                 'message' => $statusText
             ];
+
+            // Si se completó el envío con éxito, no ejecutar el segundo slot en el mismo segundo
+            if ($ok) {
+                break;
+            }
         }
     }
 

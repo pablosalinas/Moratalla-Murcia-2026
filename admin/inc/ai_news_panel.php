@@ -206,7 +206,7 @@ $defaultDateTo = $dateSettings['news_search_date_to'] ?? '';
 
             <!-- Barra de búsqueda por términos -->
             <div style="display: flex; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap;">
-                <input type="text" id="aiNewsSearchQuery" value="Moratalla Murcia" placeholder="Ej: Moratalla Murcia, Ayuntamiento Moratalla, Castillo..." style="flex: 1; min-width: 220px; padding: 0.65rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem;" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchInternetNews();}">
+                <input type="text" id="aiNewsSearchQuery" value="Moratalla Murcia y Banda de Música de Moratalla" placeholder="Ej: Moratalla Murcia y Banda de Música de Moratalla..." style="flex: 1; min-width: 220px; padding: 0.65rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem;" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchInternetNews();}">
                 <button type="button" onclick="searchInternetNews()" id="btnSearchInternetNews" class="btn" style="background: #6d28d9; color: white; padding: 0.65rem 1.2rem; font-weight: 600;">
                     <i class="fas fa-search"></i> Buscar Noticias
                 </button>
@@ -215,9 +215,9 @@ $defaultDateTo = $dateSettings['news_search_date_to'] ?? '';
             <!-- Búsqueda rápida por temas de Moratalla -->
             <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 0.9rem;">
                 <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Temas rápidos:</span>
+                <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Moratalla Murcia y Banda de Música de Moratalla')" style="background:#eef2ff; color:#3730a3; border:2px solid #6366f1; font-weight:700;"><i class="fas fa-layer-group"></i> 🔄 Moratalla + Banda de Música (Por defecto)</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Moratalla Murcia')">📰 General Moratalla</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Banda de Música de Moratalla')">🎵 Banda de Música</button>
-                <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Moratalla Murcia y Banda de Música de Moratalla')" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; font-weight:700;"><i class="fas fa-layer-group"></i> 🔄 Moratalla + Banda de Música</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Ayuntamiento de Moratalla')">🏛️ Ayuntamiento</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Turismo Cultura Castillo Moratalla')">🏰 Turismo y Patrimonio</button>
                 <button type="button" class="ai-chip-btn" onclick="quickSearchTopic('Fiestas Tambor Encierros Moratalla')">🥁 Fiestas y Tradiciones</button>
@@ -458,7 +458,7 @@ function quickSearchTopic(topic) {
 }
 
 function searchInternetNews() {
-    const q = document.getElementById('aiNewsSearchQuery').value.trim() || 'Moratalla Murcia';
+    const q = document.getElementById('aiNewsSearchQuery').value.trim() || 'Moratalla Murcia y Banda de Música de Moratalla';
     const dateFromEl = document.getElementById('aiNewsDateFrom');
     const dateToEl = document.getElementById('aiNewsDateTo');
     const dateFrom = dateFromEl ? dateFromEl.value.trim() : '';
@@ -556,6 +556,8 @@ function resetAllNewsFilters() {
     const toEl = document.getElementById('aiNewsDateTo');
     if (fromEl) fromEl.value = defaultSavedDateFrom;
     if (toEl) toEl.value = defaultSavedDateTo;
+    const qEl = document.getElementById('aiNewsSearchQuery');
+    if (qEl) qEl.value = 'Moratalla Murcia y Banda de Música de Moratalla';
     setNewsStatusFilter('new');
     searchInternetNews();
 }
@@ -765,11 +767,15 @@ function renderFoundNewsList() {
             ? '<span style="font-size:0.75rem; color:#1e293b; font-weight:700;"><i class="far fa-calendar-alt" style="color:#059669;"></i> ' + escapeHtml(formatSpanishDate(dateStrToFormat)) + '</span>'
             : '<span style="font-size:0.73rem; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:2px 7px; border-radius:4px; font-weight:700;" title="No se pudo localizar la fecha de publicación en el medio original (no se aplica la fecha de hoy)"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i> Fecha no localizada</span>';
 
+        const topicBadge = it.topic_badge || ((it.title.toLowerCase().indexOf('banda') !== -1 || (it.snippet || '').toLowerCase().indexOf('banda') !== -1) ? '🎵 Banda de Música de Moratalla' : '📰 Actualidad Moratalla');
+        const topicBadgeHtml = '<span class="ai-badge-pill" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe;">' + escapeHtml(topicBadge) + '</span>';
+
         return '<div class="' + cardClass + '">' +
             '<div style="display:flex; gap:12px; align-items:flex-start; flex:1; min-width:0;">' +
                 thumbHtml +
                 '<div style="flex:1; min-width:0;">' +
                     '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:4px;">' +
+                        topicBadgeHtml +
                         statusBadge +
                         '<span style="font-size:0.76rem; font-weight:700; color:#6d28d9; background:#f3e8ff; padding:2px 8px; border-radius:4px;">' + escapeHtml(it.source) + '</span>' +
                         dateHtml +

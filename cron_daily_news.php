@@ -18,15 +18,20 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/inc/mailer.php';
 require_once __DIR__ . '/admin/inc/ai_news_helper.php';
 
+if (php_sapi_name() !== 'cli') {
+    header('Access-Control-Allow-Origin: *');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Content-Type: application/json; charset=utf-8');
+}
+
 $pdo = getDB();
 
 // Evitar ejecuciones simultáneas con un archivo de bloqueo temporal (máx 3 minutos)
 $lockFile = sys_get_temp_dir() . '/mm_auto_news_cron.lock';
 if (file_exists($lockFile) && (time() - @filemtime($lockFile)) < 180) {
     if (php_sapi_name() !== 'cli') {
-        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'locked', 'message' => 'Ejecución en curso.']);
     }
-    echo json_encode(['status' => 'locked', 'message' => 'Ejecución en curso.']);
     exit;
 }
 @touch($lockFile);

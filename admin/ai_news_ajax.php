@@ -17,10 +17,13 @@ $action = $_POST['ajax_action'] ?? $_GET['ajax_action'] ?? '';
 
 try {
     if ($action === 'search_news') {
-        $query = trim($_POST['query'] ?? $_GET['query'] ?? 'Moratalla Murcia');
+        $query = trim($_POST['query'] ?? $_GET['query'] ?? '');
+        if ($query === '') {
+            $query = 'Moratalla Murcia y Banda de Música de Moratalla';
+        }
         $dateFrom = isset($_POST['date_from']) ? trim($_POST['date_from']) : (isset($_GET['date_from']) ? trim($_GET['date_from']) : null);
         $dateTo   = isset($_POST['date_to'])   ? trim($_POST['date_to'])   : (isset($_GET['date_to'])   ? trim($_GET['date_to'])   : null);
-        $items = searchMoratallaNews($pdo, $query, 28, $dateFrom, $dateTo);
+        $items = searchMoratallaNews($pdo, $query, 30, $dateFrom, $dateTo);
 
         $counts = ['new' => 0, 'published' => 0, 'discarded' => 0];
         foreach ($items as $it) {
