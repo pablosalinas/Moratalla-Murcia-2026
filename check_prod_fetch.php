@@ -10,26 +10,20 @@ if (php_sapi_name() !== 'cli' && $secret !== 'moratalla2026_diag') {
 
 header('Content-Type: text/plain; charset=utf-8');
 
-echo "=== TEST POLLINATIONS ON IONOS ===\n";
-$ch = curl_init('https://text.pollinations.ai/openai');
-$payload = json_encode([
-    'model' => 'openai',
-    'messages' => [
-        ['role' => 'user', 'content' => 'Di hola en JSON: {"msg":"hola"}']
-    ],
-    'response_format' => ['type' => 'json_object']
-]);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $payload,
-    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-    CURLOPT_TIMEOUT => 20,
-    CURLOPT_SSL_VERIFYPEER => false
-]);
-$resp = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$err = curl_error($ch);
-curl_close($ch);
-echo "Pollinations HTTP: $code, Err: $err\n";
-echo "Pollinations Resp: " . substr($resp, 0, 500) . "\n";
+$testUrl = 'https://elnoroestedigital.com/una-reserva-de-la-biosfera-en-murcia-moratalla-y-caravaca/';
+$info = extractArticleContentAndImages($testUrl, 'Una reserva de la Biosfera en Murcia: Moratalla y Caravaca', '', '', 'El Noroeste Digital');
+$pdo = getDB();
+$cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
+
+echo "Testing generateSupervisedDraftWithGemini...\n";
+$start = microtime(true);
+$draft = generateSupervisedDraftWithGemini($pdo, $info, $cats);
+$elapsed = round(microtime(true) - $start, 2);
+echo "Elapsed: {$elapsed}s\n";
+echo "Draft Title: " . $draft['title'] . "\n";
+echo "Used Gemini: " . (!empty($draft['used_gemini']) ? 'YES' : 'NO') . "\n";
+echo "Model: " . ($draft['model'] ?? 'none') . "\n";
+echo "Sections count: " . count($draft['sections'] ?? []) . "\n";
+echo "HTML Length: " . strlen($draft['content_html'] ?? '') . "\n";
+echo "Lead: " . ($draft['lead'] ?? '') . "\n";
+if (!empty($draft['gemini_note'])) echo "Note: " . $draft['gemini_note'] . "\n";
