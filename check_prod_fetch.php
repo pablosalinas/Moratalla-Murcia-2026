@@ -10,20 +10,18 @@ if (php_sapi_name() !== 'cli' && $secret !== 'moratalla2026_diag') {
 
 header('Content-Type: text/plain; charset=utf-8');
 
-$testUrl = 'https://elnoroestedigital.com/una-reserva-de-la-biosfera-en-murcia-moratalla-y-caravaca/';
-$info = extractArticleContentAndImages($testUrl, 'Una reserva de la Biosfera en Murcia: Moratalla y Caravaca', '', '', 'El Noroeste Digital');
-$pdo = getDB();
-$cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
+// The Google News URL that search_news returns for this exact news item:
+$gnUrl = 'https://news.google.com/rss/articles/CBMikgFBVV95cUxQUVAzWjVTTGhvUk5zcUlEX1dCMGRsUTNtR3lsVDVaeWVaNHdQQmYzVUVHMmdxOUJ2QlJ1dllyWVJfQ2VUWVdMaGl5UkZVTGJmVzg1a2JXeGxadDB2dXBtYk1tczZNRFBNejMzZV9kcDVCVnE4NkdFTHBJdFFaYVlGWkdEdHhvNEUtekhMZk5NMXBFQQ?oc=5';
+$title = 'Una reserva de la Biosfera en Murcia: Moratalla y Caravaca - El Noroeste Digital';
 
-echo "Testing generateSupervisedDraftWithGemini...\n";
+echo "Testing resolveRealArticleUrl on Ionos...\n";
 $start = microtime(true);
-$draft = generateSupervisedDraftWithGemini($pdo, $info, $cats);
+$resolved = resolveRealArticleUrl($gnUrl, $title, 'El Noroeste Digital');
 $elapsed = round(microtime(true) - $start, 2);
-echo "Elapsed: {$elapsed}s\n";
-echo "Draft Title: " . $draft['title'] . "\n";
-echo "Used Gemini: " . (!empty($draft['used_gemini']) ? 'YES' : 'NO') . "\n";
-echo "Model: " . ($draft['model'] ?? 'none') . "\n";
-echo "Sections count: " . count($draft['sections'] ?? []) . "\n";
-echo "HTML Length: " . strlen($draft['content_html'] ?? '') . "\n";
-echo "Lead: " . ($draft['lead'] ?? '') . "\n";
-if (!empty($draft['gemini_note'])) echo "Note: " . $draft['gemini_note'] . "\n";
+echo "Resolved URL in {$elapsed}s: $resolved\n";
+
+echo "Testing extractArticleContentAndImages on Ionos...\n";
+$info = extractArticleContentAndImages($gnUrl, $title, '', '', 'El Noroeste Digital');
+echo "Extracted Title: " . $info['title'] . "\n";
+echo "Extracted Body Length: " . strlen($info['body_text']) . "\n";
+echo "Extracted Body Snippet: " . substr($info['body_text'], 0, 200) . "\n";
