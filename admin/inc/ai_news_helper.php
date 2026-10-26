@@ -1070,6 +1070,40 @@ function searchMoratallaNewsSingleQuery($pdo, $query, $maxResults = 25, $doAnnot
 }
 
 /**
+ * Busca en DuckDuckGo HTML el enlace real del artículo publicado por un medio digital a partir de su titular.
+ */
+function searchArticleUrlViaDuckDuckGo($title, $source = '') {
+    if (empty($title)) return '';
+    $cleanTitle = preg_replace('/^\[.*?\]\s*|\s*-\s*[^-]+$/u', '', $title);
+    $cleanTitle = trim(preg_replace('/[«»"“”\(\)]/u', ' ', $cleanTitle));
+    if (empty($cleanTitle)) return '';
+
+    $queries = [
+        '"' . $cleanTitle . '"',
+        $cleanTitle . ' ' . ($source ?: 'Moratalla')
+    ];
+
+    foreach ($queries as $q) {
+        $ddgUrl = 'https://html.duckduckgo.com/html/?q=' . urlencode($q);
+        $html = aiHttpGet($ddgUrl, 7);
+        if (!empty($html)) {
+            if (preg_match_all('/<a[^>]+class="result__url"[^>]+href="([^"]+)"/i', $html, $matches)) {
+                foreach ($matches[1] as $rawHref) {
+                    $target = $rawHref;
+                    if (preg_match('/uddg=([^&]+)/', $rawHref, $udm)) {
+                        $target = urldecode($udm[1]);
+                    }
+                    if (stripos($target, 'google.com') === false && stripos($target, 'duckduckgo.com') === false && preg_match('#^https?://#i', $target)) {
+                        return $target;
+                    }
+                }
+            }
+        }
+    }
+    return '';
+}
+
+/**
  * Si una URL es un enlace intermedio de Google News, decodifica o localiza la URL directa del artículo original
  * verificando siempre que corresponda exactamente a la noticia seleccionada.
  */
@@ -1086,10 +1120,8 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
         return $url;
     }
 
-    $cookie = 'SOCS=CAESHAgBEhJnd3NfMjAyNDA5MDQtMF9SQzIaAmVuIAEaBgiA_L22Bg; CONSENT=PENDING+999';
-
     // 1. Intentar decodificación directa del token base64 si contiene URL en claro
-    if (preg_match('#/articles/([A-Za-z0-9_-]+)#', $url, $m)) {
+    if (preg_match('#/(?:rss/)?articles/([A-Za-z0-9_-]+)#', $url, $m)) {
         $artId = $m[1];
         $b64 = strtr($artId, '-_', '+/');
         $pad = strlen($b64) % 4;
@@ -1102,19 +1134,17 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
             }
         }
 
-        // 2. Decodificación oficial de Google News (tokens AU_yqL...) mediante batchexecute Fbv4je
-        // Añadimos cookie SOCS para evitar redirecciones al consentimiento de Google
-        $ch = curl_init('https://news.google.com/articles/' . $artId . '?hl=es-ES&gl=ES&ceid=ES%3Aes');
+        // 2. Decodificación oficial de Google News mediante batchexecute RPC Fbv4je
+        $ch = curl_init('https://news.google.com/articles/' . $artId);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 6,
-            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_TIMEOUT        => 7,
             CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_COOKIE         => $cookie
+            CURLOPT_SSL_VERIFYHOST => false
         ]);
         $gnPageHtml = curl_exec($ch);
         $effUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
@@ -1128,13 +1158,13 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
             preg_match('/data-n-a-ts="([^"]+)"/', $gnPageHtml, $tsM);
             preg_match('/data-n-a-sg="([^"]+)"/', $gnPageHtml, $sgM);
 
-            $ts = $tsM[1] ?? '';
+            $ts = isset($tsM[1]) ? (int)$tsM[1] : 0;
             $sg = $sgM[1] ?? '';
 
-            if ($ts !== '' && $sg !== '') {
-                $innerReq = '["garturlreq",[["es","ES",["FINANCE_TOP_INDICES","WEB_TEST_1_0_0"],null,null,1,1,"ES:es",null,180,null,null,null,null,null,0,null,null,[1608992183,723341000]],"es","ES",1,[2,3,4,8],1,0,"655000234",0,0,null,0],"' . addslashes($artId) . '",' . addslashes($ts) . ',"' . addslashes($sg) . '"]';
+            if ($ts > 0 && $sg !== '') {
+                $innerReq = '["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"' . $artId . '",' . $ts . ',"' . $sg . '"]';
                 $fReq = json_encode([[['Fbv4je', $innerReq, null, 'generic']]]);
-                $ch = curl_init('https://news.google.com/_/DotsSplashUi/data/batchexecute?rpcids=Fbv4je');
+                $ch = curl_init('https://news.google.com/_/DotsSplashUi/data/batchexecute');
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST           => true,
@@ -1143,8 +1173,7 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
                         'Content-Type: application/x-www-form-urlencoded;charset=UTF-8',
                         'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                     ],
-                    CURLOPT_COOKIE         => $cookie,
-                    CURLOPT_TIMEOUT        => 8,
+                    CURLOPT_TIMEOUT        => 7,
                     CURLOPT_CONNECTTIMEOUT => 4,
                     CURLOPT_SSL_VERIFYPEER => false,
                     CURLOPT_SSL_VERIFYHOST => false
@@ -1153,6 +1182,16 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
                 curl_close($ch);
 
                 if (!empty($batchResp)) {
+                    $lines = explode("\n\n", $batchResp);
+                    if (isset($lines[1])) {
+                        $p = @json_decode($lines[1], true);
+                        if (isset($p[0][2])) {
+                            $inner = @json_decode($p[0][2], true);
+                            if (!empty($inner[1]) && stripos($inner[1], 'google.com') === false && preg_match('#^https?://#i', $inner[1])) {
+                                return $inner[1];
+                            }
+                        }
+                    }
                     if (preg_match('/garturlres\\\\?",\\\\?"(https?:[^\\\\"]+)/i', $batchResp, $resM) ||
                         preg_match('/\["garturlres","(https?:[^"]+)"/', $batchResp, $resM)) {
                         $candUrl = stripslashes($resM[1]);
@@ -1169,13 +1208,19 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
         }
     }
 
-    // 3. Buscar el titular en Bing News/Web SOLO si el título del resultado coincide con la noticia seleccionada
+    // 3. Fallback DuckDuckGo: localizar el artículo directamente en el medio original a partir de su titular
     if (!empty($title)) {
+        $ddgCandidate = searchArticleUrlViaDuckDuckGo($title, $source);
+        if (!empty($ddgCandidate)) {
+            return $ddgCandidate;
+        }
+
+        // 4. Fallback Bing News
         $normTarget = normalizeNewsTitleForDedupe($title);
         $cleanSearchTitle = preg_replace('/^\[.*?\]\s*|\s*-\s*[^-]+$/u', '', $title);
         $searchQuery = '"' . trim($cleanSearchTitle) . '" ' . ($source ?: 'Moratalla');
         $bingUrl = 'https://www.bing.com/news/search?q=' . urlencode($searchQuery) . '&format=rss&mkt=es-ES';
-        $bingXml = aiHttpGet($bingUrl, 8);
+        $bingXml = aiHttpGet($bingUrl, 7);
         if (!empty($bingXml)) {
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($bingXml);
@@ -1196,7 +1241,7 @@ function resolveRealArticleUrl($url, $title = '', $source = '') {
         }
 
         $bingWebUrl = 'https://www.bing.com/search?q=' . urlencode(trim($cleanSearchTitle) . ' ' . $source) . '&format=rss';
-        $bingWebXml = aiHttpGet($bingWebUrl, 8);
+        $bingWebXml = aiHttpGet($bingWebUrl, 7);
         if (!empty($bingWebXml)) {
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($bingWebXml);
@@ -1451,6 +1496,13 @@ function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnip
                     $domExtractedBlocks[] = "• " . $txt;
                 }
             } else {
+                // Ignorar firmas en mayúsculas de autores o agencias (ej: "JESÚS RODRÍGUEZ/ASOCIACIÓN DESCUBRIENDO MORATALLA", "REDACCIÓN/EFE")
+                if (preg_match('/^[A-ZÁÉÍÓÚÑ0-9\s\/\-\.]{4,75}$/u', $txt) && !preg_match('/[a-záéíóúñ]/u', $txt)) {
+                    continue;
+                }
+                if (preg_match('/^(por|texto|foto|redacción|fuente|autor|agencias):?\s+/iu', $txt) && mb_strlen($txt) < 80) {
+                    continue;
+                }
                 if (mb_strlen($txt) >= 30) {
                     $seenBlockTexts[$txt] = true;
                     $domExtractedBlocks[] = $txt;
@@ -1480,6 +1532,24 @@ function extractArticleContentAndImages($url, $fallbackTitle = '', $fallbackSnip
 
     if (empty($extractedText)) {
         $extractedText = $fallbackSnippet ?: $fallbackTitle;
+    }
+
+    // Si tras el primer intento no tenemos un texto sustancial (menos de 200 caracteres),
+    // intentar localizar la URL directa del medio en DuckDuckGo a partir del titular
+    if (mb_strlen(trim($extractedText)) < 200 && !empty($fallbackTitle)) {
+        static $ddgRecursionGuard = false;
+        if (!$ddgRecursionGuard) {
+            $ddgRecursionGuard = true;
+            $ddgDirectUrl = searchArticleUrlViaDuckDuckGo($fallbackTitle, $sourceName);
+            if (!empty($ddgDirectUrl) && $ddgDirectUrl !== $finalUrl && stripos($ddgDirectUrl, 'google.com') === false) {
+                $subInfo = extractArticleContentAndImages($ddgDirectUrl, $fallbackTitle, $fallbackSnippet, $rssImage, $sourceName, $fallbackPubDate);
+                $ddgRecursionGuard = false;
+                if (!empty($subInfo['body_text']) && mb_strlen(trim($subInfo['body_text'])) >= 200) {
+                    return $subInfo;
+                }
+            }
+            $ddgRecursionGuard = false;
+        }
     }
 
     if (empty($detectedSource)) {
