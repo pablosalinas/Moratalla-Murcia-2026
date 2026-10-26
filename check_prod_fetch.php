@@ -10,27 +10,26 @@ if (php_sapi_name() !== 'cli' && $secret !== 'moratalla2026_diag') {
 
 header('Content-Type: text/plain; charset=utf-8');
 
-$testUrl = 'https://elnoroestedigital.com/una-reserva-de-la-biosfera-en-murcia-moratalla-y-caravaca/';
-
-echo "=== 1. TEST DIRECT FETCH TO EL NOROESTE ===\n";
-$finalUrl = '';
-$html = aiHttpGet($testUrl, 12, $finalUrl);
-echo "Final URL: $finalUrl\n";
-echo "HTML Length: " . strlen($html) . "\n";
-echo "HTML Prefix (300 chars): " . substr($html, 0, 300) . "\n\n";
-
-echo "=== 2. TEST CONTENT EXTRACTION ===\n";
-$info = extractArticleContentAndImages($testUrl, 'Una reserva de la Biosfera en Murcia: Moratalla y Caravaca', '', '', 'El Noroeste Digital');
-echo "Extracted Title: " . $info['title'] . "\n";
-echo "Extracted Body Length: " . strlen($info['body_text']) . "\n";
-echo "Extracted Body Snippet: " . substr($info['body_text'], 0, 300) . "\n\n";
-
-echo "=== 3. TEST DRAFT GENERATION ===\n";
-$pdo = getDB();
-$cats = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
-$draft = generateSupervisedDraftWithGemini($pdo, $info, $cats);
-echo "Draft Title: " . $draft['title'] . "\n";
-echo "Used Gemini: " . (!empty($draft['used_gemini']) ? 'YES' : 'NO') . "\n";
-echo "Model: " . ($draft['model'] ?? 'none') . "\n";
-echo "Sections count: " . count($draft['sections'] ?? []) . "\n";
-echo "Content HTML length: " . strlen($draft['content_html'] ?? '') . "\n";
+echo "=== TEST POLLINATIONS ON IONOS ===\n";
+$ch = curl_init('https://text.pollinations.ai/openai');
+$payload = json_encode([
+    'model' => 'openai',
+    'messages' => [
+        ['role' => 'user', 'content' => 'Di hola en JSON: {"msg":"hola"}']
+    ],
+    'response_format' => ['type' => 'json_object']
+]);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+    CURLOPT_TIMEOUT => 20,
+    CURLOPT_SSL_VERIFYPEER => false
+]);
+$resp = curl_exec($ch);
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$err = curl_error($ch);
+curl_close($ch);
+echo "Pollinations HTTP: $code, Err: $err\n";
+echo "Pollinations Resp: " . substr($resp, 0, 500) . "\n";
