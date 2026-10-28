@@ -15,11 +15,7 @@
             --text: #f8fafc;
             --muted: #94a3b8;
         }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
@@ -38,57 +34,27 @@
             justify-content: space-between;
             gap: 1rem;
         }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        .brand h1 {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: 0.3px;
-        }
+        .brand { display: flex; align-items: center; gap: 0.75rem; }
+        .brand h1 { font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
         .brand span {
-            font-size: 0.8rem;
-            background: var(--accent);
-            color: #fff;
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            font-weight: 600;
+            font-size: 0.8rem; background: var(--accent); color: #fff;
+            padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;
         }
-        .nav-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            align-items: center;
-        }
+        .nav-bar { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
         .nav-btn {
-            background: #334155;
-            color: #e2e8f0;
-            border: 1px solid #475569;
-            padding: 0.4rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.82rem;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.15s ease;
+            background: #334155; color: #e2e8f0; border: 1px solid #475569;
+            padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.82rem;
+            cursor: pointer; text-decoration: none; transition: all 0.15s ease;
         }
         .nav-btn:hover, .nav-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
+            background: var(--accent); border-color: var(--accent); color: #fff;
         }
         main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1.25rem;
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 1.25rem;
         }
         .stage-wrapper {
-            background: #ffffff;
+            background: #023f40;
             border-radius: 10px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
             overflow: hidden;
@@ -106,28 +72,17 @@
             display: block;
         }
         .quick-links {
-            margin-top: 1rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: center;
-            max-width: 820px;
+            margin-top: 1rem; display: flex; flex-wrap: wrap;
+            gap: 0.5rem; justify-content: center; max-width: 820px;
         }
         .sub-btn {
-            background: rgba(255,255,255,0.06);
-            color: var(--muted);
-            border: 1px solid rgba(255,255,255,0.12);
-            padding: 0.35rem 0.75rem;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.15s ease;
+            background: rgba(255,255,255,0.06); color: var(--muted);
+            border: 1px solid rgba(255,255,255,0.12); padding: 0.35rem 0.75rem;
+            border-radius: 5px; font-size: 0.8rem; cursor: pointer;
+            text-decoration: none; transition: all 0.15s ease;
         }
         .sub-btn:hover, .sub-btn.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
+            background: var(--accent); border-color: var(--accent); color: #fff;
         }
     </style>
 </head>
@@ -135,7 +90,7 @@
 
 <header>
     <div class="brand">
-        <span>Abril 2003</span>
+        <span>Abril 2003 (SWF)</span>
         <h1>I Festival de Bandas de Música — Villa de Moratalla</h1>
     </div>
     <nav class="nav-bar">
@@ -171,7 +126,6 @@
 </main>
 
 <script>
-    // Si se abre con doble clic en Windows (file://) y XAMPP está activo, o si no, cargamos desde memoria (Uint8Array)
     window.RufflePlayer = window.RufflePlayer || {};
 
     let player;
@@ -187,24 +141,6 @@
         return bytes;
     }
 
-    // Interceptar fetch() por si el propio Flash hace loadMovie("principal.swf") bajo protocolo file://
-    const originalFetch = window.fetch;
-    window.fetch = async function(input, init) {
-        const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-        const match = urlStr.match(/([^\/\\]+\.swf)$/i);
-        if (match && window.SWF_BUNDLE) {
-            const key = match[1].toLowerCase();
-            if (window.SWF_BUNDLE[key]) {
-                const bytes = base64ToUint8Array(window.SWF_BUNDLE[key]);
-                return new Response(bytes, {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/x-shockwave-flash' }
-                });
-            }
-        }
-        return originalFetch.apply(this, arguments);
-    };
-
     function highlightActive(swfName) {
         const lower = swfName.toLowerCase();
         document.querySelectorAll('[data-swf]').forEach(el => {
@@ -216,16 +152,24 @@
         });
     }
 
+    function getBaseDirUrl() {
+        const href = window.location.href;
+        return href.substring(0, href.lastIndexOf('/') + 1);
+    }
+
     function loadSwfInPlayer(swfName, pushHistory = true) {
         if (!player) return;
         const key = swfName.toLowerCase();
         if (window.SWF_BUNDLE && window.SWF_BUNDLE[key]) {
             player.load({
                 data: base64ToUint8Array(window.SWF_BUNDLE[key]),
+                base: getBaseDirUrl(),
                 swfFileName: swfName,
+                allowScriptAccess: true,
+                openUrlMode: "allow",
                 autoplay: "on",
                 unmuteOverlay: "visible",
-                backgroundColor: "#ffffff",
+                backgroundColor: "#023f40",
                 letterbox: "on",
                 warnOnUnsupportedContent: false
             });
