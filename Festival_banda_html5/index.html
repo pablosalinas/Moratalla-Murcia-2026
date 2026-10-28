@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Festival de Bandas de Música - Villa de Moratalla (Abril 2003)</title>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #c0392b;
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: var(--panel);
+            border-bottom: 1px solid #334155;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .brand { display: flex; align-items: center; gap: 0.75rem; }
+        .brand h1 { font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+        .brand span {
+            font-size: 0.78rem; background: #10b981; color: #fff;
+            padding: 0.15rem 0.55rem; border-radius: 4px; font-weight: 700;
+        }
+        .nav-bar { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+        .nav-btn {
+            background: #334155; color: #e2e8f0; border: 1px solid #475569;
+            padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.82rem;
+            cursor: pointer; text-decoration: none; transition: all 0.15s ease;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+        }
+        main {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 1.25rem;
+        }
+        .stage-wrapper {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            width: 100%;
+            max-width: 850px;
+            aspect-ratio: 750 / 550;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            animation: fadeInStage 0.35s ease-out;
+        }
+        @keyframes fadeInStage {
+            from { opacity: 0.6; transform: scale(0.99); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .festival-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            user-select: none;
+        }
+        /* Animación 3D nativa del escudo de la Banda dentro del SVG */
+        .svg-crest {
+            animation: crestSpin 5s infinite ease-in-out;
+            transform-origin: 0px 0px;
+        }
+        @keyframes crestSpin {
+            0%, 100% { transform: scaleX(1); }
+            50% { transform: scaleX(0.08); }
+        }
+        /* Interacciones nativas de botones SVG (Hover & Click como en el SWF original) */
+        .svg-interactive {
+            cursor: pointer;
+            transition: filter 0.15s ease;
+        }
+        .svg-interactive:hover {
+            filter: drop-shadow(0 2px 4px rgba(192, 57, 43, 0.35));
+        }
+        .svg-sprite-btn .state-over {
+            display: none;
+        }
+        .svg-interactive:hover .svg-sprite-btn .state-up {
+            display: none;
+        }
+        .svg-interactive:hover .svg-sprite-btn .state-over {
+            display: inline;
+        }
+        .quick-links {
+            margin-top: 1rem; display: flex; flex-wrap: wrap;
+            gap: 0.5rem; justify-content: center; max-width: 850px;
+        }
+        .sub-btn {
+            background: rgba(255,255,255,0.06); color: var(--muted);
+            border: 1px solid rgba(255,255,255,0.12); padding: 0.35rem 0.75rem;
+            border-radius: 5px; font-size: 0.8rem; cursor: pointer;
+            text-decoration: none; transition: all 0.15s ease;
+        }
+        .sub-btn:hover, .sub-btn.active {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+        }
+        .intro-banner {
+            position: absolute; bottom: 18px; right: 24px;
+            background: var(--accent); color: #fff; padding: 0.5rem 1.1rem;
+            border-radius: 25px; font-size: 0.88rem; font-weight: 600;
+            text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            transition: transform 0.2s ease;
+        }
+        .intro-banner:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <span>HTML5 + SVG Nativo (Sin SWF)</span>
+        <h1>I Festival de Bandas de Música — Villa de Moratalla (Abril 2003)</h1>
+    </div>
+    <nav class="nav-bar">
+        <a href="index.html" class="nav-btn active">Intro</a>
+        <a href="principal.html" class="nav-btn ">Menú Principal</a>
+        <a href="presentacion.html" class="nav-btn ">Presentación</a>
+        <a href="Prog_Actividades.html" class="nav-btn ">Actividades</a>
+        <a href="participantes.html" class="nav-btn ">Participantes</a>
+        <a href="conciertos.html" class="nav-btn ">Conciertos</a>
+        <a href="charlas.html" class="nav-btn ">Charlas</a>
+        <a href="exposicion.html" class="nav-btn ">Exposición</a>
+        <a href="cine.html" class="nav-btn ">Cine</a>
+    </nav>
+</header>
+
+<main>
+    <div class="stage-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 550" width="100%" height="100%" class="festival-svg">
+    <rect width="750" height="550" fill="#023f40"/>
+    <a href="principal.html" data-link="principal.html" class="svg-interactive"><g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,375.00,275.00)"><path d="M -375.0 275.0 L 375.0 275.0 L 375.0 275.0 L 375.0 275.0 L 375.0 -275.0 L 375.0 -275.0 L 375.0 -275.0 L -375.0 -275.0 L -375.0 -275.0 L -375.0 -275.0 L -375.0 275.0 L -375.0 275.0 L -375.0 275.0 Z" fill="#023f40" stroke="none"/></g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,689.00,78.00)" class="svg-sprite"><g transform="matrix(1.0000,0.0000,0.0000,1.0000,0.00,0.00)"><image href="assets/index_id3.png" width="87" height="103" transform="matrix(1.0000,0.0000,0.0000,1.0000,-44.00,-52.00)"/></g></g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,65.00,62.00)" class="svg-sprite"><g transform="matrix(1.0000,0.0000,0.0000,1.0000,0.00,0.00)"><g class="svg-crest"><image href="assets/index_id14.png" width="100" height="100" transform="matrix(1.0000,0.0000,0.0000,1.0000,-50.00,-50.00)"/></g></g><g transform="matrix(0.2000,0.0000,0.0000,0.1429,7.00,-13.00)"><image href="assets/index_id5.png" width="5" height="7" transform="matrix(1.0000,0.0000,0.0000,1.0000,-2.00,-3.00)"/></g></g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,367.00,297.00)" class="svg-sprite"><g transform="matrix(1.0000,0.0000,0.0000,1.0000,0.00,0.00)"><path d="M 0.0 -120.0 Q 48.8 -120.0 93.4 -110.5 Q 136.5 -101.35 169.7 -84.7 Q 186.05 -76.45 199.0 -66.85 Q 212.05 -57.15 221.1 -46.4 Q 230.35 -35.45 235.1 -23.75 Q 240.0 -11.8 240.0 0.5 Q 240.0 12.8 235.1 24.75 Q 230.35 36.45 221.1 47.4 Q 212.05 58.15 199.0 67.85 Q 186.05 77.45 169.7 85.7 Q 136.5 102.35 93.4 111.5 Q 48.8 121.0 0.0 121.0 Q -48.8 121.0 -93.4 111.5 Q -136.5 102.35 -169.7 85.7 Q -186.05 77.45 -199.0 67.85 Q -212.05 58.15 -221.1 47.4 Q -230.35 36.45 -235.1 24.75 Q -237.5 18.85 -238.75 12.8 Q -239.35 9.75 -239.65 6.7 Q -239.8 5.15 -239.9 3.6 Q -239.95 2.8 -239.95 2.05 Q -240.0 1.25 -240.0 0.5 Q -240.0 -11.8 -235.1 -23.75 Q -230.35 -35.45 -221.1 -46.4 Q -212.05 -57.15 -199.0 -66.85 Q -186.05 -76.45 -169.7 -84.7 Q -136.5 -101.35 -93.4 -110.5 Q -48.8 -120.0 -0.0 -120.0 Z" fill="rgba(0,0,0,1.00)" fill-rule="evenodd" stroke="none"/></g></g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,374.00,308.00)"><path d="M -142.7 -28.8 Q -142.9 -27.85 -143.3 -27.3 Q -143.6 -26.9 -144.05 -26.9 Q -144.35 -26.9 -145.0 -27.35 Q -147.3 -28.8 -149.65 -28.8 Q -152.7 -28.8 -155.25 -26.9 Q -157.85 -25.05 -159.3 -21.65 Q -160.75 -18.2 -160.75 -14.15 Q -160.75 -9.1 -158.55 -5.35 Q -155.55 -0.35 -150.1 -0.35 Q -147.1 -0.35 -144.9 -2.05 Q -142.7 -3.7 -141.05 -7.35 L -141.55 -7.75 Q -143.5 -4.35 -145.15 -3.25 Q -146.8 -2.1 -148.9 -2.1 Q -151.35 -2.1 -153.25 -3.55 Q -155.15 -5.0 -156.1 -7.7 Q -157.05 -10.4 -157.05 -14.1 Q -157.05 -18.6 -156.05 -21.6 Q -155.05 -24.6 -153.3 -26.0 Q -151.55 -27.35 -149.35 -27.35 Q -146.8 -27.35 -144.95 -25.5 Q -143.05 -23.65 -142.05 -19.5 L -141.55 -19.5 L -142.05 -28.8 L -142.7 -28.8 Z M -122.45 -6.15 Q -121.8 -4.25 -121.8 -3.4 Q -121.8 -2.75 -122.25 -2.25 Q -122.7 -1.8 -124.0 -1.75 L -124.0 -1.0 L -115.4 -1.0 L -115.4 -1.75 Q -116.75 -1.8 -117.5 -2.65 Q -118.25 -3.45 -119.15 -6.15 L -126.75 -28.8 L -127.3 -28.8 L -135.1 -6.45 Q -136.1 -3.45 -136.95 -2.5 Q -137.35 -2.05 -138.7 -1.75 L -138.7 -1.0 L -131.8 -1.0 L -131.8 -1.75 Q -133.4 -1.85 -133.85 -2.35 Q -134.3 -2.8 -134.3 -3.4 Q -134.3 -4.2 -133.8 -5.8 L -132.3 -10.05 L -123.75 -10.05 L -122.45 -6.15 Z M -131.75 -11.6 L -127.95 -22.55 L -124.25 -11.6 L -131.75 -11.6 Z M -91.7 -1.75 Q -93.5 -1.95 -94.6 -2.85 Q -95.75 -3.75 -97.3 -6.4 L -101.8 -14.2 Q -99.05 -14.95 -97.7 -16.8 Q -96.35 -18.65 -96.35 -21.15 Q -96.35 -23.5 -97.5 -25.2 Q -98.7 -26.9 -100.35 -27.55 Q -102.0 -28.15 -105.5 -28.15 L -113.45 -28.15 L -113.45 -27.4 L -112.65 -27.4 Q -111.4 -27.4 -110.8 -26.55 Q -110.35 -25.9 -110.35 -23.35 L -110.35 -5.8 Q -110.35 -3.45 -110.7 -2.85 Q -111.3 -1.75 -112.65 -1.75 L -113.45 -1.75 L -113.45 -1.0 L -104.1 -1.0 L -104.1 -1.75 L -104.95 -1.75 Q -106.15 -1.75 -106.75 -2.6 Q -107.0 -2.9 -107.1 -3.7 Q -107.2 -4.5 -107.2 -5.8 L -107.2 -13.65 Q -107.0 -13.65 -106.75 -13.65 Q -106.5 -13.6 -106.3 -13.6 Q -105.75 -13.6 -105.0 -13.65 L -97.6 -1.0 L -91.7 -1.0 L -91.7 -1.75 Z M -107.2 -26.25 Q -105.6 -26.65 -104.7 -26.65 Q -102.6 -26.65 -101.3 -25.05 Q -100.05 -23.45 -100.05 -20.9 Q -100.05 -18.3 -101.6 -16.6 Q -103.2 -14.9 -106.3 -14.9 Q -106.45 -14.9 -106.7 -14.9 Q -106.9 -14.9 -107.2 -14.9 L -107.2 -26.25 Z M -71.3 -28.8 Q -71.35 -27.75 -71.55 -27.4 Q -71.8 -27.05 -72.1 -27.05 Q -72.4 -27.05 -73.3 -27.45 Q -75.1 -28.3 -76.05 -28.55 Q -77.05 -28.8 -78.2 -28.8 Q -81.5 -28.8 -83.9 -27.05 Q -86.75 -24.95 -88.4 -21.05 Q -89.8 -17.75 -89.8 -14.15 Q -89.8 -9.2 -87.3 -5.4 Q -84.05 -0.35 -77.75 -0.35 Q -75.5 -0.35 -73.7 -0.95 Q -71.9 -1.5 -70.05 -2.75 L -70.05 -11.0 Q -70.05 -13.2 -69.7 -13.95 Q -69.25 -15.05 -67.95 -15.05 L -67.55 -15.05 L -67.55 -15.8 L -76.05 -15.8 L -76.05 -15.05 Q -74.75 -15.05 -74.2 -14.7 Q -73.65 -14.35 -73.45 -13.7 Q -73.2 -13.05 -73.2 -11.0 L -73.2 -3.25 Q -74.25 -2.55 -75.35 -2.15 Q -76.5 -1.8 -77.7 -1.8 Q -79.8 -1.8 -81.75 -3.25 Q -83.7 -4.75 -84.9 -7.95 Q -85.5 -9.55 -85.8 -11.3 Q -86.1 -13.1 -86.1 -15.05 Q -86.1 -19.8 -84.3 -23.25 Q -82.15 -27.35 -78.0 -27.35 Q -74.95 -27.35 -73.0 -25.0 Q -71.65 -23.4 -70.8 -20.25 L -70.2 -20.25 L -70.7 -28.8 L -71.3 -28.8 Z M -49.65 -6.15 Q -49.0 -4.25 -49.0 -3.4 Q -49.0 -2.75 -49.5 -2.25 Q -49.95 -1.8 -51.25 -1.75 L -51.25 -1.0 L -42.6 -1.0 L -42.6 -1.75 Q -43.95 -1.8 -44.7 -2.65 Q -45.45 -3.45 -46.35 -6.15 L -54.0 -28.8 L -54.5 -28.8 L -62.35 -6.45 Q -63.35 -3.45 -64.15 -2.5 Q -64.55 -2.05 -65.95 -1.75 L -65.95 -1.0 L -59.0 -1.0 L -59.0 -1.75 Q -60.6 -1.85 -61.05 -2.35 Q -61.55 -2.8 -61.55 -3.4 Q -61.55 -4.2 -61.0 -5.8 L -59.5 -10.05 L -50.95 -10.05 L -49.65 -6.15 Z M -58.95 -11.6 L -55.15 -22.55 L -51.5 -11.6 L -58.95 -11.6 Z M -41.7 -27.4 Q -40.75 -27.4 -40.3 -27.25 Q -39.35 -26.85 -38.85 -26.4 Q -38.35 -25.95 -37.4 -24.6 L -37.4 -5.65 Q -37.4 -3.4 -37.75 -2.75 Q -38.35 -1.75 -39.75 -1.75 L -40.55 -1.75 L -40.55 -1.0 L -32.85 -1.0 L -32.85 -1.75 L -33.6 -1.75 Q -34.9 -1.75 -35.55 -2.55 Q -35.75 -2.85 -35.85 -3.65 Q -35.9 -4.05 -35.95 -4.55 Q -35.95 -5.05 -35.95 -5.65 L -35.95 -22.4 L -21.55 -0.55 L -20.95 -0.55 L -20.95 -23.5 Q -20.95 -25.75 -20.6 -26.4 Q -20.0 -27.4 -18.65 -27.4 L -17.85 -27.4 L -17.85 -28.15 L -25.55 -28.15 L -25.55 -27.4 L -24.75 -27.4 Q -23.5 -27.4 -22.85 -26.6 Q -22.65 -26.25 -22.5 -25.5 Q -22.45 -25.1 -22.45 -24.6 Q -22.4 -24.35 -22.4 -24.05 Q -22.4 -23.95 -22.4 -23.8 Q -22.4 -23.65 -22.4 -23.5 L -22.4 -7.95 L -35.75 -28.15 L -41.7 -28.15 L -41.7 -27.4 Z M -6.05 -1.0 Q 0.3 -1.0 3.4 -5.25 Q 4.8 -7.15 5.5 -9.5 Q 6.2 -11.85 6.2 -14.7 Q 6.2 -18.95 4.6 -22.15 Q 3.05 -25.4 0.5 -26.8 Q -2.0 -28.15 -6.9 -28.15 L -15.8 -28.15 L -15.8 -27.4 L -15.0 -27.4 Q -13.8 -27.4 -13.15 -26.55 Q -12.7 -25.9 -12.7 -23.35 L -12.7 -5.8 Q -12.7 -3.5 -13.05 -2.85 Q -13.65 -1.75 -15.0 -1.75 L -15.8 -1.75 L -15.8 -1.0 L -6.05 -1.0 Z M -9.55 -26.1 Q -7.7 -26.65 -6.25 -26.65 Q -2.4 -26.65 0.05 -23.4 Q 1.25 -21.8 1.9 -19.55 Q 2.2 -18.45 2.35 -17.2 Q 2.5 -15.95 2.5 -14.55 Q 2.5 -8.95 0.05 -5.7 Q -2.4 -2.4 -6.15 -2.4 Q -7.5 -2.4 -9.55 -2.95 L -9.55 -26.1 Z M 13.2 -25.25 Q 9.6 -21.15 9.6 -14.65 Q 9.6 -8.35 12.7 -4.35 Q 15.75 -0.35 20.3 -0.35 Q 24.75 -0.35 27.9 -4.45 Q 31.05 -8.55 31.05 -14.75 Q 31.05 -20.75 27.95 -24.75 Q 24.8 -28.8 20.55 -28.8 Q 16.25 -28.8 13.2 -25.25 L 13.2 -25.25 Z M 25.15 -24.6 Q 27.35 -21.2 27.35 -14.2 Q 27.35 -7.75 25.35 -4.8 Q 23.35 -1.8 20.25 -1.8 Q 17.35 -1.8 15.6 -4.5 Q 13.3 -8.1 13.3 -14.75 Q 13.3 -21.25 15.5 -24.65 Q 17.3 -27.35 20.25 -27.35 Q 23.35 -27.35 25.15 -24.6 L 25.15 -24.6 Z M 52.95 -1.0 Q 59.3 -1.0 62.4 -5.25 Q 63.8 -7.15 64.5 -9.5 Q 65.2 -11.85 65.2 -14.7 Q 65.2 -18.95 63.65 -22.15 Q 62.05 -25.4 59.5 -26.8 Q 56.95 -28.15 52.05 -28.15 L 43.15 -28.15 L 43.15 -27.4 L 43.95 -27.4 Q 45.2 -27.4 45.8 -26.55 Q 46.25 -25.9 46.25 -23.35 L 46.25 -5.8 Q 46.25 -3.5 45.9 -2.85 Q 45.35 -1.75 43.95 -1.75 L 43.15 -1.75 L 43.15 -1.0 L 52.95 -1.0 Z M 49.4 -26.1 Q 51.25 -26.65 52.7 -26.65 Q 56.6 -26.65 59.05 -23.4 Q 60.3 -21.8 60.9 -19.55 Q 61.2 -18.45 61.35 -17.2 Q 61.5 -15.95 61.5 -14.55 Q 61.5 -8.95 59.05 -5.7 Q 56.6 -2.4 52.85 -2.4 Q 51.45 -2.4 49.4 -2.95 L 49.4 -26.1 Z M 83.9 -6.15 Q 84.55 -4.25 84.55 -3.4 Q 84.55 -2.75 84.1 -2.25 Q 83.65 -1.8 82.35 -1.75 L 82.35 -1.0 L 90.95 -1.0 L 90.95 -1.75 Q 89.6 -1.8 88.85 -2.65 Q 88.1 -3.45 87.2 -6.15 L 79.6 -28.8 L 79.05 -28.8 L 71.25 -6.45 Q 70.25 -3.45 69.4 -2.5 Q 69.0 -2.05 67.65 -1.75 L 67.65 -1.0 L 74.55 -1.0 L 74.55 -1.75 Q 72.95 -1.85 72.5 -2.35 Q 72.05 -2.8 72.05 -3.4 Q 72.05 -4.2 72.55 -5.8 L 74.05 -10.05 L 82.6 -10.05 L 83.9 -6.15 Z M 74.6 -11.6 L 78.4 -22.55 L 82.1 -11.6 L 74.6 -11.6 Z M 89.9 -28.15 L 89.65 -21.8 L 90.3 -21.8 Q 90.4 -23.65 91.0 -24.75 Q 91.55 -25.8 92.4 -26.2 Q 93.05 -26.5 94.6 -26.5 L 97.2 -26.5 L 97.2 -5.65 Q 97.2 -3.4 96.85 -2.75 Q 96.25 -1.75 94.9 -1.75 L 94.1 -1.75 L 94.1 -1.0 L 103.45 -1.0 L 103.45 -1.75 L 102.7 -1.75 Q 101.4 -1.75 100.75 -2.55 Q 100.55 -2.85 100.45 -3.65 Q 100.35 -4.4 100.35 -5.65 L 100.35 -26.5 L 103.4 -26.5 Q 104.75 -26.5 105.6 -25.9 Q 106.45 -25.35 106.95 -24.2 Q 107.25 -23.5 107.4 -21.8 L 108.05 -21.8 L 107.8 -28.15 L 89.9 -28.15 Z M 114.0 -25.25 Q 110.45 -21.15 110.45 -14.65 Q 110.45 -8.35 113.5 -4.35 Q 116.6 -0.35 121.1 -0.35 Q 125.6 -0.35 128.75 -4.45 Q 131.85 -8.55 131.85 -14.75 Q 131.85 -20.75 128.75 -24.75 Q 125.6 -28.8 121.4 -28.8 Q 117.05 -28.8 114.0 -25.25 L 114.0 -25.25 Z M 126.0 -24.6 Q 128.2 -21.2 128.2 -14.2 Q 128.2 -7.75 126.2 -4.8 Q 124.15 -1.8 121.1 -1.8 Q 118.2 -1.8 116.4 -4.5 Q 114.1 -8.1 114.1 -14.75 Q 114.1 -21.25 116.35 -24.65 Q 118.1 -27.35 121.05 -27.35 Q 124.2 -27.35 126.0 -24.6 L 126.0 -24.6 Z M 148.6 -28.8 Q 148.45 -27.85 148.2 -27.55 Q 147.9 -27.25 147.5 -27.25 Q 147.15 -27.25 146.25 -27.75 Q 144.25 -28.8 142.5 -28.8 Q 139.75 -28.8 137.9 -26.65 Q 136.1 -24.55 136.1 -21.65 Q 136.1 -19.95 136.75 -18.55 Q 137.35 -17.15 138.5 -15.95 Q 139.7 -14.8 142.55 -12.85 Q 145.35 -10.9 146.0 -10.3 Q 146.9 -9.4 147.35 -8.4 Q 147.6 -7.9 147.7 -7.4 Q 147.75 -7.15 147.8 -6.9 Q 147.8 -6.75 147.8 -6.6 Q 147.8 -6.55 147.8 -6.5 Q 147.8 -6.45 147.8 -6.45 Q 147.8 -6.4 147.8 -6.35 Q 147.8 -4.55 146.65 -3.25 Q 145.45 -1.9 143.45 -1.9 Q 141.7 -1.9 140.25 -2.85 Q 138.85 -3.85 138.1 -5.3 Q 137.4 -6.75 137.0 -9.65 L 136.35 -9.65 L 136.35 -0.35 L 137.0 -0.35 Q 137.1 -1.3 137.35 -1.6 Q 137.55 -1.9 137.95 -1.9 Q 138.4 -1.9 139.95 -1.25 Q 141.55 -0.65 142.05 -0.55 Q 142.85 -0.35 143.8 -0.35 Q 146.85 -0.35 148.75 -2.6 Q 150.7 -4.8 150.7 -7.9 Q 150.7 -9.55 150.1 -11.0 Q 149.45 -12.5 148.35 -13.6 Q 147.2 -14.7 144.15 -16.7 Q 140.35 -19.25 139.35 -20.75 Q 139.0 -21.25 138.85 -21.8 Q 138.7 -22.35 138.7 -23.0 Q 138.7 -24.6 139.75 -25.9 Q 140.85 -27.15 142.55 -27.15 Q 144.05 -27.15 145.4 -26.25 Q 146.8 -25.3 147.55 -23.7 Q 148.3 -22.15 148.6 -19.5 L 149.25 -19.5 L 149.25 -28.8 L 148.6 -28.8 Z" fill="rgba(153,102,51,1.00)" fill-rule="evenodd" stroke="none"/></g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,374.00,327.00)"><path d="M -170.0 -6.0 L 170.0 -6.0 L 170.0 7.0 L -170.0 7.0 L -170.0 -6.0 Z" fill="rgba(255,255,255,1.00)" fill-rule="evenodd" stroke="none"/></g><g transform="matrix(1.0000,0.0000,0.0000,1.0000,374.00,327.00)"><path d="M -170.0 -6.0 L 170.0 -6.0 L 170.0 7.0 L -170.0 7.0 L -170.0 -6.0 Z" fill="rgba(153,102,51,1.00)" fill-rule="evenodd" stroke="none"/></g><a href="principal.html" data-link="principal.html" class="svg-interactive"><g transform="matrix(1.0000,0.0000,0.0000,1.0000,539.00,368.00)" class="svg-sprite"><g transform="matrix(1.0000,0.0000,0.0000,1.0000,0.00,0.00)"><path d="M 0.5 0.0 Q 0.7 0.0 0.85 0.1 Q 1.0 0.25 1.0 0.5 Q 1.0 0.7 0.85 0.85 Q 0.7 1.0 0.5 1.0 Q 0.25 1.0 0.1 0.85 Q -0.0 0.7 -0.0 0.5 Q -0.0 0.25 0.1 0.1 Q 0.25 -0.0 0.5 -0.0 Z" fill="rgba(255,255,255,1.00)" fill-rule="evenodd" stroke="none"/></g></g></a></g></a>
+</svg>
+        <a href="principal.html" class="intro-banner">Entrar al Menú Principal ➔</a>
+    </div>
+
+    <div class="quick-links">
+        <a href="moratalla.html" class="sub-btn ">🎵 Banda de Moratalla</a>
+        <a href="histmoratalla.html" class="sub-btn ">📜 Historia Moratalla</a>
+        <a href="diremoratalla.html" class="sub-btn ">🎼 Director Moratalla</a>
+        <a href="bullas.html" class="sub-btn ">🎵 Banda de Bullas</a>
+        <a href="histbullas.html" class="sub-btn ">📜 Historia Bullas</a>
+        <a href="direbullas.html" class="sub-btn ">🎼 Director Bullas</a>
+        <a href="cehegin.html" class="sub-btn ">🎵 Banda de Cehegín</a>
+        <a href="histcehegin.html" class="sub-btn ">📜 Historia Cehegín</a>
+        <a href="direcehegin.html" class="sub-btn ">🎼 Director Cehegín</a>
+        <a href="vilaplana.html" class="sub-btn ">⭐ Pascual Vilaplana</a>
+        <a href="imagenes/portada_festival.jpg" target="_blank" class="sub-btn">🖼️ Cartel Portada</a>
+        <a href="imagenes/contraportada_festival.jpg" target="_blank" class="sub-btn">🖼️ Contraportada</a>
+    </div>
+</main>
+
+<script>
+    // Sonido discreto y elegante generado con Web Audio API (sin archivos MP3 estridentes)
+    let audioCtx = null;
+    function playSubtleTick() {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(680, audioCtx.currentTime + 0.035);
+            gain.gain.setValueAtTime(0.035, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.035);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.04);
+        } catch (e) {}
+    }
+    document.querySelectorAll('.svg-interactive').forEach(el => {
+        el.addEventListener('mouseenter', playSubtleTick);
+    });
+    setTimeout(() => { window.location.href = "principal.html"; }, 4000);
+</script>
+
+</body>
+</html>
