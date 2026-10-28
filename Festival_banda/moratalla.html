@@ -127,6 +127,16 @@
 
 <script>
     window.RufflePlayer = window.RufflePlayer || {};
+    window.RufflePlayer.config = {
+        autoplay: "on",
+        unmuteOverlay: "hidden",
+        splashScreen: false,
+        backgroundColor: "#023f40",
+        letterbox: "on",
+        warnOnUnsupportedContent: false,
+        allowScriptAccess: true,
+        openUrlMode: "allow"
+    };
 
     let player;
     const initialSwf = "moratalla.swf";
@@ -168,7 +178,8 @@
                 allowScriptAccess: true,
                 openUrlMode: "allow",
                 autoplay: "on",
-                unmuteOverlay: "visible",
+                unmuteOverlay: "hidden",
+                splashScreen: false,
                 backgroundColor: "#023f40",
                 letterbox: "on",
                 warnOnUnsupportedContent: false
@@ -188,6 +199,14 @@
         player = ruffle.createPlayer();
         player.id = "ruffle-stage";
         document.getElementById("player-container").appendChild(player);
+
+        // Ocultar también vía Shadow DOM cualquier rastro de splash screen o unmute overlay
+        if (player.shadowRoot) {
+            const style = document.createElement('style');
+            style.textContent = '#unmute-overlay, #splash-screen { display: none !important; opacity: 0 !important; pointer-events: none !important; }';
+            player.shadowRoot.appendChild(style);
+        }
+
         loadSwfInPlayer(initialSwf, false);
 
         document.querySelectorAll('[data-swf]').forEach(btn => {
