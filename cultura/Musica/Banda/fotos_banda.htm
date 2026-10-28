@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banda de Música de Moratalla - Fotografías</title>
+    <style>
+        
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #c0392b;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 1.5rem 1rem 3rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .escudo-banda-container {
+            width: 85px;
+            height: 85px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 600px;
+            flex-shrink: 0;
+        }
+        .escudo-banda-rotator {
+            width: 75px;
+            height: 75px;
+            transform-style: preserve-3d;
+            animation: giroEscudo 6s infinite ease-in-out;
+        }
+        .escudo-banda-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+        @keyframes giroEscudo {
+            0%, 100% { transform: rotateY(0deg) scale(1); }
+            25% { transform: rotateY(180deg) scale(1.05); }
+            50% { transform: rotateY(360deg) scale(1); }
+            75% { transform: rotateY(180deg) scale(1.05); }
+        }
+        .title-group h1 {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        .title-group .subtitle {
+            color: var(--accent-color);
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+        .nav-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .nav-tab {
+            text-decoration: none;
+            color: var(--secondary-color);
+            background: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--accent-color);
+            color: #ffffff;
+        }
+
+        .featured-section {
+            background: var(--card-bg); border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+        }
+        .featured-section h2 { font-size: 1.2rem; color: var(--secondary-color); margin-bottom: 1rem; }
+        .featured-section img { max-width: 100%; height: auto; border-radius: 6px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+        .gallery-card {
+            background: var(--card-bg); border-radius: 8px; overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06); border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; transition: transform 0.2s ease;
+        }
+        .gallery-card:hover { transform: translateY(-4px); }
+        .image-wrapper { background: #eee; width: 100%; height: 190px; overflow: hidden; display: block; }
+        .image-wrapper img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .card-caption { padding: 1rem; font-size: 0.92rem; color: var(--secondary-color); text-align: center; flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        .caption-date { display: block; font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    
+    <header>
+        <div class="header-left">
+            <div class="escudo-banda-container">
+                <div class="escudo-banda-rotator">
+                    <img src="imagenes/escudo_banda.png" alt="Escudo Banda de Música de Moratalla" class="escudo-banda-img">
+                </div>
+            </div>
+            <div class="title-group">
+                <h1>Banda de Música de Moratalla</h1>
+                <div class="subtitle">Fotografías</div>
+            </div>
+        </div>
+        <nav class="nav-tabs">
+            <a href="banda.htm" class="nav-tab ">Historia e Himno</a>
+<a href="banda_ensayos.htm" class="nav-tab ">Programación y Ensayos</a>
+<a href="banda_conciertos.htm" class="nav-tab ">Conciertos</a>
+<a href="fotos_banda.htm" class="nav-tab active">Fotografías</a>
+<a href="../../../Festival_banda/index.html" class="nav-tab ">I Festival de Bandas (2003)</a>
+        </nav>
+    </header>
+    
+    <section class="featured-section">
+        <h2>Foto Oficial de la Banda (Octubre 2002)</h2>
+        <a href="imagenes/banda_oficial.jpg" target="_blank" rel="noopener">
+            <img src="imagenes/banda_oficial_mini.jpg" alt="Foto oficial de la Banda de Música de Moratalla">
+        </a>
+    </section>
+    <main class="gallery-grid">
+        <article class="gallery-card"><a href="imagenes/musica1.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica10.jpg" alt="Caravaca"></a><div class="card-caption">Foto en Caravaca de la Cruz</div></article>
+        <article class="gallery-card"><a href="imagenes/musica2.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica20.jpg" alt="Plaza Iglesia 1999"></a><div class="card-caption"><span>Plaza de la Iglesia de Moratalla<span class="caption-date">Julio de 1999</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/musica3.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica30.jpg" alt="Plaza Iglesia 1978"></a><div class="card-caption"><span>Plaza de la Iglesia de Moratalla<span class="caption-date">1978</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/musica4.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica40.jpg" alt="Iglesia Asunción"></a><div class="card-caption">Escalera de entrada a la Iglesia Nuestra Señora de la Asunción</div></article>
+        <article class="gallery-card"><a href="imagenes/musica5.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica50.jpg" alt="Cornetas y tambores"></a><div class="card-caption">Banda de cornetas y tambores</div></article>
+        <article class="gallery-card"><a href="imagenes/musica6.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica60.jpg" alt="Cornetas y tambores"></a><div class="card-caption">Banda de cornetas y tambores</div></article>
+        <article class="gallery-card"><a href="imagenes/musica7.jpg" target="_blank" class="image-wrapper"><img src="imagenes/musica70.jpg" alt="Cornetas y tambores"></a><div class="card-caption">Banda de cornetas y tambores</div></article>
+        <article class="gallery-card"><a href="imagenes/ensayo101.jpg" target="_blank" class="image-wrapper"><img src="imagenes/ensayo001.jpg" alt="Sala de ensayos"></a><div class="card-caption"><span>Sala de ensayos<span class="caption-date">Noviembre 2003</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/ensayo102.jpg" target="_blank" class="image-wrapper"><img src="imagenes/ensayo002.jpg" alt="Sala de ensayos"></a><div class="card-caption"><span>Sala de ensayos<span class="caption-date">Noviembre 2003</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/ensayo103.jpg" target="_blank" class="image-wrapper"><img src="imagenes/ensayo003.jpg" alt="Sala de ensayos"></a><div class="card-caption"><span>Sala de ensayos<span class="caption-date">Noviembre 2003</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/ensayo104.jpg" target="_blank" class="image-wrapper"><img src="imagenes/ensayo004.jpg" alt="Sala de ensayos"></a><div class="card-caption"><span>Sala de ensayos<span class="caption-date">Noviembre 2003</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/Banda_San_Anton_Ene2004.jpg" target="_blank" class="image-wrapper"><img src="imagenes/Banda_San_Anton_Ene2004_peq.jpg" alt="San Antón"></a><div class="card-caption"><span>San Antón<span class="caption-date">17 de Enero de 2004</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/Banda-17-junio-2000-Diana_w.jpg" target="_blank" class="image-wrapper"><img src="imagenes/Banda-17-junio-2000-Diana_peque.jpg" alt="Diana Cristo del Rayo"></a><div class="card-caption"><span>Diana Cristo del Rayo<span class="caption-date">17/07/2000</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/piti001.jpg" target="_blank" class="image-wrapper"><img src="imagenes/piti101.jpg" alt="La piti"></a><div class="card-caption"><span>Músicos haciendo la piti después del ensayo<span class="caption-date">29/02/2004</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/piti002.jpg" target="_blank" class="image-wrapper"><img src="imagenes/piti102.jpg" alt="La piti"></a><div class="card-caption"><span>Músicos haciendo la piti después del ensayo<span class="caption-date">29/02/2004</span></span></div></article>
+        <article class="gallery-card"><a href="imagenes/piti003.jpg" target="_blank" class="image-wrapper"><img src="imagenes/piti103.jpg" alt="La piti"></a><div class="card-caption"><span>Músicos haciendo la piti después del ensayo<span class="caption-date">29/02/2004</span></span></div></article>
+    </main>
+</div>
+</body>
+</html>

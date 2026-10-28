@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banda de Música de Moratalla - Programación y Ensayos</title>
+    <style>
+        
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #c0392b;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 1.5rem 1rem 3rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .escudo-banda-container {
+            width: 85px;
+            height: 85px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 600px;
+            flex-shrink: 0;
+        }
+        .escudo-banda-rotator {
+            width: 75px;
+            height: 75px;
+            transform-style: preserve-3d;
+            animation: giroEscudo 6s infinite ease-in-out;
+        }
+        .escudo-banda-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+        @keyframes giroEscudo {
+            0%, 100% { transform: rotateY(0deg) scale(1); }
+            25% { transform: rotateY(180deg) scale(1.05); }
+            50% { transform: rotateY(360deg) scale(1); }
+            75% { transform: rotateY(180deg) scale(1.05); }
+        }
+        .title-group h1 {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        .title-group .subtitle {
+            color: var(--accent-color);
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+        .nav-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .nav-tab {
+            text-decoration: none;
+            color: var(--secondary-color);
+            background: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--accent-color);
+            color: #ffffff;
+        }
+
+        .content-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { .content-grid { grid-template-columns: 1fr 1.1fr; } }
+        .card {
+            background: var(--card-bg); border-radius: 10px; padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color);
+        }
+        .card-title {
+            color: var(--primary-color); font-size: 1.25rem; margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent-color); text-transform: uppercase;
+        }
+        .repertoire-group { margin-bottom: 1.5rem; }
+        .group-name {
+            font-size: 0.95rem; font-weight: 700; color: var(--secondary-color);
+            text-transform: uppercase; margin-bottom: 0.5rem; display: inline-block; border-bottom: 1px solid #ccc;
+        }
+        .piece-list { list-style: none; padding-left: 0.5rem; }
+        .piece-list li { position: relative; padding-left: 1.2rem; margin-bottom: 0.35rem; font-size: 0.95rem; }
+        .piece-list li::before { content: "•"; position: absolute; left: 0; color: var(--accent-color); font-weight: bold; }
+        .director-letter { font-style: italic; color: #4b5563; margin-bottom: 2rem; }
+        .director-letter p { margin-bottom: 1rem; text-align: justify; }
+        .director-letter .farewell { text-align: center; font-style: normal; font-weight: 600; color: var(--primary-color); margin-top: 1.2rem; }
+        .rules-section { background-color: #fbfbfb; border-left: 4px solid var(--accent-color); padding: 1.2rem 1.5rem; border-radius: 0 8px 8px 0; }
+        .rules-title { font-size: 1rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 0.75rem; text-transform: uppercase; }
+        .rules-list { list-style: none; }
+        .rules-list li { position: relative; padding-left: 1.2rem; margin-bottom: 0.6rem; font-size: 0.92rem; }
+        .rules-list li::before { content: "—"; position: absolute; left: 0; color: var(--accent-color); font-weight: bold; }
+        .signature { text-align: right; margin-top: 1.5rem; }
+        .signature .name { font-weight: bold; color: var(--primary-color); font-size: 0.95rem; }
+        .signature .role { font-size: 0.85rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+<div class="container">
+    
+    <header>
+        <div class="header-left">
+            <div class="escudo-banda-container">
+                <div class="escudo-banda-rotator">
+                    <img src="imagenes/escudo_banda.png" alt="Escudo Banda de Música de Moratalla" class="escudo-banda-img">
+                </div>
+            </div>
+            <div class="title-group">
+                <h1>Banda de Música de Moratalla</h1>
+                <div class="subtitle">Programación y Ensayos</div>
+            </div>
+        </div>
+        <nav class="nav-tabs">
+            <a href="banda.htm" class="nav-tab ">Historia e Himno</a>
+<a href="banda_ensayos.htm" class="nav-tab active">Programación y Ensayos</a>
+<a href="banda_conciertos.htm" class="nav-tab ">Conciertos</a>
+<a href="fotos_banda.htm" class="nav-tab ">Fotografías</a>
+<a href="../../../Festival_banda/index.html" class="nav-tab ">I Festival de Bandas (2003)</a>
+        </nav>
+    </header>
+    
+    <div class="content-grid">
+        <section class="card">
+            <h2 class="card-title">Repertorio Inicio Temporada 2004</h2>
+            <div class="repertoire-group">
+                <span class="group-name">Bandas Sonoras</span>
+                <ul class="piece-list">
+                    <li>Gladiator</li><li>La misión</li><li>Bailando con lobos</li>
+                    <li>La conquista del paraíso</li><li>Memorias de África</li>
+                    <li>La lista de Schindler</li><li>Braveheart</li><li>El padrino</li>
+                </ul>
+            </div>
+            <div class="repertoire-group">
+                <span class="group-name">Pasacalles y Marchas</span>
+                <ul class="piece-list">
+                    <li>Luis</li><li>Bajo la doble águila</li><li>Antañona</li>
+                    <li>Homenaje a Pepín Liria</li><li>Benaguacil</li>
+                </ul>
+            </div>
+            <div class="repertoire-group">
+                <span class="group-name">Obras Españolas (o basadas en música española)</span>
+                <ul class="piece-list">
+                    <li>Goyescas</li><li>Tambor de granaderos</li><li>El camino real</li>
+                    <li>La Leyenda del beso</li><li>La Gran Vía</li><li>Alma de Dios</li>
+                    <li>El Bateo</li><li>Una noche en Granada</li><li>Sevilla</li>
+                </ul>
+            </div>
+            <div class="repertoire-group">
+                <span class="group-name">Pasodobles</span>
+                <ul class="piece-list">
+                    <li>La Cañada</li><li>María Esparza</li><li>En er mundo</li>
+                    <li>Mujer esteponera</li><li>Tercio de quites</li>
+                </ul>
+            </div>
+        </section>
+        <section class="card">
+            <h2 class="card-title">Nota de la Dirección</h2>
+            <div class="director-letter">
+                <p>Cumplidos cuatro años desde que comenzamos esta nueva etapa de la Banda de Música de Moratalla conmigo como director, y recogiendo vuestras inquietudes, he pensado en una programación montada sobre dos grandes ejes: un concierto de bandas sonoras y un concierto de música española.</p>
+                <p>Estas programaciones supondrán en su mayoría una recopilación del trabajo realizado durante este tiempo, de forma que podremos ver las diferencias interpretativas y resultados de las épocas en que tocamos estas obras comparándolas con la nueva situación de la Banda.</p>
+                <p>Supondrá un trabajo recopilatorio que pretende revivir momentos pasados. Además, permitirá que los nuevos componentes se puedan sumar al conocimiento de este repertorio y las dificultades que conlleva, y cerrar una etapa antes de abrir otra con nuevos y numerosos retos. Gracias por la confianza y colaboración que depositáis en mí.</p>
+                <div class="farewell">Espero que sea de vuestro agrado.<br>Vuestro Director.</div>
+            </div>
+            <div class="rules-section">
+                <div class="rules-title">Indicaciones para los Ensayos</div>
+                <ul class="rules-list">
+                    <li>Los ensayos deben traerse preparados.</li>
+                    <li>El ensayo del viernes comenzará a las <strong>21:30</strong> (para preparar material y calentar) y a las <strong>21:45</strong> para afinación y ensayo.</li>
+                    <li>El ensayo del domingo comenzará a las <strong>11:30</strong> (para preparar material y calentar) y a las <strong>11:45</strong> para afinación y ensayo.</li>
+                    <li>El ensayo será continuo.</li>
+                    <li>Traer material para poder tomar las anotaciones que se precisen sobre las partituras.</li>
+                </ul>
+                <div class="signature">
+                    <div class="name">Doroteo Ludeña López</div>
+                    <div class="role">Director</div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+</body>
+</html>

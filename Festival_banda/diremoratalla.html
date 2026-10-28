@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Director Banda de Moratalla - I Festival de Bandas de Música</title>
+    <script src="swf_bundle.js"></script>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #c0392b;
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: var(--panel);
+            border-bottom: 1px solid #334155;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .brand h1 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.3px;
+        }
+        .brand span {
+            font-size: 0.8rem;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .nav-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .nav-btn {
+            background: #334155;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+        }
+        .stage-wrapper {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            width: 100%;
+            max-width: 820px;
+            aspect-ratio: 750 / 550;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #ruffle-stage, ruffle-player {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+        .quick-links {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            max-width: 820px;
+        }
+        .sub-btn {
+            background: rgba(255,255,255,0.06);
+            color: var(--muted);
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 0.35rem 0.75rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .sub-btn:hover, .sub-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <span>Abril 2003</span>
+        <h1>I Festival de Bandas de Música — Villa de Moratalla</h1>
+    </div>
+    <nav class="nav-bar">
+        <a href="index.html" class="nav-btn" data-swf="index.swf">Intro</a>
+        <a href="principal.html" class="nav-btn" data-swf="principal.swf">Menú Principal</a>
+        <a href="presentacion.html" class="nav-btn" data-swf="presentacion.swf">Presentación</a>
+        <a href="Prog_Actividades.html" class="nav-btn" data-swf="Prog_Actividades.swf">Actividades</a>
+        <a href="participantes.html" class="nav-btn" data-swf="participantes.swf">Participantes</a>
+        <a href="conciertos.html" class="nav-btn" data-swf="conciertos.swf">Conciertos</a>
+        <a href="charlas.html" class="nav-btn" data-swf="charlas.swf">Charlas</a>
+        <a href="exposicion.html" class="nav-btn" data-swf="exposicion.swf">Exposición</a>
+        <a href="cine.html" class="nav-btn" data-swf="cine.swf">Cine</a>
+    </nav>
+</header>
+
+<main>
+    <div class="stage-wrapper" id="player-container"></div>
+
+    <div class="quick-links">
+        <a href="moratalla.html" class="sub-btn" data-swf="moratalla.swf">🎵 Banda de Moratalla</a>
+        <a href="histmoratalla.html" class="sub-btn" data-swf="histmoratalla.swf">📜 Historia Moratalla</a>
+        <a href="diremoratalla.html" class="sub-btn" data-swf="diremoratalla.swf">🎼 Director Moratalla</a>
+        <a href="bullas.html" class="sub-btn" data-swf="bullas.swf">🎵 Banda de Bullas</a>
+        <a href="histbullas.html" class="sub-btn" data-swf="histbullas.swf">📜 Historia Bullas</a>
+        <a href="direbullas.html" class="sub-btn" data-swf="direbullas.swf">🎼 Director Bullas</a>
+        <a href="cehegin.html" class="sub-btn" data-swf="cehegin.swf">🎵 Banda de Cehegín</a>
+        <a href="histcehegin.html" class="sub-btn" data-swf="histcehegin.swf">📜 Historia Cehegín</a>
+        <a href="direcehegin.html" class="sub-btn" data-swf="direcehegin.swf">🎼 Director Cehegín</a>
+        <a href="vilaplana.html" class="sub-btn" data-swf="vilaplana.swf">⭐ Pascual Vilaplana</a>
+        <a href="imagenes/portada_festival.jpg" target="_blank" class="sub-btn">🖼️ Cartel Portada</a>
+        <a href="imagenes/contraportada_festival.jpg" target="_blank" class="sub-btn">🖼️ Contraportada</a>
+    </div>
+</main>
+
+<script>
+    // Si se abre con doble clic en Windows (file://) y XAMPP está activo, o si no, cargamos desde memoria (Uint8Array)
+    window.RufflePlayer = window.RufflePlayer || {};
+
+    let player;
+    const initialSwf = "diremoratalla.swf";
+
+    function base64ToUint8Array(base64) {
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // Interceptar fetch() por si el propio Flash hace loadMovie("principal.swf") bajo protocolo file://
+    const originalFetch = window.fetch;
+    window.fetch = async function(input, init) {
+        const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+        const match = urlStr.match(/([^\/\\]+\.swf)$/i);
+        if (match && window.SWF_BUNDLE) {
+            const key = match[1].toLowerCase();
+            if (window.SWF_BUNDLE[key]) {
+                const bytes = base64ToUint8Array(window.SWF_BUNDLE[key]);
+                return new Response(bytes, {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/x-shockwave-flash' }
+                });
+            }
+        }
+        return originalFetch.apply(this, arguments);
+    };
+
+    function highlightActive(swfName) {
+        const lower = swfName.toLowerCase();
+        document.querySelectorAll('[data-swf]').forEach(el => {
+            if (el.getAttribute('data-swf').toLowerCase() === lower) {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+    }
+
+    function loadSwfInPlayer(swfName, pushHistory = true) {
+        if (!player) return;
+        const key = swfName.toLowerCase();
+        if (window.SWF_BUNDLE && window.SWF_BUNDLE[key]) {
+            player.load({
+                data: base64ToUint8Array(window.SWF_BUNDLE[key]),
+                swfFileName: swfName,
+                autoplay: "on",
+                unmuteOverlay: "visible",
+                backgroundColor: "#ffffff",
+                letterbox: "on",
+                warnOnUnsupportedContent: false
+            });
+        } else {
+            player.load(swfName);
+        }
+        highlightActive(swfName);
+        if (pushHistory && window.location.protocol !== 'file:') {
+            const htmlName = swfName.replace(/\.swf$/i, '.html');
+            window.history.pushState({ swf: swfName }, '', htmlName);
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        const ruffle = window.RufflePlayer.newest();
+        player = ruffle.createPlayer();
+        player.id = "ruffle-stage";
+        document.getElementById("player-container").appendChild(player);
+        loadSwfInPlayer(initialSwf, false);
+
+        document.querySelectorAll('[data-swf]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetSwf = btn.getAttribute('data-swf');
+                loadSwfInPlayer(targetSwf, true);
+            });
+        });
+    });
+
+    window.addEventListener("popstate", (e) => {
+        if (e.state && e.state.swf) {
+            loadSwfInPlayer(e.state.swf, false);
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banda de Música de Moratalla - Conciertos</title>
+    <style>
+        
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #c0392b;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 1.5rem 1rem 3rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .escudo-banda-container {
+            width: 85px;
+            height: 85px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 600px;
+            flex-shrink: 0;
+        }
+        .escudo-banda-rotator {
+            width: 75px;
+            height: 75px;
+            transform-style: preserve-3d;
+            animation: giroEscudo 6s infinite ease-in-out;
+        }
+        .escudo-banda-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+        @keyframes giroEscudo {
+            0%, 100% { transform: rotateY(0deg) scale(1); }
+            25% { transform: rotateY(180deg) scale(1.05); }
+            50% { transform: rotateY(360deg) scale(1); }
+            75% { transform: rotateY(180deg) scale(1.05); }
+        }
+        .title-group h1 {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        .title-group .subtitle {
+            color: var(--accent-color);
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+        .nav-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .nav-tab {
+            text-decoration: none;
+            color: var(--secondary-color);
+            background: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--accent-color);
+            color: #ffffff;
+        }
+
+        .concert-card {
+            background: var(--card-bg); border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color);
+            margin-bottom: 2rem; overflow: hidden; display: grid; grid-template-columns: 1fr;
+        }
+        @media (min-width: 768px) { .concert-card { grid-template-columns: 1.6fr 1fr; } }
+        .concert-details { padding: 2rem; }
+        .concert-title { color: var(--primary-color); font-size: 1.4rem; margin-bottom: 1rem; }
+        .meta-info {
+            background-color: #f1f5f9; border-left: 4px solid var(--accent-color);
+            padding: 0.8rem 1.2rem; border-radius: 0 6px 6px 0; margin-bottom: 1.5rem; font-size: 0.95rem;
+        }
+        .program-title { font-size: 1rem; font-weight: 700; color: var(--secondary-color); text-transform: uppercase; margin-bottom: 0.75rem; }
+        .program-list { list-style: none; padding-left: 0.5rem; }
+        .program-list li { position: relative; padding-left: 1.2rem; margin-bottom: 0.4rem; font-size: 0.95rem; }
+        .program-list li::before { content: "♪"; position: absolute; left: 0; color: var(--accent-color); font-weight: bold; }
+        .sidebar {
+            background-color: #fafafa; border-top: 1px solid var(--border-color); padding: 2rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        @media (min-width: 768px) { .sidebar { border-top: none; border-left: 1px solid var(--border-color); } }
+        .sidebar img { max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); margin-bottom: 1rem; }
+        .badge-loteria {
+            display: inline-block; background: #eef2ff; color: var(--primary-color);
+            border: 1px solid #c7d2fe; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+        }
+        .festival-banner { text-align: center; margin-top: 1.5rem; }
+        .btn-festival {
+            display: inline-block; background: var(--primary-color); color: #ffffff;
+            text-decoration: none; padding: 0.85rem 1.5rem; border-radius: 6px; font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .btn-festival:hover { background: var(--accent-color); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+<div class="container">
+    
+    <header>
+        <div class="header-left">
+            <div class="escudo-banda-container">
+                <div class="escudo-banda-rotator">
+                    <img src="imagenes/escudo_banda.png" alt="Escudo Banda de Música de Moratalla" class="escudo-banda-img">
+                </div>
+            </div>
+            <div class="title-group">
+                <h1>Banda de Música de Moratalla</h1>
+                <div class="subtitle">Conciertos</div>
+            </div>
+        </div>
+        <nav class="nav-tabs">
+            <a href="banda.htm" class="nav-tab ">Historia e Himno</a>
+<a href="banda_ensayos.htm" class="nav-tab ">Programación y Ensayos</a>
+<a href="banda_conciertos.htm" class="nav-tab active">Conciertos</a>
+<a href="fotos_banda.htm" class="nav-tab ">Fotografías</a>
+<a href="../../../Festival_banda/index.html" class="nav-tab ">I Festival de Bandas (2003)</a>
+        </nav>
+    </header>
+    
+    <main>
+        <article class="concert-card">
+            <div class="concert-details">
+                <h2 class="concert-title">Concierto de Navidad</h2>
+                <div class="meta-info">
+                    <div><strong>Fecha:</strong> Sábado, 27 de Diciembre de 2003</div>
+                    <div><strong>Lugar:</strong> Teatro Trieta</div>
+                    <div><strong>Horario:</strong> 20:30 h</div>
+                </div>
+                <div class="program-title">Programa Provisional</div>
+                <ul class="program-list">
+                    <li>Sleighride (veloz trineo)</li>
+                    <li>Marcha Turca (Mozart)</li>
+                    <li>Sinfonía Clásica</li>
+                    <li>En un Mercado Persa</li>
+                    <li>Braveheart</li>
+                    <li>Tambor de Granaderos</li>
+                    <li>Una Noche en Granada (Emilio Cebrián Ruiz)</li>
+                </ul>
+            </div>
+            <aside class="sidebar">
+                <img src="imagenes/loteria_banda.jpg" alt="Lotería de Navidad de la Banda">
+                <div class="badge-loteria">Participaciones de 3 €</div>
+            </aside>
+        </article>
+        <div class="festival-banner">
+            <a href="../../../Festival_banda/index.html" class="btn-festival">
+                🎺 I Festival de Bandas de Música — Villa de Moratalla (Abril 2003)
+            </a>
+        </div>
+    </main>
+</div>
+</body>
+</html>

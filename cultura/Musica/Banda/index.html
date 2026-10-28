@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banda de Música de Moratalla - Historia</title>
+    <style>
+        
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #c0392b;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 1.5rem 1rem 3rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .escudo-banda-container {
+            width: 85px;
+            height: 85px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 600px;
+            flex-shrink: 0;
+        }
+        .escudo-banda-rotator {
+            width: 75px;
+            height: 75px;
+            transform-style: preserve-3d;
+            animation: giroEscudo 6s infinite ease-in-out;
+        }
+        .escudo-banda-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        }
+        @keyframes giroEscudo {
+            0%, 100% { transform: rotateY(0deg) scale(1); }
+            25% { transform: rotateY(180deg) scale(1.05); }
+            50% { transform: rotateY(360deg) scale(1); }
+            75% { transform: rotateY(180deg) scale(1.05); }
+        }
+        .title-group h1 {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        .title-group .subtitle {
+            color: var(--accent-color);
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+        .nav-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .nav-tab {
+            text-decoration: none;
+            color: var(--secondary-color);
+            background: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--accent-color);
+            color: #ffffff;
+        }
+
+        .himno-section { text-align: center; margin-bottom: 2rem; }
+        .btn-himno {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background-color: var(--accent-color); color: #ffffff;
+            text-decoration: none; padding: 0.75rem 1.6rem; border-radius: 30px;
+            font-size: 1rem; font-weight: 600;
+            box-shadow: 0 3px 6px rgba(192, 57, 43, 0.25);
+            transition: all 0.2s ease;
+        }
+        .btn-himno:hover { background-color: #a93226; transform: translateY(-2px); }
+        .history-card {
+            background: var(--card-bg); border-radius: 10px; padding: 2.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color);
+        }
+        .card-header {
+            text-align: center; margin-bottom: 1.8rem; padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .card-header h2 { font-size: 1.4rem; color: var(--primary-color); text-transform: uppercase; }
+        .history-text { font-size: 1.05rem; color: #374151; text-align: justify; }
+        .history-text p { margin-bottom: 1.25rem; text-indent: 1.5rem; }
+        .history-text p:first-of-type::first-letter {
+            font-size: 2.5rem; float: left; line-height: 1; padding-right: 8px;
+            color: var(--accent-color); font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    
+    <header>
+        <div class="header-left">
+            <div class="escudo-banda-container">
+                <div class="escudo-banda-rotator">
+                    <img src="imagenes/escudo_banda.png" alt="Escudo Banda de Música de Moratalla" class="escudo-banda-img">
+                </div>
+            </div>
+            <div class="title-group">
+                <h1>Banda de Música de Moratalla</h1>
+                <div class="subtitle">Historia y Documentación</div>
+            </div>
+        </div>
+        <nav class="nav-tabs">
+            <a href="banda.htm" class="nav-tab active">Historia e Himno</a>
+<a href="banda_ensayos.htm" class="nav-tab ">Programación y Ensayos</a>
+<a href="banda_conciertos.htm" class="nav-tab ">Conciertos</a>
+<a href="fotos_banda.htm" class="nav-tab ">Fotografías</a>
+<a href="../../../Festival_banda/index.html" class="nav-tab ">I Festival de Bandas (2003)</a>
+        </nav>
+    </header>
+    
+    <div class="himno-section">
+        <a href="himno.pdf" target="_blank" rel="noopener" class="btn-himno">
+            <span>📄</span> Letra: HIMNO A MORATALLA (PDF)
+        </a>
+    </div>
+    <main>
+        <article class="history-card">
+            <div class="card-header"><h2>Reseña Histórica</h2></div>
+            <div class="history-text">
+                <p>La Asociación Cultural «Banda de Música de Moratalla» se constituye como tal asociación en fechas muy recientes, en el año 1999. Pero, aunque entidad de tan inmediata creación, su bagaje no es pequeño: fruto de una centenaria tradición musical en Moratalla, la Banda de Música de Moratalla se remonta a inicios del pasado siglo, momento en el que adopta el carácter de Banda Municipal.</p>
+                <p>Tras un dilatado período en el que se suceden distintos directores, se encarga la dirección de la Banda en 1966 a <strong>D. Juan Antonio Fernández García</strong>, verdadero artífice de lo que la Banda de Música de Moratalla es en la actualidad, ya que de su fecunda didáctica musical surgen la práctica totalidad de los músicos de la actual banda, heredera de la Agrupación Musical «Cristo del Rayo» constituida durante el tiempo en que D. Juan Antonio Fernández estuvo al frente de la misma.</p>
+                <p>Tras un ínterin posterior a la jubilación de éste y constituida la actual Asociación, <strong>D. Doroteo Ludeña López</strong> asume la responsabilidad de Director de la misma y, recogiendo el espíritu innovador que la nueva institución musical quiere emprender, afronta con renovado ánimo el futuro de la música en Moratalla. Como resultado de la unión de Director, músicos y la ilusión de todo un pueblo, tenemos como resultado la Banda de Música de Moratalla.</p>
+            </div>
+        </article>
+    </main>
+</div>
+</body>
+</html>
