@@ -4,6 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bandas y Participantes - I Festival de Bandas de Música</title>
+    <script>
+        // Interceptar attachShadow ANTES de que cargue Ruffle para ocultar el letrero (splash-screen) y el icono de silencio desde el milisegundo 0
+        (function() {
+            const origAttachShadow = Element.prototype.attachShadow;
+            Element.prototype.attachShadow = function(init) {
+                const shadow = origAttachShadow.call(this, init);
+                if (this.tagName && this.tagName.toLowerCase().includes('ruffle')) {
+                    const hideStyle = document.createElement('style');
+                    hideStyle.textContent = `
+                        #splash-screen,
+                        .splash-screen,
+                        #unmute-overlay,
+                        .unmute-overlay,
+                        #logo,
+                        .logo {
+                            display: none !important;
+                            opacity: 0 !important;
+                            visibility: hidden !important;
+                            pointer-events: none !important;
+                            width: 0 !important;
+                            height: 0 !important;
+                        }
+                    `;
+                    shadow.appendChild(hideStyle);
+                    const obs = new MutationObserver(() => {
+                        if (!shadow.contains(hideStyle)) {
+                            shadow.appendChild(hideStyle);
+                        }
+                    });
+                    obs.observe(shadow, { childList: true });
+                }
+                return shadow;
+            };
+        })();
+    </script>
     <script src="swf_bundle.js"></script>
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
     <style>
@@ -199,13 +234,6 @@
         player = ruffle.createPlayer();
         player.id = "ruffle-stage";
         document.getElementById("player-container").appendChild(player);
-
-        // Ocultar también vía Shadow DOM cualquier rastro de splash screen o unmute overlay
-        if (player.shadowRoot) {
-            const style = document.createElement('style');
-            style.textContent = '#unmute-overlay, #splash-screen { display: none !important; opacity: 0 !important; pointer-events: none !important; }';
-            player.shadowRoot.appendChild(style);
-        }
 
         loadSwfInPlayer(initialSwf, false);
 
