@@ -80,6 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <p class="mt-6 text-center text-sm text-gray-600">
             ¿No tienes cuenta? <a href="registro.php" class="text-indigo-600 hover:underline font-medium">Regístrate aquí</a>
         </p>
+
+        <div class="mt-6 pt-4 border-t border-gray-100 text-center">
+            <a href="https://www.moratalla-murcia.com" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Volver a moratalla-murcia.com
+            </a>
+        </div>
     </div>
 </body>
 </html>
