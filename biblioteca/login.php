@@ -7,30 +7,41 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $captcha  = trim($_POST['captcha'] ?? '');
 
-    if ($username && $password) {
-        $stmt = $pdo->prepare('SELECT id, username, password, rol, activo FROM usuarios WHERE username = ?');
-        $stmt->execute([$username]);
-        $user = $stmt->fetch();
-
-        if ($user && password_verify($password, $user['password'])) {
-            if (isset($user['activo']) && (int)$user['activo'] === 0) {
-                $error = 'Tu cuenta está deshabilitada y pendiente de autorización por un supervisor.';
-            } else {
-                // Login exitoso
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['rol'] = $user['rol'];
-                header('Location: index.php');
-                exit;
-            }
+    if ($username && $password && $captcha !== '') {
+        if ((int)$captcha !== ($_SESSION['login_captcha_answer'] ?? -1)) {
+            $error = 'Respuesta de seguridad incorrecta. Inténtalo de nuevo.';
         } else {
-            $error = 'Usuario o contraseña incorrectos.';
+            $stmt = $pdo->prepare('SELECT id, username, password, rol, activo FROM usuarios WHERE username = ?');
+            $stmt->execute([$username]);
+            $user = $stmt->fetch();
+
+            if ($user && password_verify($password, $user['password'])) {
+                if (isset($user['activo']) && (int)$user['activo'] === 0) {
+                    $error = 'Tu cuenta está deshabilitada y pendiente de autorización por un supervisor.';
+                } else {
+                    // Login exitoso
+                    unset($_SESSION['login_captcha_answer'], $_SESSION['login_captcha_question']);
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['rol'] = $user['rol'];
+                    header('Location: index.php');
+                    exit;
+                }
+            } else {
+                $error = 'Usuario o contraseña incorrectos.';
+            }
         }
     } else {
         $error = 'Por favor, rellena todos los campos.';
     }
 }
+
+$num1 = rand(1, 10);
+$num2 = rand(1, 10);
+$_SESSION['login_captcha_answer'] = $num1 + $num2;
+$_SESSION['login_captcha_question'] = "¿Cuánto es $num1 + $num2?";
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -69,6 +80,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
                 <input type="password" name="password" id="password" required 
+                       class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="captcha" class="block text-sm font-medium text-gray-700">Verificación de seguridad: <strong class="text-indigo-600"><?= htmlspecialchars($_SESSION['login_captcha_question']) ?></strong></label>
+                <input type="number" name="captcha" id="captcha" required placeholder="Escribe el resultado..."
                        class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
             </div>
             

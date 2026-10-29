@@ -9,31 +9,43 @@ $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $captcha  = trim($_POST['captcha'] ?? '');
 
-    if ($username !== '' && $password !== '') {
-        // Verificar si el usuario ya existe
-        $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE username = ?');
-        $stmt->execute([$username]);
-        if ($stmt->fetch()) {
-            $error = 'El nombre de usuario ya está registrado.';
+    if ($username !== '' && $password !== '' && $captcha !== '') {
+        if ((int)$captcha !== ($_SESSION['captcha_answer'] ?? -1)) {
+            $error = 'Respuesta de seguridad incorrecta. Inténtalo de nuevo.';
         } else {
-            // Crear el usuario con la contraseña encriptada y en estado deshabilitado (activo = 0)
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO usuarios (username, password, rol, activo) VALUES (?, ?, 'consulta', 0)");
-
-            if ($stmt->execute([$username, $hashed_password])) {
-                // Enviar correo a info@moratalla-murcia.com indicando que hay alta pendiente de confirmación
-                $mailError = null;
-                enviarCorreoAltaPendiente($username, $mailError);
-
-                $success = 'Solicitud de alta registrada correctamente. Tu cuenta ha quedado en estado <strong>deshabilitado</strong> pendiente de confirmación hasta que un supervisor la autorice.';
+            // Verificar si el usuario ya existe
+            $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE username = ?');
+            $stmt->execute([$username]);
+            if ($stmt->fetch()) {
+                $error = 'El nombre de usuario ya está registrado.';
             } else {
-                $error = 'Ocurrió un error al registrar la solicitud de alta.';
+                // Crear el usuario con la contraseña encriptada y en estado deshabilitado (activo = 0)
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO usuarios (username, password, rol, activo) VALUES (?, ?, 'consulta', 0)");
+
+                if ($stmt->execute([$username, $hashed_password])) {
+                    // Enviar correo a info@moratalla-murcia.com indicando que hay alta pendiente de confirmación
+                    $mailError = null;
+                    enviarCorreoAltaPendiente($username, $mailError);
+
+                    $success = 'Solicitud de alta registrada correctamente. Tu cuenta ha quedado en estado <strong>deshabilitado</strong> pendiente de confirmación hasta que un supervisor la autorice.';
+                } else {
+                    $error = 'Ocurrió un error al registrar la solicitud de alta.';
+                }
             }
         }
     } else {
-        $error = 'Por favor, introduce un usuario y una contraseña.';
+        $error = 'Por favor, rellena todos los campos.';
     }
+}
+
+if (!$success) {
+    $num1 = rand(1, 10);
+    $num2 = rand(1, 10);
+    $_SESSION['captcha_answer'] = $num1 + $num2;
+    $_SESSION['captcha_question'] = "¿Cuánto es $num1 + $num2?";
 }
 ?>
 <!DOCTYPE html>
@@ -79,6 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
                     <input type="password" name="password" id="password" required 
+                           class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label for="captcha" class="block text-sm font-medium text-gray-700">Verificación de seguridad: <strong class="text-indigo-600"><?= htmlspecialchars($_SESSION['captcha_question']) ?></strong></label>
+                    <input type="number" name="captcha" id="captcha" required placeholder="Escribe el resultado..."
                            class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 
