@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Base ────────────────────────────────── */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+}
+
+/* ── Spinner de carga (paginación / AJAX) ── */
+.spinner {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #e5e7eb;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Tejuelo ─────────────────────────────── */
+.tejuelo {
+    flex-shrink: 0;
+    width: 4rem;
+    background: #fef9c3;
+    border: 2px solid #fde047;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    text-align: center;
+    padding: 0.25rem 0;
+    transition: transform 0.15s;
+}
+.tejuelo:hover { transform: scale(1.06); }
+.tejuelo-line {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.3;
+}
+
+/* ── Paginación ──────────────────────────── */
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.pagination-btn:hover:not(:disabled) {
+    background: #eef2ff;
+    border-color: #a5b4fc;
+    color: #4f46e5;
+}
+.pagination-btn.active {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #fff;
+    font-weight: 600;
+    pointer-events: none;
+}
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
