@@ -304,10 +304,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Registrar la noticia en el control anti-redundancia (ai_processed_news) para no volver a ofrecerla como pendiente
-            if (!empty($source_url) || !empty($ai_original_title)) {
-                $pubDateFormatted = !empty($event_date) ? formatDateToSpanish($event_date) : null;
-                markNewsAsProcessed($pdo, $source_url ?: $title, $ai_original_title ?: $title, $ai_source_name, 'published', $news_id, null, null, $pubDateFormatted, $event_date);
-            }
+            $pubDateFormatted = !empty($event_date) ? formatDateToSpanish($event_date) : null;
+            markNewsAsProcessed($pdo, $source_url ?: $title, $ai_original_title ?: $title, $ai_source_name ?: 'Prensa', 'published', $news_id, null, null, $pubDateFormatted, $event_date);
 
             // Procesar imágenes preseleccionadas para la galería desde las Opciones A, B o C
             if (!empty($_POST['preselected_gallery_paths']) && is_array($_POST['preselected_gallery_paths'])) {

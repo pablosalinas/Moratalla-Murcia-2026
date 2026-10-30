@@ -422,10 +422,18 @@ function isNewsItemInDateRange($item, $dateFrom = '', $dateTo = '', $allowUndate
 }
 
 /**
- * Normaliza un titular para comparación anti-duplicados
+ * Normaliza un titular para comparación anti-duplicados eliminando sufijos de medios, stopwords y caracteres especiales.
  */
 function normalizeNewsTitleForDedupe($title) {
-    $t = mb_strtolower(trim((string)$title), 'UTF-8');
+    $t = trim((string)$title);
+    if ($t === '') return '';
+
+    // Eliminar sufijos habituales de fuentes y periódicos como " - El Noroeste Digital", " | La Verdad", " - Europa Press"
+    $t = preg_replace('/(\s*[-|–—]\s*[^-|–—]+)$/u', '', $t);
+    // Eliminar prefijos/sufijos entre corchetes o paréntesis como "[Vídeo]", "[Fotos]"
+    $t = preg_replace('/^\[.*?\]\s*|\s*\[.*?\]$/u', '', $t);
+
+    $t = mb_strtolower($t, 'UTF-8');
     $replacements = [
         'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ü'=>'u', 'ñ'=>'n',
         'Á'=>'a', 'É'=>'e', 'Í'=>'i', 'Ó'=>'o', 'Ú'=>'u', 'Ü'=>'u', 'Ñ'=>'n'
@@ -433,7 +441,12 @@ function normalizeNewsTitleForDedupe($title) {
     $t = strtr($t, $replacements);
     $t = preg_replace('/[^a-z0-9\s]/', ' ', $t);
     $words = preg_split('/\s+/', $t, -1, PREG_SPLIT_NO_EMPTY);
-    $stopwords = ['el','la','los','las','un','una','unos','unas','de','del','al','en','con','por','para','sobre','se','su','sus','que','y','o','a','ante','bajo','como','entre','hacia','hasta','sin','tras','moratalla','murcia','region'];
+    $stopwords = [
+        'el','la','los','las','un','una','unos','unas','de','del','al','en','con','por','para',
+        'sobre','se','su','sus','que','y','o','a','ante','bajo','como','entre','hacia','hasta',
+        'sin','tras','moratalla','murcia','region','noticias','digital','periodico','diario',
+        'redaccion','prensa','noticia','ultima','hora'
+    ];
     $filtered = [];
     foreach ($words as $w) {
         if (strlen($w) > 2 && !in_array($w, $stopwords, true)) {
@@ -468,27 +481,39 @@ function normalizeUrlForHash($url) {
 }
 
 /**
- * Calcula si dos titulares normalizados se refieren a la misma noticia
+ * Calcula si dos titulares normalizados se refieren a la misma noticia (contraste inteligente contra base de datos)
  */
 function areNewsTitlesRedundant($normA, $normB) {
     if ($normA === '' || $normB === '') return false;
     if ($normA === $normB) return true;
     if (strpos($normA, $normB) !== false || strpos($normB, $normA) !== false) {
-        if (min(strlen($normA), strlen($normB)) >= 18) return true;
+        if (min(strlen($normA), strlen($normB)) >= 14) return true;
     }
 
     $wordsA = array_unique(explode(' ', $normA));
     $wordsB = array_unique(explode(' ', $normB));
-    if (count($wordsA) < 3 || count($wordsB) < 3) return false;
+    if (empty($wordsA) || empty($wordsB)) return false;
 
     $intersection = array_intersect($wordsA, $wordsB);
-    $overlapRatio = count($intersection) / min(count($wordsA), count($wordsB));
-    if ($overlapRatio >= 0.65) {
+    $matchCount = count($intersection);
+    $minWords = min(count($wordsA), count($wordsB));
+    $overlapRatio = $minWords > 0 ? ($matchCount / $minWords) : 0;
+
+    // 1. Si comparten 3 o más palabras clave y representan el 50% o más de la menor
+    if ($matchCount >= 3 && $overlapRatio >= 0.50) {
+        return true;
+    }
+    // 2. Si la noticia menor tiene solo 2 palabras clave y ambas coinciden al 100%
+    if ($minWords === 2 && $matchCount === 2) {
+        return true;
+    }
+    // 3. Si comparten 4 o más palabras clave de alto valor semántico
+    if ($matchCount >= 4) {
         return true;
     }
 
     similar_text($normA, $normB, $percent);
-    return ($percent >= 72.0);
+    return ($percent >= 66.0);
 }
 
 /**
@@ -567,7 +592,7 @@ function unmarkProcessedNews($pdo, $urlHashOrId) {
 }
 
 /**
- * Cruza una lista de noticias encontradas en internet contra `ai_processed_news` y `news_events`
+ * Cruza una lista de noticias encontradas en internet contra `news_events` (publicadas en la web) y `ai_processed_news`
  */
 function annotateNewsWithProcessedStatus($pdo, array $items) {
     ensureAiNewsTrackingSchema($pdo);
@@ -586,14 +611,16 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
         $stmt2 = $pdo->query("SELECT id, title, source_url, event_date FROM news_events ORDER BY id DESC");
         while ($r = $stmt2->fetch(PDO::FETCH_ASSOC)) {
             $r['title_norm'] = normalizeNewsTitleForDedupe($r['title']);
-            $r['url_hash'] = !empty($r['source_url']) ? hash('sha256', normalizeUrlForHash($r['source_url'])) : '';
+            $r['clean_url'] = !empty($r['source_url']) ? normalizeUrlForHash($r['source_url']) : '';
+            $r['url_hash'] = !empty($r['clean_url']) ? hash('sha256', $r['clean_url']) : '';
             $existingNews[] = $r;
         }
     } catch (Exception $e) {}
 
     $matchedRecordIds = [];
     foreach ($items as &$item) {
-        $itemUrlHash = hash('sha256', normalizeUrlForHash($item['url'] ?: $item['title']));
+        $itemCleanUrl = normalizeUrlForHash($item['url'] ?: $item['title']);
+        $itemUrlHash = hash('sha256', $itemCleanUrl);
         $itemTitleNorm = normalizeNewsTitleForDedupe($item['title']);
 
         $item['url_hash'] = $itemUrlHash;
@@ -603,7 +630,34 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
         $item['processed_record_id'] = null;
         $item['processed_date'] = null;
 
-        $explicitlyAvailable = false;
+        // 1. Contrastar de forma prioritaria contra `news_events` (noticias reales ya publicadas en la web)
+        $isPublishedOnWeb = false;
+        foreach ($existingNews as $en) {
+            $urlMatch = false;
+            if (!empty($en['clean_url']) && !empty($itemCleanUrl)) {
+                if ($en['url_hash'] === $itemUrlHash || $en['clean_url'] === $itemCleanUrl) {
+                    $urlMatch = true;
+                } elseif (strpos($itemCleanUrl, $en['clean_url']) !== false || strpos($en['clean_url'], $itemCleanUrl) !== false) {
+                    $urlMatch = true;
+                }
+            }
+            $titleMatch = areNewsTitlesRedundant($itemTitleNorm, $en['title_norm']);
+
+            if ($urlMatch || $titleMatch) {
+                $item['process_status'] = 'published';
+                $item['matched_news_id'] = (int)$en['id'];
+                $item['matched_title'] = $en['title'];
+                if (empty($item['date_found']) && !empty($en['event_date'])) {
+                    $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
+                    $item['pub_date'] = formatDateToSpanish($en['event_date']);
+                    $item['date_found'] = true;
+                }
+                $isPublishedOnWeb = true;
+                break;
+            }
+        }
+
+        // 2. Contrastar contra el historial de `ai_processed_news`
         foreach ($processedRows as $pr) {
             $sameHash = ($pr['url_hash'] === $itemUrlHash);
             $sameTitle = areNewsTitlesRedundant($itemTitleNorm, $pr['title_norm']);
@@ -612,7 +666,6 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                 $item['processed_record_id'] = (int)$pr['id'];
                 $item['processed_date'] = $pr['processed_at'] ? date('d/m/Y H:i', strtotime($pr['processed_at'])) : '';
 
-                // Si la noticia registrada tiene guardada la fecha real de publicación y el ítem del feed aún no la tenía
                 if (empty($item['date_found'])) {
                     if (!empty($pr['published_date_iso']) && $pr['published_date_iso'] !== '0000-00-00') {
                         $item['event_date_iso'] = $pr['published_date_iso'];
@@ -630,17 +683,27 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                     }
                 }
 
-                if ($pr['status'] === 'discarded') {
-                    $item['process_status'] = 'discarded';
-                    $item['matched_title'] = $pr['title_original'];
-                } elseif ($pr['status'] === 'available' || $pr['status'] === 'new') {
-                    $item['process_status'] = 'new';
-                    $explicitlyAvailable = true;
+                if ($isPublishedOnWeb) {
+                    // Sincronizar ai_processed_news si en base de datos ya está publicada en la web
+                    if ($pr['status'] !== 'published') {
+                        try {
+                            $pdo->prepare("UPDATE ai_processed_news SET status = 'published', news_event_id = ?, processed_at = NOW() WHERE id = ?")
+                                ->execute([$item['matched_news_id'], (int)$pr['id']]);
+                        } catch (Exception $e) {}
+                    }
                 } else {
-                    $item['process_status'] = 'published';
-                    $item['matched_news_id'] = $pr['real_news_id'] ?: $pr['news_event_id'];
-                    $item['matched_title'] = $pr['published_title'] ?: $pr['title_original'];
+                    if ($pr['status'] === 'discarded') {
+                        $item['process_status'] = 'discarded';
+                        $item['matched_title'] = $pr['title_original'];
+                    } elseif ($pr['status'] === 'published') {
+                        $item['process_status'] = 'published';
+                        $item['matched_news_id'] = $pr['real_news_id'] ?: $pr['news_event_id'];
+                        $item['matched_title'] = $pr['published_title'] ?: $pr['title_original'];
+                    } else {
+                        $item['process_status'] = 'new';
+                    }
                 }
+
                 if (empty($item['snippet']) && !empty($pr['snippet_summary'])) {
                     $item['snippet'] = $pr['snippet_summary'];
                 }
@@ -650,45 +713,50 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
                 break;
             }
         }
-
-        if ($item['process_status'] === 'new' && !$explicitlyAvailable) {
-            foreach ($existingNews as $en) {
-                if (!empty($en['url_hash']) && $en['url_hash'] === $itemUrlHash) {
-                    $item['process_status'] = 'published';
-                    $item['matched_news_id'] = (int)$en['id'];
-                    $item['matched_title'] = $en['title'];
-                    if (empty($item['date_found']) && !empty($en['event_date'])) {
-                        $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
-                        $item['pub_date'] = formatDateToSpanish($en['event_date']);
-                        $item['date_found'] = true;
-                    }
-                    break;
-                }
-                if (areNewsTitlesRedundant($itemTitleNorm, $en['title_norm'])) {
-                    $item['process_status'] = 'published';
-                    $item['matched_news_id'] = (int)$en['id'];
-                    $item['matched_title'] = $en['title'];
-                    if (empty($item['date_found']) && !empty($en['event_date'])) {
-                        $item['event_date_iso'] = date('Y-m-d', strtotime($en['event_date']));
-                        $item['pub_date'] = formatDateToSpanish($en['event_date']);
-                        $item['date_found'] = true;
-                    }
-                    break;
-                }
-            }
-        }
     }
     unset($item);
 
-    // Incorporar también las noticias guardadas en `ai_processed_news` (disponibles del boletín automático, descartadas o publicadas)
-    // que no estén en el feed actual, para que siempre puedan verse, redactarse y reconducirse desde los botones de filtro
+    // Incorporar también las noticias guardadas en `ai_processed_news`
+    // que no estén en el feed actual, contrastándolas siempre contra `news_events`
     foreach ($processedRows as $pr) {
         $prId = (int)$pr['id'];
         if (isset($matchedRecordIds[$prId])) continue;
 
         $st = 'published';
-        if ($pr['status'] === 'discarded') $st = 'discarded';
-        elseif ($pr['status'] === 'available' || $pr['status'] === 'new') $st = 'new';
+        $matchedNewsId = $pr['real_news_id'] ?: $pr['news_event_id'];
+        $matchedNewsTitle = $pr['published_title'] ?: $pr['title_original'];
+
+        if ($pr['status'] === 'discarded') {
+            $st = 'discarded';
+        } elseif ($pr['status'] === 'available' || $pr['status'] === 'new') {
+            // Contrastar contra news_events para comprobar si ya ha sido publicada en la web
+            $alreadyPubId = null;
+            $alreadyPubTitle = null;
+            $prCleanUrl = !empty($pr['source_url']) ? normalizeUrlForHash($pr['source_url']) : '';
+            $prNormTitle = !empty($pr['title_norm']) ? $pr['title_norm'] : normalizeNewsTitleForDedupe($pr['title_original']);
+
+            foreach ($existingNews as $en) {
+                $uMatch = (!empty($en['clean_url']) && !empty($prCleanUrl) && ($en['clean_url'] === $prCleanUrl || $en['url_hash'] === $pr['url_hash']));
+                $tMatch = areNewsTitlesRedundant($prNormTitle, $en['title_norm']);
+                if ($uMatch || $tMatch) {
+                    $alreadyPubId = (int)$en['id'];
+                    $alreadyPubTitle = $en['title'];
+                    break;
+                }
+            }
+
+            if ($alreadyPubId !== null) {
+                $st = 'published';
+                $matchedNewsId = $alreadyPubId;
+                $matchedNewsTitle = $alreadyPubTitle;
+                try {
+                    $pdo->prepare("UPDATE ai_processed_news SET status = 'published', news_event_id = ?, processed_at = NOW() WHERE id = ?")
+                        ->execute([$alreadyPubId, $prId]);
+                } catch (Exception $e) {}
+            } else {
+                $st = 'new';
+            }
+        }
 
         $dateFound = false;
         $eventDateIso = '';
@@ -727,8 +795,8 @@ function annotateNewsWithProcessedStatus($pdo, array $items) {
             'rss_image'           => $pr['rss_image'] ?: '',
             'url_hash'            => $pr['url_hash'],
             'process_status'      => $st,
-            'matched_news_id'     => $pr['real_news_id'] ?: $pr['news_event_id'],
-            'matched_title'       => $pr['published_title'] ?: $pr['title_original'],
+            'matched_news_id'     => $matchedNewsId,
+            'matched_title'       => $matchedNewsTitle,
             'processed_record_id' => $prId,
             'processed_date'      => !empty($pr['processed_at']) ? date('d/m/Y H:i', strtotime($pr['processed_at'])) : ''
         ];
@@ -2350,18 +2418,8 @@ function collectAndSummarizeMoratallaDigestNews($pdo, $maxItemsToEnrich = 30) {
         return ($b['timestamp'] ?? 0) <=> ($a['timestamp'] ?? 0);
     });
 
-    // Enviar todas las nuevas disponibles que cumplen el filtro
+    // Enviar EXCLUSIVAMENTE las noticias nuevas o no procesadas (NUNCA incluir noticias ya publicadas)
     $selected = $newAvailable;
-
-    // Si no hubiera nuevas disponibles en este momento, tomar las últimas publicadas con enlace para que el boletín muestre contexto
-    if (empty($selected)) {
-        foreach ($publishedList as $pubIt) {
-            if (!empty($pubIt['url'])) {
-                $selected[] = $pubIt;
-            }
-            if (count($selected) >= 4) break;
-        }
-    }
 
     // Construir la estructura completa de cada noticia respetando exactamente los datos de la búsqueda
     $enrichedItems = [];
@@ -2530,7 +2588,9 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     }
     $adminPanelUrl = $siteBaseUrl . '/admin/news.php?action=add&open_ai=1';
 
-    $subject = "📰 Resumen Diario de Noticias de Moratalla y Banda de Música ({$totalItems} nuevas) - " . date('d/m/Y');
+    $subject = ($totalItems === 0)
+        ? "📰 Boletín de Noticias de Moratalla: No hay noticias nuevas que procesar - " . date('d/m/Y')
+        : "📰 Noticias de Moratalla y Banda de Música ({$totalItems} nuevas pendientes de procesar) - " . date('d/m/Y');
 
     // Construir versión texto plano
     $plainBody  = "RESUMEN AUTOMÁTICO DE NOTICIAS - MORATALLA Y BANDA DE MÚSICA\r\n";
@@ -2538,11 +2598,13 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     if ($dateRangeInfo !== '') {
         $plainBody .= "{$dateRangeInfo}\r\n";
     }
-    $plainBody .= "Estado actual: {$counts['new']} Nuevas Disponibles | {$counts['published']} Ya Publicadas | {$counts['discarded']} Descartadas\r\n";
+    $plainBody .= "Estado actual: {$counts['new']} Nuevas Disponibles | {$counts['published']} Ya Publicadas en Web | {$counts['discarded']} Descartadas\r\n";
     $plainBody .= "=====================================================================\r\n\r\n";
 
     if (empty($items)) {
-        $plainBody .= "En este horario no se han detectado noticias nuevas pendientes en la red sobre Moratalla o la Banda de Música de Moratalla.\r\n\r\n";
+        $plainBody .= "ESTADO: NO HAY NOTICIAS NUEVAS QUE PROCESAR\r\n\r\n";
+        $plainBody .= "Se ha realizado la extracción automática de noticias sobre Moratalla y la Banda de Música de Moratalla y se han contrastado contra la web oficial (moratalla-murcia.com).\r\n\r\n";
+        $plainBody .= "En este momento no se han localizado titulares nuevos pendientes de procesar. Todas las noticias detectadas en la red ya han sido contrastadas y publicadas en la web o descartadas anteriormente.\r\n\r\n";
     } else {
         foreach ($items as $i => $it) {
             $num = $i + 1;
@@ -2566,8 +2628,8 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     }
 
     if (!empty($publishedItems)) {
-        $plainBody .= "YA PUBLICADAS EN LA WEB (Detectadas y filtradas para evitar duplicados):\r\n";
-        foreach (array_slice($publishedItems, 0, 5) as $pubIt) {
+        $plainBody .= "NOTICIAS YA CONTRASTADAS Y PUBLICADAS EN LA WEB (Filtradas automáticamente):\r\n";
+        foreach (array_slice($publishedItems, 0, 7) as $pubIt) {
             $plainBody .= " - [PUBLICADA] " . ($pubIt['title'] ?? '') . " (" . ($pubIt['source'] ?? '') . ")\r\n";
         }
         $plainBody .= "\r\n";
@@ -2602,9 +2664,15 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
     $cardsHtml = $statsHeaderHtml;
     if (empty($items)) {
         $cardsHtml .= "
-            <div style='background:#f8faf9; border:1px dashed #cbd5e1; border-radius:12px; padding:28px; text-align:center; color:#475569;'>
-                <p style='font-size:16px; margin:0 0 8px 0; font-weight:bold; color:#1b4332;'>Sin novedades pendientes en este turno</p>
-                <p style='font-size:14px; margin:0;'>Se ha realizado la búsqueda automática de <strong>Moratalla</strong> y <strong>Banda de Música de Moratalla</strong>, pero no han aparecido titulares nuevos distintos de los ya publicados o descartados.</p>
+            <div style='background:#f0fdf4; border:2px solid #86efac; border-radius:12px; padding:28px 24px; text-align:center; color:#166534; margin-bottom:24px;'>
+                <div style='font-size:36px; line-height:1; margin-bottom:12px;'>✅</div>
+                <h3 style='margin:0 0 10px 0; font-size:20px; color:#14532d; font-weight:700;'>No hay noticias nuevas que procesar</h3>
+                <p style='margin:0 0 10px 0; font-size:14px; line-height:1.6; color:#166534;'>
+                    Se ha completado la extracción y el contraste automático con la base de datos de noticias de <strong>moratalla-murcia.com</strong>.
+                </p>
+                <p style='margin:0; font-size:13px; line-height:1.5; color:#15803d;'>
+                    Todas las noticias localizadas en los medios digitales y redes sobre <strong>Moratalla</strong> y la <strong>Banda de Música de Moratalla</strong> ya han sido <strong>contrastadas y publicadas en la web</strong> o <strong>descartadas</strong> previamente. No hay novedades pendientes en este turno.
+                </p>
             </div>";
     } else {
         foreach ($items as $it) {
@@ -2633,9 +2701,11 @@ function sendMoratallaNewsDigestEmail($pdo, $slotLabel = 'Automático', &$errorD
                 . '&prefill_source=' . urlencode($it['source']);
             $safeDirectDiscardUrl = htmlspecialchars($directDiscardUrl, ENT_QUOTES, 'UTF-8');
 
-            $statusPill = ($it['process_status'] === 'published')
-                ? "<span style='display:inline-block; background:#d1fae5; color:#065f46; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>YA PUBLICADA EN WEB</span>"
-                : "<span style='display:inline-block; background:#ede9fe; color:#5b21b6; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>NUEVA DISPONIBLE</span>";
+            $statusPill = "<span style='display:inline-block; background:#ede9fe; color:#5b21b6; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:12px;'>NUEVA PENDIENTE DE PROCESAR</span>";
+
+            $dateBadgeHtml = !empty($it['date_found'])
+                ? "<span style='color:#059669; font-weight:700;'>📅 {$safeDate}</span>"
+                : "<span style='display:inline-block; background:#fef3c7; color:#92400e; font-size:11px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #fde68a;'>⚠️ Fecha no localizada</span>";
 
             $dateBadgeHtml = !empty($it['date_found'])
                 ? "<span style='color:#059669; font-weight:700;'>📅 {$safeDate}</span>"
