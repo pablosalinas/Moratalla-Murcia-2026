@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="bgGastro" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#451a03"/>
+      <stop offset="55%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#1b4332"/>
+    </linearGradient>
+    <linearGradient id="goldG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#d4af37"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bgGastro)"/>
+  <circle cx="400" cy="215" r="185" fill="#fde68a" opacity="0.08"/>
+  <!-- Bodegón Tradicional de la Cocina de Moratalla -->
+  <g transform="translate(175, 110)">
+    <!-- Sartén / Perol tradicional de leña (Migas, Arroz y Andrajos) -->
+    <ellipse cx="185" cy="175" rx="135" ry="52" fill="#1e293b" stroke="#d4af37" stroke-width="4"/>
+    <ellipse cx="185" cy="168" rx="120" ry="42" fill="#d97706"/>
+    <!-- Vapor aromático -->
+    <path d="M145,110 Q130,80 150,55" fill="none" stroke="#fde68a" stroke-width="4" stroke-linecap="round" opacity="0.65"/>
+    <path d="M185,100 Q170,68 190,42" fill="none" stroke="#fde68a" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+    <path d="M225,110 Q210,80 230,55" fill="none" stroke="#fde68a" stroke-width="4" stroke-linecap="round" opacity="0.65"/>
+    <!-- Mazapán artesano de Moratalla -->
+    <g transform="translate(320, 115)">
+      <ellipse cx="75" cy="65" rx="78" ry="38" fill="#fef3c7" stroke="#d4af37" stroke-width="3"/>
+      <path d="M22,58 Q75,20 128,58 Q75,85 22,58 Z" fill="url(#goldG)" stroke="#92400e" stroke-width="2"/>
+      <text x="75" y="62" text-anchor="middle" fill="#451a03" font-family="Segoe UI, sans-serif" font-size="11" font-weight="800">MAZAPÁN</text>
+    </g>
+    <!-- Aceite de oliva y vino de la tierra -->
+    <path d="M25,180 L45,75 L68,75 L88,180 Z" fill="#15803d" stroke="#fde68a" stroke-width="2"/>
+    <rect x="49" y="52" width="15" height="24" fill="#d4af37"/>
+  </g>
+  <path d="M0,368 Q400,335 800,368 L800,480 L0,480 Z" fill="#081c15"/>
+  <!-- Medallón de Referencia Gastronomía -->
+  <g transform="translate(650, 345)">
+    <circle cx="0" cy="0" r="64" fill="#081c15" stroke="url(#goldG)" stroke-width="4"/>
+    <circle cx="0" cy="0" r="32" fill="none" stroke="#fde68a" stroke-width="3"/>
+    <circle cx="0" cy="0" r="20" fill="url(#goldG)"/>
+  </g>
+  <g transform="translate(48, 412)">
+    <rect x="0" y="0" width="365" height="42" rx="21" fill="rgba(255,255,255,0.1)" stroke="#d4af37" stroke-width="1.5"/>
+    <text x="22" y="26" fill="#fde68a" font-family="Segoe UI, Roboto, sans-serif" font-size="14" font-weight="800" letter-spacing="1.5">GASTRONOMÍA Y SABORES DE SIERRA</text>
+  </g>
+</svg>

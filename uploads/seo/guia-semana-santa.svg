@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="bgTambor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#31102f"/>
+      <stop offset="50%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#1b4332"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bgTambor)"/>
+  <circle cx="400" cy="210" r="165" fill="#fde68a" opacity="0.1"/>
+  <!-- Tambor Tradicional de Moratalla y Baquetas -->
+  <g transform="translate(285, 85)">
+    <ellipse cx="115" cy="60" rx="95" ry="30" fill="#fef3c7" stroke="#d4af37" stroke-width="5"/>
+    <path d="M20,60 L20,175 A95,30 0 0,0 210,175 L210,60 Z" fill="#991b1b" stroke="#d4af37" stroke-width="4"/>
+    <ellipse cx="115" cy="60" rx="88" ry="24" fill="#fde68a"/>
+    <!-- Cuerdas en V del tambor -->
+    <polyline points="25,70 55,180 85,78 115,185 145,78 175,180 205,70" fill="none" stroke="#fde68a" stroke-width="3.5"/>
+    <!-- Baquetas cruzadas -->
+    <line x1="35" y1="15" x2="185" y2="85" stroke="#78350f" stroke-width="8" stroke-linecap="round"/>
+    <line x1="195" y1="15" x2="45" y2="85" stroke="#78350f" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="185" cy="85" r="8" fill="#fef3c7"/>
+    <circle cx="45" cy="85" r="8" fill="#fef3c7"/>
+  </g>
+  <path d="M0,360 Q400,325 800,360 L800,480 L0,480 Z" fill="#081c15"/>
+  <text x="400" y="425" text-anchor="middle" fill="#fde68a" font-family="Segoe UI, sans-serif" font-size="16" font-weight="800" letter-spacing="2">SEMANA SANTA Y TAMBORADAS DE MORATALLA</text>
+</svg>

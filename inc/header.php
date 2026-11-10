@@ -391,7 +391,7 @@ function renderHorizontalMenu() {
 
             if ($parentId === 0 && function_exists('isSeo90Active') && isSeo90Active()) {
                 $html .= "<li class='seo-nav-highlight'>";
-                $html .= "<a href='guia.php' data-hint='Guías completas: Qué ver, Turismo Rural, Historia, Patrimonio, Rutas y Gastronomía'><i class='fas fa-compass' style='color:var(--accent); margin-right:6px;'></i> Guías y Turismo <i class='fas fa-angle-down nav-arrow'></i></a>";
+                $html .= "<a href='guia.php' data-hint='Guías completas: Qué ver, Turismo Rural, Historia, Patrimonio, Rutas y Gastronomía'><i class='fas fa-compass' style='color:var(--accent); margin-right:5px; width:15px; text-align:center;'></i>Guías <i class='fas fa-angle-down nav-arrow'></i></a>";
                 $html .= "<ul class='dropdown'>";
                 $html .= "<li><a href='guia.php?slug=guia-completa-moratalla'><i class='fas fa-compass' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Guía Completa: Qué Ver</strong></a></li>";
                 $html .= "<li><a href='guia.php?slug=turismo-rural-moratalla'><i class='fas fa-tree' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Turismo Rural en Moratalla</strong></a></li>";
@@ -428,9 +428,9 @@ function renderHorizontalMenu() {
 
                 $html .= "<li>";
                 $html .= "<a href='{$url}'{$hintAttr}>";
-                if ($parentId !== 0) {
-                    $html .= renderItemIcon($cat['icon'] ?? '', '📁');
-                }
+                $catDefaultIcon = getCategoryIcon($cat['name']);
+                $topLevelStyle = ($parentId === 0) ? 'margin-right:5px; width:15px;' : '';
+                $html .= renderItemIcon($cat['icon'] ?? '', $catDefaultIcon, $topLevelStyle);
                 $html .= htmlspecialchars($cat['name']);
                 if ($hasChildren) {
                     $html .= " <i class='fas fa-angle-" . ($parentId === 0 ? 'down' : 'right') . " nav-arrow'></i>";

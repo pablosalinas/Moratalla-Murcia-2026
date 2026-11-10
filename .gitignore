@@ -3,6 +3,7 @@ uploads/*
 !uploads/theme/
 !uploads/icons/
 !uploads/icons/.gitkeep
+!uploads/seo/
 
 # Archivos de entorno con credenciales reales
 .env

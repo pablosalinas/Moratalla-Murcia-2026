@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="bgCast" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#081c15"/>
+      <stop offset="55%" stop-color="#1b4332"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </linearGradient>
+    <linearGradient id="goldC" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bgCast)"/>
+  <circle cx="400" cy="210" r="190" fill="#fde68a" opacity="0.1"/>
+  <g transform="translate(210, 65)">
+    <rect x="115" y="25" width="150" height="245" fill="url(#goldC)" rx="4" stroke="#081c15" stroke-width="3"/>
+    <path d="M110,25 L110,5 L135,5 L135,18 L160,18 L160,5 L185,5 L185,18 L210,18 L210,5 L235,5 L235,18 L270,18 L270,25 Z" fill="#fde68a"/>
+    <rect x="165" y="75" width="18" height="42" rx="9" fill="#081c15"/>
+    <rect x="197" y="75" width="18" height="42" rx="9" fill="#081c15"/>
+    <rect x="20" y="120" width="100" height="150" fill="#d4af37"/>
+    <rect x="260" y="120" width="100" height="150" fill="#d4af37"/>
+    <path d="M168,270 L168,195 A22,22 0 0,1 212,195 L212,270 Z" fill="#081c15"/>
+  </g>
+  <path d="M0,340 Q400,280 800,340 L800,480 L0,480 Z" fill="#081c15"/>
+  <text x="400" y="425" text-anchor="middle" fill="#fde68a" font-family="Segoe UI, sans-serif" font-size="16" font-weight="800" letter-spacing="2">CASTILLO FORTALEZA Y TORRE DEL HOMENAJE</text>
+</svg>

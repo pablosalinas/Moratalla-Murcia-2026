@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="sky1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#081c15"/>
+      <stop offset="45%" stop-color="#1b4332"/>
+      <stop offset="100%" stop-color="#2d6a4f"/>
+    </linearGradient>
+    <linearGradient id="gold1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="50%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+    <linearGradient id="stone1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="72%" cy="26%" r="35%">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.75"/>
+      <stop offset="55%" stop-color="#d4af37" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#081c15" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Fondo -->
+  <rect width="800" height="480" fill="url(#sky1)"/>
+  <rect width="800" height="480" fill="url(#sunGlow)"/>
+  <!-- Rosa de los vientos decorativa -->
+  <g transform="translate(580,125)" opacity="0.28">
+    <circle cx="0" cy="0" r="95" fill="none" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="6,6"/>
+    <circle cx="0" cy="0" r="68" fill="none" stroke="#d4af37" stroke-width="1.2"/>
+    <polygon points="0,-90 12,-18 90,0 12,18 0,90 -12,18 -90,0 -12,-18" fill="#fde68a"/>
+  </g>
+  <!-- Sol dorado -->
+  <circle cx="580" cy="125" r="46" fill="url(#gold1)" opacity="0.9"/>
+  <!-- Sierras del Noroeste al fondo -->
+  <path d="M0,330 L110,250 L230,295 L370,210 L510,280 L650,220 L800,275 L800,480 L0,480 Z" fill="#132e23" opacity="0.85"/>
+  <path d="M0,365 L140,305 L290,340 L450,275 L610,330 L800,290 L800,480 L0,480 Z" fill="#1b4332"/>
+  <!-- Silueta del Cerro y Castillo-Fortaleza de Moratalla -->
+  <g transform="translate(150, 95)">
+    <!-- Torre del Homenaje -->
+    <rect x="95" y="45" width="76" height="145" rx="3" fill="url(#gold1)" stroke="#081c15" stroke-width="2"/>
+    <!-- Almenas Torre -->
+    <path d="M91,45 L91,30 L105,30 L105,40 L117,40 L117,30 L131,30 L131,40 L143,40 L143,30 L157,30 L157,40 L175,40 L175,45 Z" fill="#fde68a"/>
+    <!-- Ventanas góticas geminadas -->
+    <rect x="122" y="78" width="10" height="24" rx="5" fill="#081c15"/>
+    <rect x="136" y="78" width="10" height="24" rx="5" fill="#081c15"/>
+    <!-- Muralla y cubos laterales -->
+    <rect x="35" y="105" width="65" height="85" fill="#d4af37"/>
+    <rect x="168" y="112" width="72" height="78" fill="#c59b27"/>
+    <path d="M35,105 L35,93 L47,93 L47,101 L59,101 L59,93 L71,93 L71,101 L83,101 L83,93 L95,93 L95,105 Z" fill="#fde68a"/>
+    <path d="M168,112 L168,100 L182,100 L182,108 L196,108 L196,100 L210,100 L210,108 L224,108 L224,100 L240,100 L240,112 Z" fill="#fde68a"/>
+    <!-- Iglesia de la Asunción y caserío escalonado -->
+    <rect x="260" y="128" width="90" height="72" fill="url(#stone1)"/>
+    <polygon points="255,128 305,98 355,128" fill="#b45309"/>
+    <rect x="335" y="88" width="28" height="112" fill="#e2e8f0"/>
+    <polygon points="332,88 349,62 366,88" fill="#d4af37"/>
+    <circle cx="349" cy="108" r="7" fill="#081c15"/>
+    <!-- Casas blancas del casco antiguo -->
+    <rect x="60" y="182" width="52" height="38" fill="#f8fafc"/>
+    <polygon points="57,182 86,166 115,182" fill="#d97706"/>
+    <rect x="118" y="176" width="60" height="44" fill="#f1f5f9"/>
+    <polygon points="115,176 148,158 181,176" fill="#b45309"/>
+    <rect x="184" y="184" width="68" height="36" fill="#ffffff"/>
+    <polygon points="181,184 218,167 255,184" fill="#d97706"/>
+  </g>
+  <!-- Colina frontal con pinares -->
+  <path d="M0,390 Q240,300 490,355 T800,340 L800,480 L0,480 Z" fill="#081c15"/>
+  <!-- Medallón/Logo de referencia de la Guía Pilar -->
+  <g transform="translate(650, 345)">
+    <circle cx="0" cy="0" r="64" fill="#081c15" stroke="url(#gold1)" stroke-width="4"/>
+    <circle cx="0" cy="0" r="54" fill="none" stroke="#fde68a" stroke-width="1" stroke-dasharray="4,4"/>
+    <polygon points="0,-34 9,-9 34,0 9,9 0,34 -9,9 -34,0 -9,-9" fill="url(#gold1)"/>
+    <circle cx="0" cy="0" r="6" fill="#081c15"/>
+  </g>
+  <!-- Sello tipográfico inferior -->
+  <g transform="translate(48, 412)">
+    <rect x="0" y="0" width="320" height="42" rx="21" fill="rgba(255,255,255,0.1)" stroke="#d4af37" stroke-width="1.5"/>
+    <text x="22" y="26" fill="#fde68a" font-family="Segoe UI, Roboto, sans-serif" font-size="14" font-weight="800" letter-spacing="1.5">MORATALLA · GUÍA OFICIAL</text>
+  </g>
+</svg>

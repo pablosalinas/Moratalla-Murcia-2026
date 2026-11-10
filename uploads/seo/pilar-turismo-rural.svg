@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="bgRural" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="55%" stop-color="#1b4332"/>
+      <stop offset="100%" stop-color="#081c15"/>
+    </linearGradient>
+    <linearGradient id="riverG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="50%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="goldR" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#d4af37"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bgRural)"/>
+  <!-- Sol de montaña -->
+  <circle cx="620" cy="115" r="52" fill="url(#goldR)" opacity="0.88"/>
+  <circle cx="620" cy="115" r="85" fill="#fde68a" opacity="0.14"/>
+  <!-- Macizo de Revolcadores (2.015 m) -->
+  <polygon points="40,340 240,120 430,340" fill="#134e4a" opacity="0.8"/>
+  <polygon points="240,120 190,175 225,165 245,182 268,162 292,176" fill="#f8fafc" opacity="0.85"/>
+  <polygon points="270,350 490,145 710,350" fill="#115e59" opacity="0.9"/>
+  <polygon points="490,145 450,190 480,180 500,196 528,184" fill="#e2e8f0" opacity="0.75"/>
+  <!-- Bosque de Pinos Carrasco y Laricio -->
+  <g fill="#065f46">
+    <polygon points="90,340 120,255 150,340"/>
+    <polygon points="130,345 165,240 200,345"/>
+    <polygon points="560,345 595,245 630,345"/>
+    <polygon points="610,350 645,255 680,350"/>
+    <polygon points="665,355 700,265 735,355"/>
+  </g>
+  <!-- Pradera serrana -->
+  <path d="M0,335 Q250,305 520,338 T800,325 L800,480 L0,480 Z" fill="#0f291e"/>
+  <!-- Río Alhárabe serpenteando -->
+  <path d="M485,335 C440,365 340,375 310,405 C280,435 370,455 340,480 L470,480 C490,445 410,425 435,395 C460,365 510,355 525,336 Z" fill="url(#riverG)"/>
+  <!-- Casa Rural Tradicional de Piedra y Teja -->
+  <g transform="translate(185, 248)">
+    <!-- Chimenea -->
+    <rect x="132" y="8" width="18" height="35" fill="#9a3412"/>
+    <circle cx="141" cy="-4" r="7" fill="#e2e8f0" opacity="0.5"/>
+    <circle cx="149" cy="-16" r="10" fill="#e2e8f0" opacity="0.35"/>
+    <!-- Cuerpo casa -->
+    <rect x="20" y="38" width="150" height="78" rx="4" fill="#fef3c7" stroke="#78350f" stroke-width="2"/>
+    <!-- Tejado a dos aguas -->
+    <polygon points="8,40 95,2 182,40" fill="#b45309" stroke="#fde68a" stroke-width="1.5"/>
+    <!-- Puerta de arco y ventanas iluminadas -->
+    <path d="M78,116 L78,76 A17,17 0 0,1 112,76 L112,116 Z" fill="#78350f"/>
+    <rect x="38" y="60" width="24" height="24" rx="3" fill="#fde68a" stroke="#78350f" stroke-width="2"/>
+    <rect x="128" y="60" width="24" height="24" rx="3" fill="#fde68a" stroke="#78350f" stroke-width="2"/>
+  </g>
+  <!-- Medallón de Referencia Turismo Rural -->
+  <g transform="translate(650, 345)">
+    <circle cx="0" cy="0" r="64" fill="#081c15" stroke="url(#goldR)" stroke-width="4"/>
+    <polygon points="0,-32 -26,14 26,14" fill="#34d399"/>
+    <polygon points="0,-16 -22,26 22,26" fill="#10b981"/>
+    <rect x="-5" y="26" width="10" height="12" fill="#d4af37"/>
+  </g>
+  <g transform="translate(48, 412)">
+    <rect x="0" y="0" width="350" height="42" rx="21" fill="rgba(255,255,255,0.1)" stroke="#d4af37" stroke-width="1.5"/>
+    <text x="22" y="26" fill="#fde68a" font-family="Segoe UI, Roboto, sans-serif" font-size="14" font-weight="800" letter-spacing="1.5">TURISMO RURAL Y NATURALEZA</text>
+  </g>
+</svg>

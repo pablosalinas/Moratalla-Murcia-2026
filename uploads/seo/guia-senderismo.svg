@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="bgSend" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="55%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#081c15"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bgSend)"/>
+  <circle cx="630" cy="110" r="48" fill="#fde68a" opacity="0.85"/>
+  <polygon points="80,350 290,115 500,350" fill="#115e59"/>
+  <polygon points="310,350 530,135 740,350" fill="#065f46"/>
+  <path d="M0,345 Q400,305 800,345 L800,480 L0,480 Z" fill="#081c15"/>
+  <!-- Sendero serpenteante hacia la cumbre -->
+  <path d="M260,480 C310,420 420,400 390,345 C360,295 295,240 290,115" fill="none" stroke="#fde68a" stroke-width="6" stroke-dasharray="12,8" stroke-linecap="round"/>
+  <text x="400" y="425" text-anchor="middle" fill="#fde68a" font-family="Segoe UI, sans-serif" font-size="16" font-weight="800" letter-spacing="2">RUTAS DE SENDERISMO · RÍOS Y CUMBRES</text>
+</svg>

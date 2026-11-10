@@ -74,17 +74,21 @@ $_SESSION['admin_captcha_sum'] = $_SESSION['admin_captcha_n1'] + $_SESSION['admi
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; background: var(--dark); }
-        .login-card { background: white; padding: 2.5rem 3rem; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: var(--shadow); }
+        .login-card { background: white; padding: 2.25rem 2.25rem; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: var(--shadow); overflow: hidden; box-sizing: border-box; }
         .login-card h2 { margin-bottom: 2rem; color: var(--primary); text-align: center; font-weight: 800; letter-spacing: -1px; }
         .form-group { margin-bottom: 1.25rem; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
-        .form-group input { width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 8px; font-family: inherit; }
-        .captcha-box { background: var(--gray-100); padding: 1rem; border-radius: 10px; border: 1px dashed var(--gray-300); margin-bottom: 1.25rem; }
-        .captcha-box label { display: block; margin-bottom: 0.6rem; font-weight: 600; font-size: 0.85rem; color: var(--primary); }
-        .captcha-row { display: flex; align-items: center; gap: 0.75rem; }
-        .captcha-badge { background: white; border: 1px solid var(--gray-300); border-radius: 8px; padding: 0.65rem 1rem; font-weight: 700; font-size: 1.05rem; color: var(--primary); white-space: nowrap; user-select: none; display: flex; align-items: center; gap: 0.4rem; }
-        .captcha-row input { flex: 1; padding: 0.65rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 1rem; font-weight: 700; text-align: center; outline: none; }
+        .form-group input { width: 100%; padding: 0.8rem; border: 1px solid var(--gray-300); border-radius: 8px; font-family: inherit; box-sizing: border-box; }
+        .captcha-box { background: var(--gray-100); padding: 0.85rem 1rem; border-radius: 10px; border: 1px dashed var(--gray-300); margin-bottom: 1.25rem; width: 100%; box-sizing: border-box; }
+        .captcha-box label { display: block; margin-bottom: 0.55rem; font-weight: 600; font-size: 0.82rem; color: var(--primary); }
+        .captcha-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; width: 100%; box-sizing: border-box; }
+        .captcha-badge { background: white; border: 1px solid var(--gray-300); border-radius: 8px; padding: 0.55rem 0.85rem; font-weight: 700; font-size: 0.98rem; color: var(--primary); white-space: nowrap; user-select: none; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .captcha-row input { flex: 1 1 0; min-width: 0; width: 100%; max-width: 135px; padding: 0.55rem 0.6rem; border: 2px solid var(--primary); border-radius: 8px; font-size: 0.95rem; font-weight: 700; text-align: center; outline: none; box-sizing: border-box; }
         .error-msg { background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; text-align: center; }
+        @media (max-width: 480px) {
+            .login-card { padding: 1.75rem 1.35rem; }
+            .captcha-row input { max-width: 115px; }
+        }
     </style>
 </head>
 <body>

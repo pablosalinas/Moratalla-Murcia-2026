@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <defs>
+    <linearGradient id="bgRup" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#451a03"/>
+      <stop offset="55%" stop-color="#7c2d12"/>
+      <stop offset="100%" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bgRup)"/>
+  <circle cx="400" cy="215" r="175" fill="#fde68a" opacity="0.12"/>
+  <!-- Escena de Arte Rupestre Levantino (Arquero y Ciervo) -->
+  <g transform="translate(220, 95)" stroke="#fde68a" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Arquero -->
+    <circle cx="85" cy="65" r="14" fill="#fde68a"/>
+    <path d="M85,80 L78,155 L52,220 M78,155 L112,215 M82,102 L138,94"/>
+    <path d="M128,55 Q168,95 128,135" stroke="#d4af37" stroke-width="4"/>
+    <line x1="95" y1="96" x2="155" y2="92" stroke="#fde68a" stroke-width="3"/>
+    <!-- Ciervo levantino -->
+    <path d="M240,145 Q285,135 320,145 L335,195 M255,150 L242,205 M305,150 L315,205 M240,145 L222,105"/>
+    <path d="M222,105 L202,75 M212,90 L232,78 M222,105 L242,80" stroke-width="4"/>
+  </g>
+  <path d="M0,360 Q400,320 800,360 L800,480 L0,480 Z" fill="#081c15"/>
+  <text x="400" y="425" text-anchor="middle" fill="#fde68a" font-family="Segoe UI, sans-serif" font-size="16" font-weight="800" letter-spacing="2">ARTE RUPESTRE · PATRIMONIO MUNDIAL UNESCO</text>
+</svg>

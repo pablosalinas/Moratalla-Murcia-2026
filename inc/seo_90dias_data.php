@@ -1,6 +1,6 @@
 <?php
 // inc/seo_90dias_data.php
-// Repositorio estructurado del Plan SEO 90 Días: 5 Páginas Pilar, 10 Páginas Prioritarias, 8 Artículos y Contenido Estacional.
+// Repositorio estructurado de Guías Pilar, Guías Temáticas, Tarjetas Existentes de Producción y Contenido Estacional.
 
 function getSeo90StateFile(): string {
     return __DIR__ . '/../.seo_90dias_state.json';
@@ -63,7 +63,7 @@ function isSeo90Active(): bool {
         return $_GET['preview_seo_90'] === '1';
     }
 
-    // 1. Consultar preferencia persistente en base de datos (para que se mantenga en producción aunque pasen días o despliegues)
+    // 1. Consultar preferencia persistente en base de datos
     try {
         if (!isset($pdo) && function_exists('getDB')) {
             $pdo = getDB();
@@ -90,7 +90,411 @@ function isSeo90Active(): bool {
 }
 
 /**
- * Optimización automática de Títulos SEO y Metadescripciones (Fase 1 - Semana 1)
+ * Catálogo de Tarjetas y Fichas existentes en la Base de Datos de Producción (moratalla-murcia.com)
+ * Incluye su ID real en producción, enlace directo, descripción, contador de fotografías y portada.
+ */
+function getProductionExistingCards(?PDO $pdo = null): array {
+    $cards = [
+        'castillo' => [
+            'id'            => 'castillo',
+            'page_id'       => 433,
+            'cat_id'        => 194,
+            'title'         => 'Castillo fortaleza de Moratalla',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=433',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 28,
+            'badge'         => 'Ficha Patrimonial · 28 fotografías',
+            'icon'          => 'fas fa-chess-rook',
+            'image'         => 'uploads/galerias/6a674e365ae8c_IMGP7928.JPG',
+            'fallback_img'  => 'uploads/seo/guia-castillo.svg',
+            'description'   => 'Tarjeta oficial del Castillo-Fortaleza de Moratalla y su Torre del Homenaje con descripción histórica y galería de 28 fotografías.'
+        ],
+        'asuncion' => [
+            'id'            => 'asuncion',
+            'page_id'       => 440,
+            'cat_id'        => 194,
+            'title'         => 'Parroquia de Santa María de la Asunción',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=440',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 29,
+            'badge'         => 'Monumento BIC · 29 fotografías',
+            'icon'          => 'fas fa-church',
+            'image'         => 'uploads/galerias/6a73c1aa15b1b_IMG_20211002_193016.jpg',
+            'fallback_img'  => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'description'   => 'Ficha monumental de la Parroquia de Santa María de la Asunción (s. XVI) con su historia arquitectónica y 29 fotografías.'
+        ],
+        'casa_cristo' => [
+            'id'            => 'casa_cristo',
+            'page_id'       => 441,
+            'cat_id'        => 194,
+            'title'         => 'Santuario de la Casa de Cristo',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=441',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 15,
+            'badge'         => 'Santuario y Arte Rupestre · 15 fotografías',
+            'icon'          => 'fas fa-place-of-worship',
+            'image'         => 'uploads/galerias/6a7b94c4c709e_arcos convento.jpeg',
+            'fallback_img'  => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'description'   => 'Tarjeta del Santuario y antiguo convento de la Casa de Cristo, sede del Centro de Interpretación del Arte Rupestre, con 15 fotografías.'
+        ],
+        'las_arcas' => [
+            'id'            => 'las_arcas',
+            'page_id'       => 446,
+            'cat_id'        => 194,
+            'title'         => 'Las Arcas (Acueducto e Ingeniería Hidráulica)',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=446',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 21,
+            'badge'         => 'Patrimonio Hidráulico · 21 fotografías',
+            'icon'          => 'fas fa-archway',
+            'image'         => 'uploads/galerias/6a7b9a5b28fe9_IMGP1707.JPG',
+            'fallback_img'  => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'description'   => 'Ficha y reportaje fotográfico con 21 imágenes de Las Arcas, obra histórica de conducción de aguas en Moratalla.'
+        ],
+        'santa_ana' => [
+            'id'            => 'santa_ana',
+            'page_id'       => 434,
+            'cat_id'        => 194,
+            'title'         => 'Ermita de Santa Ana',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=434',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 3,
+            'badge'         => 'Patrimonio Religioso · 3 fotografías',
+            'icon'          => 'fas fa-Pray',
+            'image'         => 'uploads/galerias/6a6b1cf74a3e8_Iglesia Santa Ana fachada principal 08.jpeg',
+            'fallback_img'  => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'description'   => 'Tarjeta patrimonial de la histórica Ermita de Santa Ana en el casco urbano de Moratalla con fotografías de su fachada e interior.'
+        ],
+        'san_francisco' => [
+            'id'            => 'san_francisco',
+            'page_id'       => 435,
+            'cat_id'        => 194,
+            'title'         => 'Convento de San Francisco',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=435',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 0,
+            'badge'         => 'Ficha Patrimonial e Histórica',
+            'icon'          => 'fas fa-landmark',
+            'image'         => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'fallback_img'  => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'description'   => 'Tarjeta dedicada a la Iglesia y antiguo Convento de San Francisco, joya del barroco en el corazón de Moratalla.'
+        ],
+        'puente_hellin' => [
+            'id'            => 'puente_hellin',
+            'page_id'       => 445,
+            'cat_id'        => 194,
+            'title'         => 'Puente de Hellín sobre el Río Alhárabe',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=445',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 0,
+            'badge'         => 'Ingeniería Histórica y Rutas',
+            'icon'          => 'fas fa-water',
+            'image'         => 'uploads/seo/pilar-turismo-rural.svg',
+            'fallback_img'  => 'uploads/seo/pilar-turismo-rural.svg',
+            'description'   => 'Ficha patrimonial del histórico Puente de Hellín sobre el río Alhárabe, paso tradicional y punto clave de rutas naturales.'
+        ],
+        'arte_rupestre' => [
+            'id'            => 'arte_rupestre',
+            'page_id'       => 451,
+            'cat_id'        => 194,
+            'title'         => 'Arte Rupestre de Moratalla',
+            'category_name' => 'Patrimonio',
+            'url'           => 'page.php?id=451',
+            'cat_url'       => 'category.php?id=194',
+            'photos_count'  => 0,
+            'badge'         => 'Patrimonio Mundial UNESCO',
+            'icon'          => 'fas fa-palette',
+            'image'         => 'uploads/seo/guia-rupestre.svg',
+            'fallback_img'  => 'uploads/seo/guia-rupestre.svg',
+            'description'   => 'Tarjeta de Patrimonio sobre los abrigos y pinturas de Arte Rupestre Levantino y Esquemático de Moratalla.'
+        ],
+        'semana_santa_ficha' => [
+            'id'            => 'semana_santa_ficha',
+            'page_id'       => 453,
+            'cat_id'        => 44,
+            'title'         => 'Semana Santa de Moratalla (Crónica y Galería)',
+            'category_name' => 'Semana Santa',
+            'url'           => 'page.php?id=453',
+            'cat_url'       => 'category.php?id=44',
+            'photos_count'  => 87,
+            'badge'         => 'Crónica + 87 fotografías',
+            'icon'          => 'fas fa-cross',
+            'image'         => 'uploads/galerias/6ad142c13f529_CIMG2926.JPG',
+            'fallback_img'  => 'uploads/seo/guia-semana-santa.svg',
+            'description'   => 'Tarjeta especial de la Semana Santa de Moratalla con reseña histórica de Pedro Martínez López y 87 fotografías.'
+        ],
+        'museo_tambor' => [
+            'id'            => 'museo_tambor',
+            'page_id'       => 430,
+            'cat_id'        => 168,
+            'title'         => 'Museo del Tambor (Moratalla)',
+            'category_name' => 'Tambores y Semana Santa',
+            'url'           => 'page.php?id=430',
+            'cat_url'       => 'category.php?id=168',
+            'photos_count'  => 15,
+            'badge'         => 'Museo y Tradición · 15 fotografías',
+            'icon'          => 'fas fa-drum',
+            'image'         => 'uploads/galerias/6a3a6e0331044__MG_9956.jpg',
+            'fallback_img'  => 'uploads/seo/guia-semana-santa.svg',
+            'description'   => 'Tarjeta oficial del Museo del Tambor de Moratalla con exposición de túnicas artesanales, tambores históricos y 15 fotografías.'
+        ],
+        'bic_tamborada' => [
+            'id'            => 'bic_tamborada',
+            'page_id'       => 458,
+            'cat_id'        => 44,
+            'title'         => 'Declaración de Interés Cultural Inmaterial (Tamborada)',
+            'category_name' => 'Tambores y Semana Santa',
+            'url'           => 'page.php?id=458',
+            'cat_url'       => 'category.php?id=168',
+            'photos_count'  => 0,
+            'badge'         => 'Reconocimiento Oficial UNESCO / BIC',
+            'icon'          => 'fas fa-award',
+            'image'         => 'uploads/asociaciones/asoc_tamboristas_2004_0.jpg',
+            'fallback_img'  => 'uploads/seo/guia-semana-santa.svg',
+            'description'   => 'Documento y tarjeta oficial sobre la Declaración de Interés Cultural Inmaterial de la Fiesta de los Tambores de Moratalla.'
+        ],
+        'cofradia_nazareno' => [
+            'id'            => 'cofradia_nazareno',
+            'page_id'       => 409,
+            'cat_id'        => 181,
+            'title'         => 'Ilustre Cofradía de Nuestro Padre Jesús Nazareno',
+            'category_name' => 'Cofradías de Semana Santa',
+            'url'           => 'page.php?id=409',
+            'cat_url'       => 'category.php?id=181',
+            'photos_count'  => 26,
+            'badge'         => 'Cofradías · 26 fotografías',
+            'icon'          => 'fas fa-church',
+            'image'         => 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_0.jpg',
+            'fallback_img'  => 'uploads/seo/guia-semana-santa.svg',
+            'description'   => 'Tarjeta de la Cofradía de Nuestro Padre Jesús Nazareno (junto al resto de cofradías en la categoría Semana Santa) con 26 fotografías.'
+        ],
+        'exaltacion_tambor_2008' => [
+            'id'            => 'exaltacion_tambor_2008',
+            'page_id'       => 411,
+            'cat_id'        => 168,
+            'title'         => 'Exaltación del Tambor y el Bombo (Asociación de Tamboristas)',
+            'category_name' => 'Asociación de Tamboristas',
+            'url'           => 'page.php?id=411',
+            'cat_url'       => 'category.php?id=168',
+            'photos_count'  => 30,
+            'badge'         => 'Archivo Tamborista · 30 fotografías',
+            'icon'          => 'fas fa-drum',
+            'image'         => 'uploads/asociaciones/asoc_tamboristas_2008_8.jpg',
+            'fallback_img'  => 'uploads/seo/guia-semana-santa.svg',
+            'description'   => 'Reportaje fotográfico de las Jornadas de Exaltación del Tambor y el Bombo y archivo de la Asociación de Tamboristas.'
+        ],
+        'calendario_fiestas' => [
+            'id'            => 'calendario_fiestas',
+            'page_id'       => 163,
+            'cat_id'        => 39,
+            'title'         => 'Calendario de Fiestas de Moratalla y Pedanías',
+            'category_name' => 'Fiestas',
+            'url'           => 'page.php?id=163',
+            'cat_url'       => 'category.php?id=39',
+            'photos_count'  => 14,
+            'badge'         => 'Tarjetas de Fiestas con Fechas y GPS',
+            'icon'          => 'fas fa-calendar-alt',
+            'image'         => 'uploads/galerias/6aa28b4a1d43b_IMGP7446.JPG',
+            'fallback_img'  => 'uploads/seo/guia-fiestas.svg',
+            'description'   => 'Tarjetas interactivas de todas las fiestas de Moratalla y sus pedanías (fechas, historia, eventos destacados y coordenadas GPS).'
+        ],
+        'cristo_del_rayo' => [
+            'id'            => 'cristo_del_rayo',
+            'page_id'       => 169,
+            'cat_id'        => 45,
+            'title'         => 'Santísimo Cristo del Rayo (Historia, Peñas y Encierros)',
+            'category_name' => 'Fiestas del Cristo del Rayo',
+            'url'           => 'category.php?id=45',
+            'cat_url'       => 'category.php?id=191',
+            'photos_count'  => 40,
+            'badge'         => 'Referencia Histórica y Fiestas',
+            'icon'          => 'fas fa-bolt',
+            'image'         => 'uploads/banners/banner_1778708256.jpg',
+            'fallback_img'  => 'uploads/seo/guia-fiestas.svg',
+            'description'   => 'Sección y fichas históricas del Santísimo Cristo del Rayo (referencia de 1621, encierros por vereda, peñas festeras y programas).'
+        ],
+        'san_anton_feria' => [
+            'id'            => 'san_anton_feria',
+            'page_id'       => 449,
+            'cat_id'        => 193,
+            'title'         => 'Feria de San Miguel, San Antón y Fiestas de Pedanías',
+            'category_name' => 'Fiestas Tradicionales',
+            'url'           => 'page.php?id=449',
+            'cat_url'       => 'category.php?id=39',
+            'photos_count'  => 18,
+            'badge'         => 'San Miguel, San Antón y Pedanías',
+            'icon'          => 'fas fa-fire',
+            'image'         => 'uploads/galerias/6aa28b4a1d43b_IMGP7446.JPG',
+            'fallback_img'  => 'uploads/seo/guia-fiestas.svg',
+            'description'   => 'Fichas fotográficas de la Feria de San Miguel (id=449), San Antón (id=164), Calar de la Santa (id=442), El Sabinar (id=443) y Cañada de la Cruz (id=444).'
+        ],
+        'historia_ludena' => [
+            'id'            => 'historia_ludena',
+            'page_id'       => 290,
+            'cat_id'        => 174,
+            'title'         => 'Historia de Moratalla (Archivo Documental)',
+            'category_name' => 'Historia y Cultura',
+            'url'           => 'page.php?id=290',
+            'cat_url'       => 'category.php?id=174',
+            'photos_count'  => 12,
+            'badge'         => 'Estudio Histórico de José Ludeña López',
+            'icon'          => 'fas fa-scroll',
+            'image'         => 'uploads/banners/banner_1778706093.jpg',
+            'fallback_img'  => 'uploads/seo/pilar-historia.svg',
+            'description'   => 'Ficha histórica de Moratalla documentada por José Ludeña López junto a la Bibliografía de Moratalla (page.php?id=296).'
+        ],
+        'banda_musica_cultura' => [
+            'id'            => 'banda_musica_cultura',
+            'page_id'       => 294,
+            'cat_id'        => 129,
+            'title'         => 'Banda de Música, Rondalla Trieta y Artesanía del Esparto',
+            'category_name' => 'Cultura, Música y Artesanía',
+            'url'           => 'page.php?id=294',
+            'cat_url'       => 'category.php?id=127',
+            'photos_count'  => 24,
+            'badge'         => 'Memoria Cultural y Fotografías Antiguas',
+            'icon'          => 'fas fa-music',
+            'image'         => 'uploads/galerias/6a0dfcf755f3d_PIC00319.JPG',
+            'fallback_img'  => 'uploads/seo/pilar-historia.svg',
+            'description'   => 'Tarjetas históricas de la Banda de Música (id=294), Rondalla Trieta (id=295) y Artesanía del Esparto de Bartolomé Marín "El Granados" (id=306).'
+        ],
+        'gastronomia_ficha' => [
+            'id'            => 'gastronomia_ficha',
+            'page_id'       => 263,
+            'cat_id'        => 80,
+            'title'         => 'Gastronomía Moratallera',
+            'category_name' => 'Gastronomía',
+            'url'           => 'page.php?id=263',
+            'cat_url'       => 'category.php?id=80',
+            'photos_count'  => 8,
+            'badge'         => 'Ficha Oficial de Gastronomía',
+            'icon'          => 'fas fa-utensils',
+            'image'         => 'uploads/banners/banner_1778708256.jpg',
+            'fallback_img'  => 'uploads/seo/pilar-gastronomia.svg',
+            'description'   => 'Tarjeta tradicional de la Gastronomía Moratallera con los sabores, productos serranos y dulces de horno del municipio.'
+        ],
+        'recetas_ficha' => [
+            'id'            => 'recetas_ficha',
+            'page_id'       => 428,
+            'cat_id'        => 80,
+            'title'         => 'Recetas de Moratalla (Recetario Tradicional)',
+            'category_name' => 'Gastronomía',
+            'url'           => 'page.php?id=428',
+            'cat_url'       => 'category.php?id=80',
+            'photos_count'  => 10,
+            'badge'         => 'Recetario Paso a Paso',
+            'icon'          => 'fas fa-book-open',
+            'image'         => 'uploads/seo/pilar-gastronomia.svg',
+            'fallback_img'  => 'uploads/seo/pilar-gastronomia.svg',
+            'description'   => 'Tarjeta con las recetas tradicionales de Moratalla: migas, arroz con conejo y caracoles, andrajos, olla de cerdo y mazapán.'
+        ],
+        'alojamientos_ficha' => [
+            'id'            => 'alojamientos_ficha',
+            'page_id'       => 278,
+            'cat_id'        => 116,
+            'title'         => 'Directorio de Casas Rurales y Alojamientos de Moratalla',
+            'category_name' => 'Turismo Rural',
+            'url'           => 'alojamientos.php',
+            'cat_url'       => 'page.php?id=278',
+            'photos_count'  => 80,
+            'badge'         => 'Directorio Interactivo + Tarjeta Rural',
+            'icon'          => 'fas fa-bed',
+            'image'         => 'uploads/seo/pilar-turismo-rural.svg',
+            'fallback_img'  => 'uploads/seo/pilar-turismo-rural.svg',
+            'description'   => 'Buscador interactivo de Casas Rurales, hoteles y camping en Moratalla (alojamientos.php) y ficha histórica de Casas Rurales (page.php?id=278).'
+        ],
+        'situacion_rutas_filippedes' => [
+            'id'            => 'situacion_rutas_filippedes',
+            'page_id'       => 452,
+            'cat_id'        => 186,
+            'title'         => 'Club Deportivo Filippedes, Ciclismo y Situación Geográfica',
+            'category_name' => 'Naturaleza, Montaña y Deporte',
+            'url'           => 'page.php?id=452',
+            'cat_url'       => 'page.php?id=279',
+            'photos_count'  => 12,
+            'badge'         => 'Senderismo, Trail y Geografía',
+            'icon'          => 'fas fa-hiking',
+            'image'         => 'uploads/galerias/6ac8dbde3f559_Club deportivo filippedes.jpg',
+            'fallback_img'  => 'uploads/seo/guia-senderismo.svg',
+            'description'   => 'Tarjetas de montaña y rutas: Club Deportivo Filippedes (id=452), Club Ciclista Moratalla (id=427) y Situación Geográfica (id=279).'
+        ]
+    ];
+
+    // Si estamos conectados a la BD de producción y existen las páginas, enriquecemos dinámicamente el contador o imagen de galería sin borrar ni alterar nada
+    if ($pdo) {
+        try {
+            $pageIds = [];
+            foreach ($cards as $c) {
+                if (!empty($c['page_id'])) {
+                    $pageIds[] = (int)$c['page_id'];
+                }
+            }
+            $pageIds = array_values(array_unique($pageIds));
+            if (!empty($pageIds)) {
+                $placeholders = implode(',', array_fill(0, count($pageIds), '?'));
+                $stmt = $pdo->prepare("
+                    SELECT p.id, p.title,
+                           (SELECT COUNT(*) FROM page_images pi WHERE pi.page_id = p.id) AS total_imgs,
+                           (SELECT pi2.image_path FROM page_images pi2 WHERE pi2.page_id = p.id ORDER BY pi2.sort_order ASC, pi2.id ASC LIMIT 1) AS first_img
+                    FROM pages p
+                    WHERE p.id IN ($placeholders)
+                ");
+                $stmt->execute($pageIds);
+                $dbRows = [];
+                while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $dbRows[(int)$r['id']] = $r;
+                }
+                foreach ($cards as $key => &$card) {
+                    $pid = (int)$card['page_id'];
+                    if (isset($dbRows[$pid])) {
+                        $row = $dbRows[$pid];
+                        $cnt = (int)$row['total_imgs'];
+                        if ($cnt > 0) {
+                            $card['photos_count'] = $cnt;
+                        }
+                        if (!empty($row['first_img'])) {
+                            $card['image'] = $row['first_img'];
+                        }
+                    }
+                }
+                unset($card);
+            }
+        } catch (\Throwable $e) {
+            // Lectura segura silenciosa
+        }
+    }
+
+    return $cards;
+}
+
+/**
+ * Devuelve las tarjetas existentes asociadas a una guía concreta
+ */
+function getCardsForGuide(string $slug, ?PDO $pdo = null): array {
+    $allGuides = getSeo90Pages();
+    $allCards  = getProductionExistingCards($pdo);
+    if (!isset($allGuides[$slug])) {
+        return [];
+    }
+    $keys = $allGuides[$slug]['related_cards'] ?? [];
+    $result = [];
+    foreach ($keys as $k) {
+        if (isset($allCards[$k])) {
+            $result[] = $allCards[$k];
+        }
+    }
+    return $result;
+}
+
+/**
+ * Optimización automática de Títulos SEO y Metadescripciones
  */
 function getSeoOptimizedMeta(string $scriptName, array $context = []): array {
     $defaultTitle = "Moratalla (Murcia) | Guía Turística, Patrimonio Histórico y Cultura";
@@ -218,7 +622,7 @@ function getSeoOptimizedMeta(string $scriptName, array $context = []): array {
 }
 
 /**
- * Contenido Estacional para Fase 3 (Días 61-90)
+ * Contenido Estacional ("Moratalla las 4 Estaciones")
  */
 function getSeoSeasonalPlans(): array {
     return [
@@ -302,17 +706,18 @@ function getSeoSeasonalPlans(): array {
 }
 
 /**
- * Devuelve el catálogo completo de las 5 Páginas Pilar + 10 Páginas Prioritarias + 8 Artículos del Plan SEO 90 Días
+ * Devuelve el catálogo completo de las 5 Páginas Pilar + Guías Temáticas con imágenes de referencia contextuales
+ * y enlaces directos a las tarjetas existentes en la base de datos de producción.
  */
 function getSeo90Pages(): array {
     return [
         // =========================================================================
-        // FASE 1: LAS 5 PÁGINAS PILAR (SEMANAS 3 Y 4)
+        // LAS 5 PÁGINAS PILAR PRINCIPALES
         // =========================================================================
         'guia-completa-moratalla' => [
             'slug'             => 'guia-completa-moratalla',
             'type'             => 'pilar',
-            'phase'            => 'Fase 1 · Página Pilar #1',
+            'phase'            => 'Guía Turística Principal',
             'priority_rank'    => 1,
             'short_title'      => 'Guía Completa de Moratalla',
             'title'            => 'Qué Ver en Moratalla | Guía Completa de Turismo y Patrimonio Histórico',
@@ -321,64 +726,66 @@ function getSeo90Pages(): array {
             'meta_description' => '¿Buscas qué ver en Moratalla? Guía turística completa: Castillo-Fortaleza, Iglesia de la Asunción, pinturas rupestres UNESCO, río Alhárabe, dónde comer y dormir.',
             'keywords'         => 'Moratalla, qué ver en Moratalla, turismo en Moratalla, Moratalla Murcia, guía de Moratalla, qué hacer en Moratalla',
             'icon'             => 'fas fa-compass',
-            'hero_image'       => 'uploads/theme/moratalla.jpg',
+            'hero_image'       => 'uploads/seo/pilar-guia-completa.svg',
+            'logo_image'       => 'uploads/seo/pilar-guia-completa.svg',
             'reading_time'     => '12 min de lectura',
-            'word_target'      => 'Guía Pilar Principal',
+            'word_target'      => 'Guía Principal',
             'map_query'        => 'Moratalla, Murcia, España',
+            'related_cards'    => ['castillo', 'asuncion', 'casa_cristo', 'las_arcas', 'semana_santa_ficha', 'calendario_fiestas', 'historia_ludena', 'gastronomia_ficha'],
             'quick_facts'      => [
                 ['label' => 'Comarca', 'value' => 'Noroeste de la Región de Murcia'],
                 ['label' => 'Altitud Casco Urbano', 'value' => '681 m s. n. m. (Pico máx: 2.015 m en Los Odres)'],
                 ['label' => 'Patrimonio UNESCO', 'value' => 'Arte Rupestre del Arco Mediterráneo y Tamboradas'],
-                ['label' => 'Imprescindibles', 'value' => 'Castillo-Fortaleza, Casco Antiguo, Río Alhárabe y Casa de Cristo']
+                ['label' => 'Tarjetas con Galería', 'value' => 'Castillo (28 fotos), La Asunción (29 fotos), Las Arcas (21 fotos), Semana Santa (87 fotos)']
             ],
             'sections' => [
                 [
                     'id'      => 'introduccion',
                     'title'   => '1. Por qué Moratalla es la joya histórica y natural del Noroeste de Murcia',
-                    'content' => '<p>Situada en el corazón de la comarca del Noroeste murciano, <strong>Moratalla</strong> es uno de los destinos más fascinantes del sureste ibérico. Su término municipal —de casi 1.000 km², uno de los más extensos de España— combina un imponente <strong>conjunto histórico-artístico medieval</strong> coronado por su Castillo-Fortaleza con las mayores masas forestales de la Región de Murcia, ríos de aguas cristalinas como el <strong>Alhárabe y el Benámor</strong>, y las cumbres más altas de la comunidad autónoma en el <strong>Macizo de Revolcadores (2.015 m)</strong>.</p>
-                    <p>Además, Moratalla ostenta un doble reconocimiento como <strong>Patrimonio Mundial por la UNESCO</strong>: por un lado, concentra más de la mitad de los abrigos con <strong>pinturas rupestres prehistóricas</strong> de toda la Región de Murcia; por otro, sus vibrantes <strong>Tamboradas de Semana Santa</strong> forman parte del Patrimonio Cultural Inmaterial de la Humanidad.</p>'
+                    'content' => '<p>Situada en el corazón de la comarca del Noroeste murciano, <strong>Moratalla</strong> es uno de los destinos más fascinantes del sureste ibérico. Su término municipal —de casi 1.000 km², uno de los más extensos de España— combina un imponente <strong>conjunto histórico-artístico medieval</strong> coronado por su <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla</strong></a> con las mayores masas forestales de la Región de Murcia, ríos de aguas cristalinas como el <strong>Alhárabe y el Benámor</strong>, y las cumbres más altas de la comunidad autónoma en el <strong>Macizo de Revolcadores (2.015 m)</strong>.</p>
+                    <p>Además, Moratalla ostenta un doble reconocimiento como <strong>Patrimonio Mundial por la UNESCO</strong>: por un lado, concentra más de la mitad de los abrigos con <a href="page.php?id=451"><strong>Arte Rupestre prehistórico</strong></a> de toda la Región de Murcia; por otro, sus vibrantes <a href="page.php?id=458"><strong>Tamboradas de Semana Santa</strong></a> forman parte del Patrimonio Cultural Inmaterial de la Humanidad.</p>'
                 ],
                 [
                     'id'      => 'imprescindibles',
-                    'title'   => '2. Los 8 lugares imprescindibles que ver en Moratalla',
-                    'content' => '<p>Si visitas Moratalla por primera vez, estos son los enclaves fundamentales que debes incluir en tu recorrido:</p>
+                    'title'   => '2. Los 8 lugares imprescindibles que ver en Moratalla (con enlace a sus tarjetas y galerías)',
+                    'content' => '<p>Si visitas Moratalla por primera vez, estos son los enclaves fundamentales que debes incluir en tu recorrido, enlazados directamente con las tarjetas descriptivas y fotográficas de nuestro archivo:</p>
                     <ul>
-                        <li><strong>Castillo-Fortaleza de Moratalla y Torre del Homenaje:</strong> Fortaleza de origen islámico reconstruida en los siglos XV y XVI por la Orden de Santiago. Su Torre del Homenaje de estilo gótico-militar levantino es una de las más bellas de España.</li>
-                        <li><strong>Iglesia de Nuestra Señora de la Asunción:</strong> Monumento declarado Bien de Interés Cultural (siglo XVI), célebre por sus columnas renacentistas y su monumentalidad sobre el caserío.</li>
-                        <li><strong>Barrio Medieval de El Castillo y Calles Empinadas:</strong> Un laberinto de callejuelas blancas, cuestas empedradas, balcones floridos y miradores panorámicos.</li>
-                        <li><strong>Convento de San Francisco y Ermita de Santa Ana:</strong> Testigos del esplendor barroco y de la religiosidad popular moratallera.</li>
-                        <li><strong>Centro de Interpretación del Arte Rupestre (Casa de Cristo):</strong> Ubicado en un antiguo monasterio mercedario en pleno monte, a los pies de la Sierra del Buitre.</li>
-                        <li><strong>Abrigos Rupestres de Cañaica del Calar y Fuente del Sabuco:</strong> Santuarios prehistóricos con escenas de caza y fauna de hace más de 6.000 años.</li>
-                        <li><strong>Río Alhárabe, Camping La Puerta y Poza de Somogil:</strong> Pozas naturales de aguas templadas y bosque de galería único en el sureste.</li>
-                        <li><strong>Pedanías altas (Benizar, Otos, Mazuza, Campo de San Juan, El Sabinar, Calar de la Santa y La Rogativa):</strong> Pueblos serranos con cascadas, castillos roqueros, sabinares milenarios y cielos estrellados.</li>
+                        <li><strong><a href="page.php?id=433">Castillo fortaleza de Moratalla</a> y Torre del Homenaje:</strong> Fortaleza de origen islámico reconstruida en los siglos XV y XVI por la Orden de Santiago. Consulta su <a href="page.php?id=433">tarjeta patrimonial con descripción y 28 fotografías</a>.</li>
+                        <li><strong><a href="page.php?id=440">Parroquia de Santa María de la Asunción</a>:</strong> Monumento declarado Bien de Interés Cultural (siglo XVI), célebre por sus columnas renacentistas. Ver <a href="page.php?id=440">ficha oficial y galería de 29 fotografías</a>.</li>
+                        <li><strong><a href="page.php?id=435">Convento de San Francisco</a> y <a href="page.php?id=434">Ermita de Santa Ana</a>:</strong> Testigos del esplendor barroco y de la devoción tradicional en el casco antiguo.</li>
+                        <li><strong><a href="page.php?id=441">Santuario de la Casa de Cristo</a> y Centro de Arte Rupestre:</strong> Antiguo monasterio mercedario en pleno monte público (<a href="page.php?id=441">ver tarjeta y 15 fotografías</a>).</li>
+                        <li><strong><a href="page.php?id=451">Abrigos de Arte Rupestre</a> (Cañaica del Calar y Fuente del Sabuco):</strong> Santuarios prehistóricos con escenas de caza de hace más de 6.000 años (<a href="page.php?id=451">ver ficha de Arte Rupestre</a>).</li>
+                        <li><strong><a href="page.php?id=446">Acueducto de Las Arcas</a> y <a href="page.php?id=445">Puente de Hellín</a>:</strong> Obras históricas de ingeniería hidráulica (<a href="page.php?id=446">ver las 21 fotografías de Las Arcas</a>).</li>
+                        <li><strong><a href="page.php?id=430">Museo del Tambor</a> y <a href="page.php?id=453">Semana Santa de Moratalla</a>:</strong> Descubre las túnicas artesanales y los tambores moratalleros (<a href="page.php?id=430">15 fotos del Museo</a> y <a href="page.php?id=453">87 fotos de Semana Santa</a>).</li>
+                        <li><strong>Pedanías altas y <a href="page.php?id=163">Calendario de Fiestas</a>:</strong> Benizar, Otos, Mazuza, Campo de San Juan, <a href="page.php?id=443">El Sabinar</a>, <a href="page.php?id=442">Calar de la Santa</a>, <a href="page.php?id=444">Cañada de la Cruz</a> y La Rogativa.</li>
                     </ul>'
                 ],
                 [
                     'id'      => 'como-organizar',
                     'title'   => '3. Cómo organizar tu visita a Moratalla paso a paso',
                     'content' => '<p>Para aprovechar al máximo tu estancia en Moratalla te recomendamos dividir la experiencia en tres ejes complementarios:</p>
-                    <p><strong>Mañana de Patrimonio e Historia:</strong> Comienza en la Plaza de la Iglesia y sube hacia la <a href="guia.php?slug=castillo-de-moratalla">Fortaleza de Moratalla</a> recorriendo la <a href="guia.php?slug=ruta-casco-antiguo-moratalla">ruta por el casco antiguo</a>. Visita el interior de Santa María de la Asunción y asómate a los miradores de la Placeta del Castillo.</p>
-                    <p><strong>Mediodía Gastronómico:</strong> Haz una parada en los <a href="restaurantes.php">bares y restaurantes de Moratalla</a> para degustar un buen plato de arroz con conejo y caracoles, migas ruleras o carnes a la brasa de la sierra, acompañados de repostería local como el famoso <a href="guia.php?slug=gastronomia-de-moratalla">mazapán de Moratalla</a>.</p>
-                    <p><strong>Tarde de Naturaleza y Arte Rupestre:</strong> A solo 10 minutos en coche del casco urbano, sube al entorno del Monte Público y <a href="guia.php?slug=monumentos-y-patrimonio-moratalla">Casa de Cristo</a> o realiza un paseo junto al río Alhárabe por el <a href="guia.php?slug=rutas-de-senderismo-en-moratalla">Estrecho de Bolvonegro</a>.</p>'
+                    <p><strong>Mañana de Patrimonio e Historia:</strong> Comienza en la Plaza de la Iglesia visitando la <a href="page.php?id=440">Parroquia de Santa María de la Asunción</a> y sube hacia el <a href="page.php?id=433">Castillo fortaleza de Moratalla</a> recorriendo la <a href="guia.php?slug=ruta-casco-antiguo-moratalla">ruta por el casco antiguo</a> pasando por la <a href="page.php?id=434">Ermita de Santa Ana</a> y el <a href="page.php?id=435">Convento de San Francisco</a>.</p>
+                    <p><strong>Mediodía Gastronómico:</strong> Haz una parada en los <a href="restaurantes.php">bares y restaurantes de Moratalla</a> para degustar las especialidades recogidas en nuestras tarjetas de <a href="page.php?id=263">Gastronomía Moratallera</a> y <a href="page.php?id=428">Recetas de Moratalla</a>.</p>
+                    <p><strong>Tarde de Naturaleza y Arte Rupestre:</strong> A solo 10 minutos en coche del casco urbano, sube al <a href="page.php?id=441">Santuario de la Casa de Cristo</a> o realiza un paseo junto al río Alhárabe cruzando el histórico <a href="page.php?id=445">Puente de Hellín</a> hacia el Estrecho de Bolvonegro.</p>'
                 ],
                 [
                     'id'      => 'alojamiento-y-servicios',
                     'title'   => '4. Dónde dormir y dónde comer en Moratalla',
-                    'content' => '<p>Moratalla es pionera del <a href="guia.php?slug=turismo-rural-moratalla">turismo rural en la Región de Murcia</a>. En nuestro directorio actualizado encontrarás más de 80 opciones en <a href="alojamientos.php">Alojamientos y Casas Rurales en Moratalla</a> (tanto en el casco histórico como en La Puerta, Benizar, Campo de San Juan o El Sabinar) y el listado completo de <a href="restaurantes.php">Bares y Restaurantes</a> con teléfonos y ubicación en mapa.</p>'
+                    'content' => '<p>Moratalla es pionera del <a href="guia.php?slug=turismo-rural-moratalla">turismo rural en la Región de Murcia</a>. En nuestro directorio actualizado encontrarás más de 80 opciones en <a href="alojamientos.php">Alojamientos y Casas Rurales en Moratalla</a> (complementado por la ficha histórica de <a href="page.php?id=278">Casas Rurales</a>) y el listado completo de <a href="restaurantes.php">Bares y Restaurantes</a> con teléfonos y ubicación en mapa.</p>'
                 ]
             ],
             'faqs' => [
                 [
                     'q' => '¿Cuántos días se necesitan para ver Moratalla?',
-                    'a' => 'En 1 día puedes conocer el Castillo-Fortaleza, la Iglesia de la Asunción, el casco antiguo y el paraje de Casa de Cristo o el río Alhárabe. Sin embargo, lo ideal es dedicar un fin de semana completo (2 o 3 días) para incluir una ruta de senderismo (Bolvonegro, Somogil o Revolcadores) y visitar las pinturas rupestres y pedanías como Benizar o La Rogativa.'
+                    'a' => 'En 1 día puedes conocer el Castillo-Fortaleza (page.php?id=433), la Parroquia de la Asunción (page.php?id=440), el casco antiguo y el Santuario de Casa de Cristo (page.php?id=441). Lo ideal es dedicar un fin de semana completo (2 o 3 días) para incluir el río Alhárabe, Bolvonegro y las pinturas rupestres.'
                 ],
                 [
-                    'q' => '¿Cuál es la mejor época para visitar Moratalla?',
-                    'a' => 'Moratalla es un destino de cuatro estaciones: en primavera destacan sus cascadas y rutas verdes; en Semana Santa sus famosas Tamboradas; del 11 al 17 de julio las Fiestas del Santísimo Cristo del Rayo; y en otoño e invierno sus bosques, setas, gastronomía de cuchara y cumbres nevadas.'
+                    'q' => '¿Dónde puedo ver fotografías reales de los monumentos de Moratalla?',
+                    'a' => 'En cada guía encontrarás las tarjetas oficiales del archivo de moratalla-murcia.com, como el Castillo fortaleza (28 fotos), la Parroquia de la Asunción (29 fotos), Las Arcas (21 fotos), Casa de Cristo (15 fotos) o Semana Santa (87 fotos).'
                 ],
                 [
                     'q' => '¿Se puede visitar el Castillo de Moratalla por dentro?',
-                    'a' => 'Sí, el recinto amurallado y la Torre del Homenaje del Castillo-Fortaleza de Moratalla son visitables. Se recomienda consultar los horarios actualizados en la Oficina de Turismo de Moratalla para acceder a las visitas guiadas.'
+                    'a' => 'Sí, el recinto amurallado y la Torre del Homenaje del Castillo-Fortaleza de Moratalla son visitables. Puedes ver un adelanto completo en nuestra tarjeta del Castillo con 28 imágenes de su exterior e interior.'
                 ]
             ],
             'related_slugs' => [
@@ -393,7 +800,7 @@ function getSeo90Pages(): array {
         'turismo-rural-moratalla' => [
             'slug'             => 'turismo-rural-moratalla',
             'type'             => 'pilar',
-            'phase'            => 'Fase 1 · Página Pilar #2',
+            'phase'            => 'Naturaleza y Alojamiento Rural',
             'priority_rank'    => 2,
             'short_title'      => 'Turismo Rural en Moratalla',
             'title'            => 'Turismo Rural en Moratalla | Casas Rurales, Naturaleza y Escapadas en Murcia',
@@ -402,50 +809,51 @@ function getSeo90Pages(): array {
             'meta_description' => 'Guía de turismo rural en Moratalla (Murcia): mejores zonas donde alojarse en casas rurales, ríos Alhárabe y Benámor, Revolcadores, pedanías y naturaleza.',
             'keywords'         => 'turismo rural en Moratalla, casas rurales Moratalla, alojamientos Moratalla, naturaleza Moratalla, escapada rural Murcia',
             'icon'             => 'fas fa-tree',
-            'hero_image'       => 'uploads/banners/banner_1778708226.jpg',
+            'hero_image'       => 'uploads/seo/pilar-turismo-rural.svg',
+            'logo_image'       => 'uploads/seo/pilar-turismo-rural.svg',
             'reading_time'     => '10 min de lectura',
-            'word_target'      => 'Guía Pilar Turismo Rural',
+            'word_target'      => 'Guía Turismo Rural',
             'map_query'        => 'Río Alhárabe Moratalla, Murcia',
+            'related_cards'    => ['alojamientos_ficha', 'casa_cristo', 'puente_hellin', 'las_arcas', 'situacion_rutas_filippedes', 'calendario_fiestas'],
             'quick_facts'      => [
                 ['label' => 'Superficie Forestal', 'value' => 'Más de 55.000 hectáreas de montes y pinares'],
                 ['label' => 'Cota Máxima', 'value' => 'Los Odres (1.878 m) y Revolcadores (2.015 m)'],
-                ['label' => 'Ríos Principales', 'value' => 'Río Alhárabe, Río Benámor y Arroyo Blanco'],
+                ['label' => 'Ríos y Parajes', 'value' => 'Río Alhárabe, Puente de Hellín, Las Arcas y Casa de Cristo'],
                 ['label' => 'Directorio Local', 'value' => 'Acceso directo a Casas Rurales, Camping y Hostales']
             ],
             'sections' => [
                 [
                     'id'      => 'capital-turismo-rural',
                     'title'   => '1. Moratalla, capital del turismo rural y de interior en la Región de Murcia',
-                    'content' => '<p>Cuando se piensa en Murcia suele venir a la mente la costa, pero al noroeste se alza un paisaje completamente distinto: <strong>Moratalla</strong>, conocida como la "Suiza murciana" por su relieve montañoso, sus valles surcados por el agua y sus extensos bosques de pino carrasco, pino laricio, encinas y sabinas albares.</p>
-                    <p>El <strong>turismo rural en Moratalla</strong> comenzó a desarrollarse de forma pionera en la década de 1990, rehabilitando antiguos cortijos, molinos harineros y casas de labranza para ofrecer una experiencia auténtica de descanso en contacto directo con la naturaleza.</p>'
+                    'content' => '<p>Al noroeste de la Región de Murcia se alza un paisaje montañoso y verde: <strong>Moratalla</strong>, conocida por su relieve escarpado, sus valles surcados por el agua y sus extensos bosques de pino carrasco, pino laricio, encinas y sabinas albares, documentados en nuestra tarjeta de <a href="page.php?id=279"><strong>Situación geográfica de Moratalla</strong></a>.</p>
+                    <p>El <strong>turismo rural en Moratalla</strong> se desarrolló de forma pionera rehabilitando antiguos cortijos, molinos y casas de labranza que puedes consultar tanto en el <a href="alojamientos.php"><strong>Directorio Interactivo de Alojamientos</strong></a> como en la tarjeta tradicional de <a href="page.php?id=278"><strong>Casas Rurales de Moratalla</strong></a>.</p>'
                 ],
                 [
                     'id'      => 'mejores-zonas-alojamiento',
                     'title'   => '2. Mejores zonas donde alojarse en una casa rural en Moratalla',
-                    'content' => '<p>Dependiendo del tipo de escapada que busques —en pareja, con niños o con grupo de amigos—, Moratalla ofrece distintas áreas naturales:</p>
+                    'content' => '<p>Dependiendo del tipo de escapada que busques —en pareja, con niños o con amigos—, Moratalla ofrece distintas áreas naturales con patrimonio propio:</p>
                     <ul>
-                        <li><strong>Entorno del Río Alhárabe y La Puerta:</strong> Ideal para familias y amantes del senderismo fluvial, a pocos kilómetros del Estrecho de Bolvonegro y la Poza de Somogil.</li>
-                        <li><strong>Casa de Cristo y Sierra del Buitre:</strong> En pleno monte público, rodeado de pinares centenarios y miradores panorámicos sobre la vega de Moratalla.</li>
-                        <li><strong>Pedanías altas (Campo de San Juan, El Sabinar, Calar de la Santa y Zaén):</strong> A más de 1.100 metros de altitud, perfectas para ver la nieve en invierno, disfrutar de noches frescas en pleno agosto y contemplar cielos estrellados sin contaminación lumínica.</li>
+                        <li><strong>Entorno del Río Alhárabe, <a href="page.php?id=445">Puente de Hellín</a> y La Puerta:</strong> Ideal para familias y amantes del senderismo fluvial, cerca del Estrecho de Bolvonegro y del acueducto histórico de <a href="page.php?id=446"><strong>Las Arcas (ver 21 fotos)</strong></a>.</li>
+                        <li><strong><a href="page.php?id=441">Santuario de la Casa de Cristo</a> y Sierra del Buitre:</strong> En pleno monte público, rodeado de pinares centenarios y miradores panorámicos (<a href="page.php?id=441">ver tarjeta y 15 fotos de Casa de Cristo</a>).</li>
+                        <li><strong>Pedanías altas (<a href="page.php?id=443">El Sabinar</a>, <a href="page.php?id=442">Calar de la Santa</a>, <a href="page.php?id=444">Cañada de la Cruz</a> y Campo de San Juan):</strong> A más de 1.100 metros de altitud, perfectas para ver la nieve en invierno y disfrutar de noches frescas en verano.</li>
                         <li><strong>Benizar, Otos y Mazuza:</strong> Riqueza hídrica, nacimientos de agua, cascadas de travertino y el histórico Castillo de Benizar.</li>
-                        <li><strong>Casco Histórico de Moratalla:</strong> Para quienes prefieren ir andando a los monumentos, tabernas, comercios y vivir el ambiente tradicional del pueblo.</li>
-                    </ul>
-                    <p>Consulta nuestro catálogo completo con contacto directo de propietarios en la sección <a href="alojamientos.php"><strong>Dónde Dormir · Alojamientos en Moratalla</strong></a>.</p>'
+                        <li><strong>Casco Histórico de Moratalla:</strong> Junto al <a href="page.php?id=433">Castillo fortaleza</a> y la <a href="page.php?id=440">Parroquia de la Asunción</a>.</li>
+                    </ul>'
                 ],
                 [
                     'id'      => 'actividades-naturaleza',
-                    'title'   => '3. Experiencias y turismo activo durante todo el año',
-                    'content' => '<p>Más allá del descanso, el entorno natural de Moratalla permite practicar <a href="guia.php?slug=rutas-de-senderismo-en-moratalla">senderismo por gargantas y cumbres</a>, rutas en bicicleta de montaña (BTT), observación de aves rapaces (buitre leonado, águila real y halcón peregrino), astroturismo y rutas micológicas en otoño.</p>'
+                    'title'   => '3. Experiencias, senderismo y deporte en la naturaleza',
+                    'content' => '<p>El entorno natural de Moratalla permite practicar <a href="guia.php?slug=rutas-de-senderismo-en-moratalla">senderismo por gargantas y cumbres</a>, rutas impulsadas por entidades locales como el <a href="page.php?id=452"><strong>Club Deportivo Filippedes Moratalla</strong></a> y el <a href="page.php?id=427"><strong>Club Ciclista de Moratalla</strong></a>, observación de aves rapaces, astroturismo y rutas micológicas en otoño.</p>'
                 ]
             ],
             'faqs' => [
                 [
                     'q' => '¿Dónde buscar casas rurales en Moratalla con contacto directo?',
-                    'a' => 'En la sección Alojamientos de moratalla-murcia.com dispones de un buscador filtrable por pedanía y localidad con teléfonos directos, correo electrónico, página web y ubicación en Google Maps de cada casa rural, camping u hostal.'
+                    'a' => 'En la sección Alojamientos (alojamientos.php) y en la ficha de Casas Rurales (page.php?id=278) dispones de acceso directo con teléfonos, correo electrónico, web y ubicación en mapa de cada alojamiento rural.'
                 ],
                 [
                     'q' => '¿Es Moratalla un buen destino de turismo rural con niños?',
-                    'a' => 'Excelente. Paseos llanos como el primer tramo del río Alhárabe junto a La Puerta, la explanada de Casa de Cristo, el Castillo de Moratalla y el Centro de Arte Rupestre son planes muy didácticos y seguros para toda la familia.'
+                    'a' => 'Excelente. Paseos como el río Alhárabe junto a La Puerta y el Puente de Hellín (page.php?id=445), la explanada del Santuario de Casa de Cristo (page.php?id=441) y el Castillo de Moratalla (page.php?id=433) son planes ideales para toda la familia.'
                 ]
             ],
             'related_slugs' => [
@@ -459,7 +867,7 @@ function getSeo90Pages(): array {
         'historia-de-moratalla' => [
             'slug'             => 'historia-de-moratalla',
             'type'             => 'pilar',
-            'phase'            => 'Fase 1 · Página Pilar #3',
+            'phase'            => 'Memoria y Archivo Histórico',
             'priority_rank'    => 3,
             'short_title'      => 'Historia de Moratalla',
             'title'            => 'Historia de Moratalla (Murcia) | De la Prehistoria a la Orden de Santiago',
@@ -468,48 +876,50 @@ function getSeo90Pages(): array {
             'meta_description' => 'Conoce la historia de Moratalla (Murcia): asentamientos prehistóricos y pinturas rupestres, pasado íbero y romano, fortaleza islámica y Encomienda de la Orden de Santiago.',
             'keywords'         => 'historia de Moratalla, historia de Moratalla Murcia, Orden de Santiago Moratalla, origen de Moratalla, patrimonio histórico Moratalla',
             'icon'             => 'fas fa-landmark',
-            'hero_image'       => 'uploads/banners/banner_1778706093.jpg',
+            'hero_image'       => 'uploads/seo/pilar-historia.svg',
+            'logo_image'       => 'uploads/seo/pilar-historia.svg',
             'reading_time'     => '11 min de lectura',
-            'word_target'      => 'Guía Pilar Historia',
+            'word_target'      => 'Guía de Historia',
             'map_query'        => 'Castillo de Moratalla, Murcia',
+            'related_cards'    => ['historia_ludena', 'arte_rupestre', 'castillo', 'asuncion', 'cristo_del_rayo', 'banda_musica_cultura'],
             'quick_facts'      => [
                 ['label' => 'Primeros Pobladores', 'value' => 'Paleolítico Superior, Epipaleolítico y Neolítico'],
                 ['label' => 'Hito Prehistórico', 'value' => 'Más de 60 abrigos con Arte Rupestre Levantino y Esquemático'],
                 ['label' => 'Edad Media', 'value' => 'Hisn islámico (Murata) y Encomienda de la Orden de Santiago (1245)'],
-                ['label' => 'Edad Moderna', 'value' => 'Construcción de Santa María de la Asunción y voto al Cristo del Rayo (1621)']
+                ['label' => 'Archivo en la Web', 'value' => 'Historia de José Ludeña (id=290), Bibliografía (id=296) y Patrimonio (cat=194)']
             ],
             'sections' => [
                 [
                     'id'      => 'prehistoria-arte-rupestre',
                     'title'   => '1. Prehistoria: El gran santuario del Arte Rupestre en Murcia',
-                    'content' => '<p>La presencia humana en las tierras de Moratalla se remonta a hace más de 10.000 años. La abundancia de agua, caza y abrigos rocosos calizos convirtió sus sierras en un enclave privilegiado durante el Epipaleolítico, el Neolítico y el Calcolítico. Fruto de aquellas sociedades cazadoras-recolectoras y de los primeros pastores son las célebres <a href="guia.php?slug=pinturas-rupestres-de-moratalla"><strong>Pinturas Rupestres de Moratalla</strong></a> (Cañaica del Calar, Fuente del Sabuco, Risca, Hondares, Molino de Capel), declaradas Patrimonio Mundial por la UNESCO en 1998.</p>
-                    <p>En el Calcolítico y la Edad del Bronce (cultura argárica) destacan poblados fortificados de altura como el de <strong>Los Molinicos</strong> (en el río Alhárabe), que controlaba las rutas naturales entre el Levante y la Alta Andalucía.</p>'
+                    'content' => '<p>La presencia humana en las tierras de Moratalla se remonta a hace más de 10.000 años. Fruto de aquellas sociedades cazadoras-recolectoras y de los primeros pastores neolíticos son los abrigos recogidos en nuestra tarjeta de <a href="page.php?id=451"><strong>Arte Rupestre de Moratalla</strong></a> y explicados en el <a href="page.php?id=441"><strong>Santuario de la Casa de Cristo</strong></a>, declarados Patrimonio Mundial por la UNESCO en 1998.</p>
+                    <p>Para profundizar en los estudios históricos y documentales del municipio, consulta directamente la tarjeta de <a href="page.php?id=290"><strong>Historia de Moratalla (por José Ludeña López)</strong></a> y la recopilación de <a href="page.php?id=296"><strong>Bibliografía sobre Moratalla</strong></a>.</p>'
                 ],
                 [
                     'id'      => 'iberos-romanos-andalusies',
                     'title'   => '2. Íberos, Romanos y la Murata andalusí',
-                    'content' => '<p>Durante la época íbera y la posterior romanización, el territorio de Moratalla articuló villas agrícolas vinculadas al aprovechamiento del esparto, el cereal, el aceite y la ganadería, con importantes vestigios en parajes como Los Villaricos. Ya en época islámica (siglos IX-XIII), se consolidó el emplazamiento defensivo sobre el cerro del castillo y el de Benizar, formando parte de la cora de Todmir y posteriormente de la taifa de Murcia.</p>'
+                    'content' => '<p>Durante la época íbera y la posterior romanización, el territorio de Moratalla articuló villas agrícolas vinculadas al esparto, el cereal y el aceite, una tradición artesanal que ha llegado hasta nuestros días como muestra la ficha de <a href="page.php?id=306"><strong>Artesanía del Esparto de Bartolomé Marín "El Granados"</strong></a>. En época islámica (siglos IX-XIII), se consolidó el emplazamiento defensivo sobre el cerro del castillo y el de Benizar.</p>'
                 ],
                 [
                     'id'      => 'orden-de-santiago',
                     'title'   => '3. La Reconquista y la Encomienda de la Orden de Santiago',
-                    'content' => '<p>Tras el Tratado de Alcaraz (1243), Alfonso X el Sabio entregó Moratalla a la poderosa <strong>Orden Militar de Santiago</strong>, convirtiéndose en sede de una importante Encomienda fronteriza frente al Reino Nazarí de Granada. En el siglo XV, los comendadores santiaguistas levantaron la monumental <strong>Torre del Homenaje</strong> del <a href="guia.php?slug=castillo-de-moratalla">Castillo de Moratalla</a>, dotándola de su característica bóveda gótica y sus almenas.</p>'
+                    'content' => '<p>Tras el Tratado de Alcaraz (1243), Alfonso X el Sabio entregó Moratalla a la <strong>Orden Militar de Santiago</strong>, convirtiéndose en sede de una importante Encomienda fronteriza. En el siglo XV, los comendadores santiaguistas levantaron la monumental Torre del Homenaje que puedes admirar en la tarjeta del <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla (con 28 fotografías)</strong></a>.</p>'
                 ],
                 [
                     'id'      => 'edad-moderna-y-contemporanea',
-                    'title'   => '4. Renacimiento, el milagro del Cristo del Rayo y la memoria contemporánea',
-                    'content' => '<p>Con el fin de la frontera granadina en 1492, Moratalla vivió una etapa de expansión urbana y demográfica en los siglos XVI y XVII. Se inició la construcción de la monumental <strong>Iglesia de Nuestra Señora de la Asunción</strong> (1521), se fundó el Convento de San Francisco y el de la Casa de Cristo. El 15 de junio de 1621 tuvo lugar el histórico suceso de la tormenta y el rayo en el templo parroquial sin causar víctimas, origen de la devoción al <strong>Santísimo Cristo del Rayo</strong> y de sus centenarios encierros taurinos por vereda.</p>
-                    <p>Explora todos los documentos originales, fotografías antiguas y crónicas en la sección de <a href="category.php?id=127"><strong>Cultura e Historia del Archivo Digital</strong></a>.</p>'
+                    'title'   => '4. Renacimiento, el milagro del Cristo del Rayo y la memoria cultural',
+                    'content' => '<p>En los siglos XVI y XVII se edificó la monumental <a href="page.php?id=440"><strong>Parroquia de Santa María de la Asunción (29 fotografías)</strong></a>, el <a href="page.php?id=435"><strong>Convento de San Francisco</strong></a>, la <a href="page.php?id=434"><strong>Ermita de Santa Ana</strong></a> y las conducciones hidráulicas de <a href="page.php?id=446"><strong>Las Arcas (21 fotografías)</strong></a>. El 15 de junio de 1621 tuvo lugar el milagro del <a href="category.php?id=45"><strong>Santísimo Cristo del Rayo</strong></a>, origen de las fiestas patronales.</p>
+                    <p>Explora también la memoria musical y artística en las tarjetas de la <a href="page.php?id=294"><strong>Banda de Música de Moratalla</strong></a>, la <a href="page.php?id=295"><strong>Rondalla Trieta</strong></a>, la pintura de <a href="page.php?id=429"><strong>Manolo Martínez "Cancarín"</strong></a> y la seda de <a href="page.php?id=305"><strong>Ana María Almagro</strong></a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿De dónde proviene el nombre de Moratalla?',
-                    'a' => 'Existen diversas hipótesis históricas y filológicas: desde topónimos prerromanos y latinos vinculados a "Murata" (lugar amurallado o fortificado) hasta su evolución fonética en época andalusí antes de pasar a la Orden de Santiago en el siglo XIII.'
+                    'q' => '¿Dónde consultar los textos históricos y bibliografía de Moratalla en esta web?',
+                    'a' => 'Puedes acceder directamente a la tarjeta "Historia de Moratalla" de José Ludeña López (page.php?id=290), a la "Bibliografía de Moratalla" (page.php?id=296) y a la categoría completa de Patrimonio (category.php?id=194).'
                 ],
                 [
                     'q' => '¿Qué ocurrió en Moratalla el 15 de junio de 1621?',
-                    'a' => 'Durante la celebración de la octava del Corpus Christi en la Iglesia de la Asunción, una gran tempestad descargó una centella o rayo dentro del templo repleto de fieles, impactando en la imagen del crucificado sin que ningún vecino perdiera la vida. Desde entonces se venera como el Santísimo Cristo del Rayo.'
+                    'a' => 'Durante la octava del Corpus Christi en la Parroquia de Santa María de la Asunción (page.php?id=440), un rayo impactó en la imagen del crucificado con el templo lleno sin causar víctimas, dando origen a la devoción al Santísimo Cristo del Rayo (category.php?id=45).'
                 ]
             ],
             'related_slugs' => [
@@ -523,51 +933,55 @@ function getSeo90Pages(): array {
         'monumentos-y-patrimonio-moratalla' => [
             'slug'             => 'monumentos-y-patrimonio-moratalla',
             'type'             => 'pilar',
-            'phase'            => 'Fase 1 · Página Pilar #4',
+            'phase'            => 'Patrimonio Monumental',
             'priority_rank'    => 4,
             'short_title'      => 'Monumentos y Patrimonio',
             'title'            => 'Monumentos y Patrimonio de Moratalla | Castillo, Iglesias y Santuarios',
             'h1'               => 'Monumentos y Patrimonio Histórico-Artístico de Moratalla',
-            'subtitle'         => 'Guía arquitectónica y patrimonial: fortalezas medievales, templos renacentistas, ermitas serranas y puentes históricos.',
-            'meta_description' => 'Descubre los monumentos de Moratalla: Castillo-Fortaleza, Iglesia de Santa María de la Asunción, Santuario de la Rogativa, Casa de Cristo y Castillo de Benizar.',
+            'subtitle'         => 'Guía arquitectónica conectada con todas las fichas y galerías fotográficas del Patrimonio de Moratalla.',
+            'meta_description' => 'Descubre los monumentos de Moratalla y accede a sus fichas con fotos: Castillo-Fortaleza, Parroquia de la Asunción, Casa de Cristo, Santa Ana, San Francisco y Las Arcas.',
             'keywords'         => 'monumentos de Moratalla, patrimonio de Moratalla, Castillo de Moratalla, Iglesia de Santa María de la Asunción Moratalla, Casa de Cristo Moratalla',
             'icon'             => 'fas fa-chess-rook',
-            'hero_image'       => 'uploads/banners/banner_1778708236.jpg',
+            'hero_image'       => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'logo_image'       => 'uploads/seo/pilar-monumentos-patrimonio.svg',
             'reading_time'     => '10 min de lectura',
-            'word_target'      => 'Guía Pilar Patrimonio',
+            'word_target'      => 'Guía de Patrimonio',
             'map_query'        => 'Iglesia de Nuestra Señora de la Asunción, Moratalla',
+            'related_cards'    => ['castillo', 'asuncion', 'casa_cristo', 'las_arcas', 'santa_ana', 'san_francisco', 'puente_hellin', 'arte_rupestre'],
             'quick_facts'      => [
-                ['label' => 'Bien de Interés Cultural', 'value' => 'Conjunto Histórico-Artístico, Castillo e Iglesia de la Asunción'],
-                ['label' => 'Fortalezas', 'value' => 'Castillo-Fortaleza de Moratalla, Castillo de Benizar y Castellar'],
-                ['label' => 'Arquitectura Religiosa', 'value' => 'Santa María de la Asunción, San Francisco, Santa Ana, Casa de Cristo y La Rogativa'],
-                ['label' => 'Ingeniería Histórica', 'value' => 'Puente de Hellín sobre el río Alhárabe y acueductos tradicionales']
+                ['label' => 'Categoría Oficial', 'value' => '8 fichas patrimoniales en Patrimonio (category.php?id=194)'],
+                ['label' => 'Fortalezas', 'value' => 'Castillo fortaleza de Moratalla (28 fotos) y Castillo de Benizar'],
+                ['label' => 'Templos y Santuarios', 'value' => 'La Asunción (29 fotos), Casa de Cristo (15 fotos), Santa Ana y San Francisco'],
+                ['label' => 'Obras Civiles y Rupestres', 'value' => 'Las Arcas (21 fotos), Puente de Hellín y Arte Rupestre']
             ],
             'sections' => [
                 [
                     'id'      => 'castillo-fortaleza',
                     'title'   => '1. El Castillo-Fortaleza de Moratalla y su Torre del Homenaje',
-                    'content' => '<p>Coronando el cerro sobre el que se escalona la villa, el <a href="guia.php?slug=castillo-de-moratalla"><strong>Castillo-Fortaleza de Moratalla</strong></a> es el símbolo indiscutible del municipio. Cuenta con seis torres (la del Homenaje, la Blanca, la del Alcaide, la de los Cuatro Vientos, la Redonda y la de la Magdalena), un gran patio de armas con aljibe y la célebre <strong>Torre del Homenaje</strong> del siglo XV, dividida en tres plantas con la espectacular Sala del Trono cubierta por bóveda de crucería gótica.</p>'
+                    'content' => '<p>Coronando el cerro sobre el que se escalona la villa, el <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla</strong></a> es el emblema patrimonial del municipio. Cuenta con seis torres (la del Homenaje, la Blanca, la del Alcaide, la de los Cuatro Vientos, la Redonda y la de la Magdalena), un gran patio de armas con aljibe y la célebre <strong>Torre del Homenaje</strong> del siglo XV.</p>
+                    <p><i class="fas fa-images" style="color:var(--primary);"></i> <strong>Referencia en la web:</strong> Accede a la <a href="page.php?id=433"><strong>Tarjeta oficial del Castillo fortaleza de Moratalla</strong></a> para leer su descripción patrimonial completa y ver su galería de <strong>28 fotografías</strong>.</p>'
                 ],
                 [
                     'id'      => 'iglesia-asuncion',
-                    'title'   => '2. Iglesia Parroquial de Nuestra Señora de la Asunción',
-                    'content' => '<p>Declarada Monumento Histórico-Artístico Nacional en 1981, la <strong>Iglesia de Santa María de la Asunción</strong> comenzó a edificarse en 1521 bajo traza de Francisco Florentín y el impulso de los maestros canteros renacentistas. Su interior sorprende por su planta de salón (<em>Hallenkirche</em>) sostenida por monumentales columnas jónicas y toscanas, y alberga la venerada imagen del Santísimo Cristo del Rayo.</p>'
+                    'title'   => '2. Parroquia de Santa María de la Asunción, Santa Ana y San Francisco',
+                    'content' => '<p>Declarada Monumento Histórico-Artístico Nacional en 1981, la <a href="page.php?id=440"><strong>Parroquia de Santa María de la Asunción</strong></a> comenzó a edificarse en 1521 bajo traza renacentista. Su interior sorprende por su planta de salón sostenida por monumentales columnas y alberga la imagen del Santísimo Cristo del Rayo (<a href="page.php?id=440">ver tarjeta y 29 fotografías</a>).</p>
+                    <p>En el recorrido urbano destacan asimismo dos templos históricos con ficha propia en nuestra sección de <a href="category.php?id=194">Patrimonio</a>: la <a href="page.php?id=434"><strong>Ermita de Santa Ana</strong></a> y el antiguo <a href="page.php?id=435"><strong>Convento de San Francisco</strong></a>.</p>'
                 ],
                 [
-                    'id'      => 'santuarios-y-conventos',
-                    'title'   => '3. Convento de San Francisco, Casa de Cristo y Santuario de la Rogativa',
+                    'id'      => 'santuarios-ingenieria',
+                    'title'   => '3. Santuario de la Casa de Cristo, Las Arcas, Puente de Hellín y Arte Rupestre',
                     'content' => '<ul>
-                        <li><strong>Iglesia y Antiguo Convento de San Francisco:</strong> Joya barroca en el corazón urbano de Moratalla, muy vinculada a la historia cofrade y musical del municipio.</li>
-                        <li><strong>Santuario y Monasterio de la Casa de Cristo:</strong> Enclavado a más de 800 metros de altitud entre pinares, alberga hoy el Centro Regional de Interpretación del Arte Rupestre.</li>
-                        <li><strong>Santuario de Nuestra Señora de la Rogativa:</strong> Situado en un fértil valle serrano al pie de Revolcadores, conserva pinturas murales históricas y una devoción secular.</li>
-                        <li><strong>Castillo de Benizar:</strong> Fortaleza roquera islámica del siglo XII alzada sobre un imponente peñón vertical que domina la vega de Benizar.</li>
+                        <li><strong><a href="page.php?id=441">Santuario de la Casa de Cristo</a>:</strong> Enclavado a más de 800 metros de altitud entre pinares, conserva su claustro de arcos y acoge el Centro de Interpretación del Arte Rupestre (<a href="page.php?id=441">ver ficha con 15 fotografías</a>).</li>
+                        <li><strong><a href="page.php?id=446">Las Arcas</a>:</strong> Monumental obra histórica de ingeniería hidráulica que conducía el agua salvando los desniveles del terreno (<a href="page.php?id=446">ver ficha con 21 fotografías</a>).</li>
+                        <li><strong><a href="page.php?id=445">Puente de Hellín</a>:</strong> Histórico puente sobre el río Alhárabe que comunicaba Moratalla con las tierras manchegas (<a href="page.php?id=445">ver tarjeta patrimonial</a>).</li>
+                        <li><strong><a href="page.php?id=451">Arte Rupestre</a>:</strong> El conjunto de abrigos prehistóricos declarados Patrimonio de la Humanidad (<a href="page.php?id=451">ver tarjeta de Arte Rupestre</a>).</li>
                     </ul>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Cuáles son los principales monumentos de Moratalla en el casco urbano?',
-                    'a' => 'Los principales monumentos del casco histórico son el Castillo-Fortaleza con su Torre del Homenaje, la Iglesia de Nuestra Señora de la Asunción, el antiguo Convento de San Francisco, la Ermita de Santa Ana, el Ayuntamiento y el trazado medieval de sus barrios.'
+                    'q' => '¿Dónde están reunidas todas las tarjetas de patrimonio de Moratalla?',
+                    'a' => 'Tanto en las tarjetas visuales de esta misma página como en la categoría Patrimonio (category.php?id=194), donde tienes acceso directo al Castillo (id=433), Santa María de la Asunción (id=440), Santa Ana (id=434), San Francisco (id=435), Casa de Cristo (id=441), Puente de Hellín (id=445), Las Arcas (id=446) y Arte Rupestre (id=451).'
                 ]
             ],
             'related_slugs' => [
@@ -581,57 +995,60 @@ function getSeo90Pages(): array {
         'gastronomia-de-moratalla' => [
             'slug'             => 'gastronomia-de-moratalla',
             'type'             => 'pilar',
-            'phase'            => 'Fase 1 · Página Pilar #5',
+            'phase'            => 'Tradición Culinaria',
             'priority_rank'    => 5,
             'short_title'      => 'Gastronomía de Moratalla',
             'title'            => 'Gastronomía de Moratalla | Platos Típicos, Mazapán y Dónde Comer',
             'h1'               => 'Gastronomía de Moratalla: Sabores de Sierra, Recetas Tradicionales y Mazapán Artesano',
-            'subtitle'         => 'Descubre la cocina serrana de Moratalla: guisos de cuchara, arroces con aroma a leña, embutidos caseros y el inconfundible mazapán moratallero.',
+            'subtitle'         => 'Descubre la cocina serrana de Moratalla: guisos de cuchara, arroces a la leña, embutidos caseros y el inconfundible mazapán moratallero.',
             'meta_description' => 'Todo sobre la gastronomía de Moratalla: platos típicos como migas, arroz con conejo y caracoles, andrajos, el famoso mazapán de Moratalla y dónde comer.',
             'keywords'         => 'gastronomía de Moratalla, dónde comer en Moratalla, platos típicos de Moratalla, mazapán de Moratalla, recetas de Moratalla',
             'icon'             => 'fas fa-utensils',
-            'hero_image'       => 'uploads/banners/banner_1778708256.jpg',
+            'hero_image'       => 'uploads/seo/pilar-gastronomia.svg',
+            'logo_image'       => 'uploads/seo/pilar-gastronomia.svg',
             'reading_time'     => '9 min de lectura',
-            'word_target'      => 'Guía Pilar Gastronomía',
+            'word_target'      => 'Guía de Gastronomía',
             'map_query'        => 'Restaurantes en Moratalla, Murcia',
+            'related_cards'    => ['gastronomia_ficha', 'recetas_ficha', 'san_anton_feria', 'calendario_fiestas'],
             'quick_facts'      => [
                 ['label' => 'Dulce Estrella', 'value' => 'Mazapán de Moratalla (almendra, yema y cabello de ángel)'],
                 ['label' => 'Platos de Cuchara y Sartén', 'value' => 'Migas ruleras, Olla de cerdo, Andrajos, Ajoharina y Arroz con conejo y caracoles'],
-                ['label' => 'Productos de la Tierra', 'value' => 'Aceite de oliva virgen extra, miel de romero, almendra, cordero segureño y guíscanos'],
-                ['label' => 'Guía de Mesas', 'value' => 'Directorio completo de Bares y Restaurantes + Recetario Tradicional Digital']
+                ['label' => 'Tarjetas en la Web', 'value' => 'Gastronomía Moratallera (id=263) y Recetas de Moratalla (id=428)'],
+                ['label' => 'Guía de Mesas', 'value' => 'Directorio completo de Bares y Restaurantes (restaurantes.php)']
             ],
             'sections' => [
                 [
                     'id'      => 'identidad-culinaria',
                     'title'   => '1. La cocina de montaña del Noroeste murciano',
-                    'content' => '<p>La <strong>gastronomía de Moratalla</strong> es el reflejo fiel de su geografía serrana y de su historia agrícola y pastoril. Aquí confluyen la tradición huertana murciana con la contundencia de la cocina manchega, granadina y jaenera de la Sierra del Segura. El aceite de oliva de variedades autóctonas, las hierbas aromáticas del monte (romero, tomillo, ajedrea) y la leña de encina o sarmiento marcan el carácter de cada plato.</p>'
+                    'content' => '<p>La <strong>gastronomía de Moratalla</strong> es el reflejo fiel de su geografía serrana y de su historia agrícola y pastoril. El aceite de oliva de variedades autóctonas, las hierbas aromáticas del monte (romero, tomillo, ajedrea) y la leña de encina o sarmiento marcan el carácter de cada plato.</p>
+                    <p>En nuestra web dispones de dos tarjetas históricas fundamentales dentro de la categoría <a href="category.php?id=80"><strong>Gastronomía</strong></a>: la ficha de <a href="page.php?id=263"><strong>Gastronomía Moratallera</strong></a> y el compendio de <a href="page.php?id=428"><strong>Recetas de Moratalla</strong></a>.</p>'
                 ],
                 [
                     'id'      => 'platos-imprescindibles',
                     'title'   => '2. Los platos típicos que debes probar en Moratalla',
                     'content' => '<ul>
-                        <li><strong>Arroz con conejo y caracoles serranos:</strong> Cocinado a fuego vivo con sarmientos, azafrán y el toque inconfundible de los caracoles chonetes o serranos.</li>
-                        <li><strong>Migas ruleras (de harina o de pan):</strong> Indispensables en los días de lluvia o frío, acompañadas de tajadas de tocino, longaniza, morcilla, ajos tiernos, uvas o granadas.</li>
-                        <li><strong>Andrajos y Ajoharina:</strong> Guisos tradicionales de invierno con tortas finas de masa cocidas en un sabroso caldo con caza, liebre, conejo o bacalao.</li>
-                        <li><strong>Olla fresca o potaje moratallero:</strong> Plato de cuchara reconfortante con legumbres, verduras de la huerta y embutidos de la matanza tradicional.</li>
+                        <li><strong>Arroz con conejo y caracoles serranos:</strong> Cocinado a fuego vivo con sarmientos, azafrán y caracoles chonetes o serranos.</li>
+                        <li><strong>Migas ruleras (de harina o de pan):</strong> Indispensables en los días de lluvia o matanza, acompañadas de tajadas, ajos tiernos, uvas o granadas.</li>
+                        <li><strong>Andrajos y Ajoharina:</strong> Guisos tradicionales de invierno con tortas finas de masa cocidas en caldo con caza, liebre, conejo o bacalao.</li>
+                        <li><strong>Olla fresca o potaje moratallero:</strong> Plato de cuchara reconfortante con legumbres y embutidos tradicionales.</li>
                         <li><strong>Cordero segureño a la brasa o al horno:</strong> Criado en los pastos de altura de las pedanías de Moratalla.</li>
                     </ul>'
                 ],
                 [
                     'id'      => 'mazapan-y-reposteria',
-                    'title'   => '3. El Mazapán de Moratalla y la repostería de horno',
-                    'content' => '<p>Mención aparte merece el célebre <strong>Mazapán de Moratalla</strong>. A diferencia de otros mazapanes de la península, el de Moratalla se elabora artesanalmente en piezas grandes o individuales con una fina pasta de almendra seleccionada, rellena de un exquisito dulce de <strong>yema de huevo y cabello de ángel</strong>, horneado hasta lograr una corteza ligeramente dorada. Junto a él brillan las tortas de Pascua, los suspiros, los rollos de vino y anís, las flores de sartén y las torrijas de Semana Santa.</p>
-                    <p>¿Quieres preparar estas recetas paso a paso o saber dónde degustarlas hoy mismo? Visita nuestro <a href="restaurantes.php"><strong>Directorio de Bares y Restaurantes de Moratalla</strong></a> y explora la sección de <a href="category.php?id=80"><strong>Gastronomía y Recetario Tradicional</strong></a>.</p>'
+                    'title'   => '3. El Mazapán de Moratalla y dónde comer',
+                    'content' => '<p>El célebre <strong>Mazapán de Moratalla</strong> se elabora artesanalmente con fina pasta de almendra rellena de dulce de <strong>yema de huevo y cabello de ángel</strong>, horneado hasta lograr una corteza dorada. Junto a él brillan las tortas de Pascua, los suspiros, los rollos de vino y las flores de sartén.</p>
+                    <p>Consulta todas las elaboraciones en la tarjeta <a href="page.php?id=428"><strong>Recetas de Moratalla</strong></a> y elige mesa hoy mismo en el <a href="restaurantes.php"><strong>Directorio de Bares y Restaurantes de Moratalla</strong></a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Qué diferencia al Mazapán de Moratalla de otros mazapanes?',
-                    'a' => 'El mazapán tradicional de Moratalla se distingue por su formato de pastel horneado cuya masa de almendra y azúcar envuelve un jugoso relleno artesanal de cabello de ángel y yema confitada, consumiéndose durante todo el año y no solo en Navidad.'
+                    'q' => '¿Dónde ver las recetas tradicionales de Moratalla en la web?',
+                    'a' => 'Accede directamente a la tarjeta "Recetas de Moratalla" (page.php?id=428) y a "Gastronomía Moratallera" (page.php?id=263) dentro de la sección Gastronomía (category.php?id=80).'
                 ],
                 [
                     'q' => '¿Dónde comer comida típica en Moratalla?',
-                    'a' => 'Tanto en el casco urbano de Moratalla como en el entorno de La Puerta, Casa de Cristo y pedanías como Benizar, Campo de San Juan o El Sabinar encontrarás mesones y restaurantes tradicionales. Puedes filtrarlos por localidad en restaurantes.php.'
+                    'a' => 'Tanto en el casco urbano de Moratalla como en La Puerta, Casa de Cristo y pedanías como Benizar, Campo de San Juan o El Sabinar encontrarás restaurantes tradicionales listados en restaurantes.php.'
                 ]
             ],
             'related_slugs' => [
@@ -643,57 +1060,59 @@ function getSeo90Pages(): array {
         ],
 
         // =========================================================================
-        // FASE 2 Y 3: LOS 8 ARTÍCULOS SEO + LAS 10 PÁGINAS PRIORITARIAS
+        // GUÍAS ESPECIALIZADAS Y RUTAS TEMÁTICAS
         // =========================================================================
         '10-lugares-imprescindibles-que-ver-en-moratalla' => [
             'slug'             => '10-lugares-imprescindibles-que-ver-en-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #1',
+            'phase'            => 'Selección Imprescindibles',
             'priority_rank'    => 6,
             'short_title'      => '10 Lugares Que Ver en Moratalla',
-            'title'            => '10 Lugares Imprescindibles Que Ver en Moratalla (Con Mapa y Consejos)',
+            'title'            => '10 Lugares Imprescindibles Que Ver en Moratalla (Con Fichas y Fotografías)',
             'h1'               => '10 Lugares Imprescindibles Que Ver en Moratalla en tu Próxima Escapada',
-            'subtitle'         => 'De la Torre del Homenaje a las pozas del río Alhárabe: la selección definitiva para no perderte nada.',
+            'subtitle'         => 'De la Torre del Homenaje a las pozas del río Alhárabe: la selección definitiva conectada con nuestras galerías fotográficas.',
             'meta_description' => 'Descubre los 10 lugares imprescindibles que ver en Moratalla (Murcia): Castillo-Fortaleza, casco antiguo, río Alhárabe, Bolvonegro, Casa de Cristo y más.',
             'keywords'         => 'qué ver en Moratalla, 10 lugares que ver en Moratalla, sitios que visitar en Moratalla, turismo Moratalla',
             'icon'             => 'fas fa-map-marked-alt',
-            'hero_image'       => 'uploads/theme/moratalla.jpg',
+            'hero_image'       => 'uploads/seo/pilar-guia-completa.svg',
+            'logo_image'       => 'uploads/seo/pilar-guia-completa.svg',
             'reading_time'     => '8 min de lectura',
-            'word_target'      => 'Artículo SEO #1',
+            'word_target'      => 'Guía de Imprescindibles',
             'map_query'        => 'Moratalla, Murcia',
+            'related_cards'    => ['castillo', 'asuncion', 'casa_cristo', 'las_arcas', 'santa_ana', 'puente_hellin', 'arte_rupestre', 'museo_tambor'],
             'quick_facts'      => [
                 ['label' => 'Tiempo Recomendado', 'value' => '1 a 3 días'],
-                ['label' => 'Enclaves Urbanos', 'value' => 'Castillo, Iglesia de la Asunción, Casco Antiguo y San Francisco'],
-                ['label' => 'Enclaves Naturales', 'value' => 'Río Alhárabe, Bolvonegro, Somogil, Casa de Cristo y Revolcadores']
+                ['label' => 'Enclaves Urbanos', 'value' => 'Castillo (id=433), La Asunción (id=440), Santa Ana (id=434) y San Francisco (id=435)'],
+                ['label' => 'Enclaves Naturales', 'value' => 'Casa de Cristo (id=441), Las Arcas (id=446), Puente de Hellín (id=445) y Arte Rupestre (id=451)']
             ],
             'sections' => [
                 [
                     'id'      => 'top-1-a-5',
                     'title'   => 'Del 1 al 5: Patrimonio histórico y miradores urbanos',
                     'content' => '<ol>
-                        <li><strong>Castillo-Fortaleza de Moratalla:</strong> Su silueta almenada y su Torre del Homenaje del siglo XV ofrecen las mejores vistas sobre el valle y la huerta.</li>
-                        <li><strong>Iglesia de Nuestra Señora de la Asunción:</strong> Obra cumbre del Renacimiento en Murcia, con un interior de columnas monumentales.</li>
-                        <li><strong>Laberinto del Casco Antiguo (Barrio del Castillo):</strong> Pasea sin prisas por sus calles empinadas, fachadas encaladas y rincones llenos de flores.</li>
-                        <li><strong>Convento de San Francisco y Plaza de la Constitución:</strong> El pulso social e histórico de la villa.</li>
-                        <li><strong>Monasterio de la Casa de Cristo y Centro de Arte Rupestre:</strong> A 7 km del pueblo, rodeado de pinares y miradores espectaculares.</li>
+                        <li><strong><a href="page.php?id=433">Castillo fortaleza de Moratalla</a>:</strong> Su silueta almenada y su Torre del Homenaje del siglo XV ofrecen las mejores vistas sobre el valle (<a href="page.php?id=433">ver tarjeta y 28 fotografías</a>).</li>
+                        <li><strong><a href="page.php?id=440">Parroquia de Santa María de la Asunción</a>:</strong> Obra cumbre del Renacimiento en Murcia, con un interior de columnas monumentales (<a href="page.php?id=440">ver tarjeta y 29 fotografías</a>).</li>
+                        <li><strong>Laberinto del Casco Antiguo y <a href="page.php?id=434">Ermita de Santa Ana</a>:</strong> Pasea sin prisas por sus calles empinadas y visita la histórica ermita (<a href="page.php?id=434">ver ficha</a>).</li>
+                        <li><strong><a href="page.php?id=435">Convento de San Francisco</a> y <a href="page.php?id=430">Museo del Tambor</a>:</strong> El pulso cultural y tamborista de la villa (<a href="page.php?id=430">ver 15 fotos del Museo del Tambor</a>).</li>
+                        <li><strong><a href="page.php?id=441">Santuario de la Casa de Cristo</a>:</strong> A 7 km del pueblo, rodeado de pinares y sede del Centro de Arte Rupestre (<a href="page.php?id=441">ver 15 fotografías</a>).</li>
                     </ol>'
                 ],
                 [
                     'id'      => 'top-6-a-10',
-                    'title'   => 'Del 6 al 10: Naturaleza salvaje, arte prehistórico y aldeas',
+                    'title'   => 'Del 6 al 10: Naturaleza salvaje, ingeniería histórica y arte prehistórico',
                     'content' => '<ol start="6">
-                        <li><strong>Río Alhárabe y paraje de La Puerta:</strong> Bosque de galería, aguas limpias y senderos familiares bajo chopos y pinos.</li>
-                        <li><strong>Estrecho de Bolvonegro:</strong> Un desfiladero fluvial tallado en roca oscura de enorme valor geológico y paisajístico.</li>
+                        <li><strong>Río Alhárabe, La Puerta y <a href="page.php?id=445">Puente de Hellín</a>:</strong> Bosque de galería, aguas limpias y puentes históricos (<a href="page.php?id=445">ver ficha del Puente de Hellín</a>).</li>
+                        <li><strong>Estrecho de Bolvonegro y <a href="page.php?id=446">Las Arcas</a>:</strong> Desfiladero fluvial y el imponente acueducto tradicional de <a href="page.php?id=446">Las Arcas (ver 21 fotografías)</a>.</li>
                         <li><strong>Poza Termal de Somogil:</strong> Rincón natural donde el agua brota a temperatura templada entre paredones de roca.</li>
-                        <li><strong>Abrigos de Cañaica del Calar (Pinturas Rupestres UNESCO):</strong> Arte prehistórico en un entorno de montaña sobrecogedor.</li>
-                        <li><strong>Benizar, La Rogativa y el Macizo de Revolcadores:</strong> Castillos roqueros, cascadas y la cumbre más alta de la Región de Murcia.</li>
+                        <li><strong><a href="page.php?id=451">Pinturas Rupestres UNESCO</a> (Cañaica del Calar):</strong> Arte prehistórico en un entorno de montaña sobrecogedor (<a href="page.php?id=451">ver ficha</a>).</li>
+                        <li><strong>Pedanías serranas (<a href="page.php?id=442">Calar de la Santa</a>, <a href="page.php?id=443">El Sabinar</a>, <a href="page.php?id=444">Cañada de la Cruz</a>, Benizar) y Revolcadores:</strong> El techo de la Región de Murcia.</li>
                     </ol>'
                 ]
             ],
             'faqs' => [
                 [
                     'q' => '¿Qué ver en Moratalla en un solo día?',
-                    'a' => 'Por la mañana recorre el Castillo-Fortaleza, la Iglesia de la Asunción y el casco antiguo; come en un restaurante tradicional del pueblo y por la tarde sube a Casa de Cristo o pasea junto al río Alhárabe en La Puerta.'
+                    'a' => 'Por la mañana recorre el Castillo-Fortaleza (page.php?id=433), la Parroquia de la Asunción (page.php?id=440) y el casco antiguo; come en un restaurante tradicional del pueblo y por la tarde sube al Santuario de Casa de Cristo (page.php?id=441) o pasea junto al río Alhárabe.'
                 ]
             ],
             'related_slugs' => [
@@ -707,40 +1126,42 @@ function getSeo90Pages(): array {
         'ruta-casco-antiguo-moratalla' => [
             'slug'             => 'ruta-casco-antiguo-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #2',
+            'phase'            => 'Recorrido Urbano',
             'priority_rank'    => 7,
             'short_title'      => 'Ruta por el Casco Antiguo',
             'title'            => 'Ruta por el Casco Antiguo de Moratalla | Calles, Miradores e Historia',
             'h1'               => 'Ruta a Pie por el Casco Antiguo de Moratalla: Del Convento de San Francisco al Castillo',
-            'subtitle'         => 'Un itinerario circular paso a paso por las callejuelas medievales, placetas y miradores más fotogénicos de Moratalla.',
-            'meta_description' => 'Recorre la ruta por el casco antiguo de Moratalla a pie: calle Mayor, Iglesia de la Asunción, barrio medieval, miradores y subida al Castillo-Fortaleza.',
+            'subtitle'         => 'Un itinerario circular paso a paso por las callejuelas medievales, ermitas, placetas y miradores más fotogénicos de Moratalla.',
+            'meta_description' => 'Recorre la ruta por el casco antiguo de Moratalla a pie: Convento de San Francisco, Santa Ana, Iglesia de la Asunción, barrio medieval y Castillo-Fortaleza.',
             'keywords'         => 'casco antiguo de Moratalla, calles de Moratalla, ruta urbana Moratalla, miradores de Moratalla',
             'icon'             => 'fas fa-route',
-            'hero_image'       => 'uploads/banners/banner_1778708236.jpg',
+            'hero_image'       => 'uploads/seo/pilar-monumentos-patrimonio.svg',
+            'logo_image'       => 'uploads/seo/pilar-monumentos-patrimonio.svg',
             'reading_time'     => '7 min de lectura',
-            'word_target'      => 'Artículo SEO #2',
+            'word_target'      => 'Itinerario Urbano',
             'map_query'        => 'Calle Mayor, Moratalla, Murcia',
+            'related_cards'    => ['san_francisco', 'santa_ana', 'asuncion', 'castillo', 'museo_tambor'],
             'quick_facts'      => [
                 ['label' => 'Duración del Paseo', 'value' => '1 hora y 30 minutos (a ritmo tranquilo con fotos)'],
-                ['label' => 'Dificultad', 'value' => 'Baja-Media (calles con pendiente hacia el Castillo)'],
+                ['label' => 'Hitos con Tarjeta Propia', 'value' => 'San Francisco (id=435), Santa Ana (id=434), La Asunción (id=440) y Castillo (id=433)'],
                 ['label' => 'Mejor Luz para Fotos', 'value' => 'Primera hora de la mañana o al atardecer']
             ],
             'sections' => [
                 [
                     'id'      => 'tramo-bajo',
-                    'title'   => 'Parada 1: La Corredera, San Francisco y la Calle Mayor',
-                    'content' => '<p>El recorrido comienza en la parte baja del centro histórico, pasando junto al antiguo <strong>Convento de San Francisco</strong> y adentrándose en la <strong>Calle Mayor</strong> y el Ayuntamiento, donde aún se conservan casas señoriales con escudos nobiliarios y rejería tradicional.</p>'
+                    'title'   => 'Parada 1: La Corredera, Convento de San Francisco, Santa Ana y Calle Mayor',
+                    'content' => '<p>El recorrido comienza en la parte baja del centro histórico, visitando el antiguo <a href="page.php?id=435"><strong>Convento de San Francisco</strong></a> y acercándose a la <a href="page.php?id=434"><strong>Ermita de Santa Ana</strong></a> y al <a href="page.php?id=430"><strong>Museo del Tambor</strong></a>, antes de adentrarse en la <strong>Calle Mayor</strong> y el Ayuntamiento, donde aún se conservan casas señoriales con escudos nobiliarios y rejería tradicional.</p>'
                 ],
                 [
                     'id'      => 'ascenso-castillo',
-                    'title'   => 'Parada 2: Plaza de la Iglesia y subida por el barrio medieval',
-                    'content' => '<p>Al llegar a la <strong>Iglesia de Nuestra Señora de la Asunción</strong>, el espacio se abre en un balcón natural sobre la vega. Desde aquí, las callejuelas estrechas y empedradas ascienden serpenteando hasta las murallas del <a href="guia.php?slug=castillo-de-moratalla">Castillo-Fortaleza</a>, regalando una de las estampas urbanas más auténticas de la Región de Murcia.</p>'
+                    'title'   => 'Parada 2: Parroquia de la Asunción y subida al Castillo-Fortaleza',
+                    'content' => '<p>Al llegar a la <a href="page.php?id=440"><strong>Parroquia de Santa María de la Asunción (ver 29 fotos)</strong></a>, el espacio se abre en un balcón natural sobre la vega. Desde aquí, las callejuelas estrechas y empedradas ascienden serpenteando hasta las murallas del <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla (ver 28 fotos)</strong></a>, regalando una de las estampas urbanas más auténticas de la Región de Murcia.</p>'
                 ]
             ],
             'faqs' => [
                 [
                     'q' => '¿Dónde aparcar para visitar el casco antiguo de Moratalla?',
-                    'a' => 'Lo más cómodo es aparcar en las zonas habilitadas en la entrada del municipio o en el entorno del Parque de la Corredera, y realizar la subida al casco histórico y al Castillo caminando.'
+                    'a' => 'Lo más cómodo es aparcar en las zonas habilitadas en la entrada del municipio o en el entorno del Parque de la Corredera, y realizar la subida hacia San Francisco (page.php?id=435), la Asunción (page.php?id=440) y el Castillo (page.php?id=433) caminando.'
                 ]
             ],
             'related_slugs' => [
@@ -753,20 +1174,23 @@ function getSeo90Pages(): array {
         'castillo-de-moratalla' => [
             'slug'             => 'castillo-de-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #3 · Prioritaria #4',
+            'phase'            => 'Monumento BIC · Fortaleza Medieval',
             'priority_rank'    => 8,
             'short_title'      => 'Castillo de Moratalla',
-            'title'            => 'Castillo de Moratalla | Historia, Torre del Homenaje y Visita a la Fortaleza',
+            'title'            => 'Castillo de Moratalla | Historia, Torre del Homenaje y Galería Fotográfica',
             'h1'               => 'El Castillo-Fortaleza de Moratalla y su Imponente Torre del Homenaje',
-            'subtitle'         => 'Descubre la historia, arquitectura gótico-militar y leyendas de la fortaleza santiaguista más emblemática del Noroeste murciano.',
-            'meta_description' => 'Guía completa del Castillo de Moratalla (Murcia): historia de la fortaleza de la Orden de Santiago, la Torre del Homenaje, la Sala del Trono y cómo visitarlo.',
+            'subtitle'         => 'Descubre la historia, arquitectura gótico-militar y la tarjeta oficial con 28 fotografías de la fortaleza santiaguista de Moratalla.',
+            'meta_description' => 'Guía completa del Castillo de Moratalla (Murcia) conectada con su tarjeta patrimonial y 28 fotografías: Orden de Santiago, Torre del Homenaje y Sala del Trono.',
             'keywords'         => 'Castillo de Moratalla, Fortaleza de Moratalla, Torre del Homenaje Moratalla, visitar Castillo de Moratalla',
             'icon'             => 'fas fa-chess-rook',
-            'hero_image'       => 'uploads/banners/banner_1778706093.jpg',
+            'hero_image'       => 'uploads/seo/guia-castillo.svg',
+            'logo_image'       => 'uploads/seo/guia-castillo.svg',
             'reading_time'     => '8 min de lectura',
-            'word_target'      => 'Artículo SEO #3 / Prioritaria',
+            'word_target'      => 'Monografía del Castillo',
             'map_query'        => 'Castillo de Moratalla, Murcia',
+            'related_cards'    => ['castillo', 'asuncion', 'historia_ludena', 'santa_ana', 'san_francisco'],
             'quick_facts'      => [
+                ['label' => 'Tarjeta Oficial y Fotos', 'value' => 'Castillo fortaleza de Moratalla (page.php?id=433 · 28 fotografías)'],
                 ['label' => 'Época de Construcción', 'value' => 'Origen islámico (s. IX-XII) y reforma santiaguista (s. XV-XVI)'],
                 ['label' => 'Elemento Destacado', 'value' => 'Torre del Homenaje de 25 m de altura y Sala del Trono gótica'],
                 ['label' => 'Protección', 'value' => 'Bien de Interés Cultural (BIC) y Patrimonio Histórico de España']
@@ -775,15 +1199,20 @@ function getSeo90Pages(): array {
                 [
                     'id'      => 'arquitectura-fortaleza',
                     'title'   => '1. Arquitectura militar: Las seis torres y el Patio de Armas',
-                    'content' => '<p>El <strong>Castillo-Fortaleza de Moratalla</strong> se asienta sobre un peñón rocoso que domina todo el corredor natural del Alhárabe. Sobre la primitiva alcazaba andalusí, los comendadores de la <strong>Orden de Santiago</strong> levantaron en el siglo XV una fortaleza cristiana artillada capaz de defender la frontera con el Reino de Granada. Su recinto amurallado conserva seis torres, aljibe subterráneo y paseo de ronda.</p>'
+                    'content' => '<p>El <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla</strong></a> se asienta sobre un peñón rocoso que domina todo el corredor natural del Alhárabe. Sobre la primitiva alcazaba andalusí, los comendadores de la <strong>Orden de Santiago</strong> levantaron en el siglo XV una fortaleza cristiana artillada capaz de defender la frontera con el Reino de Granada. Su recinto amurallado conserva seis torres, aljibe subterráneo y paseo de ronda.</p>
+                    <p><i class="fas fa-camera-retro" style="color:var(--primary);"></i> <strong>Galería Fotográfica y Ficha del Castillo:</strong> Consulta la tarjeta creada sobre el <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla (page.php?id=433)</strong></a>, que incluye la descripción detallada del monumento y un reportaje de <strong>28 fotografías</strong> de sus murallas, torres e interior.</p>'
                 ],
                 [
                     'id'      => 'torre-del-homenaje',
                     'title'   => '2. La Torre del Homenaje y la Sala del Trono',
-                    'content' => '<p>La joya del conjunto es su <strong>Torre del Homenaje</strong>, adscrita al llamado estilo gótico-militar levantino (emparentada con la de Villena o Biar). En su interior destaca la <strong>Sala del Trono</strong>, cubierta por una soberbia bóveda de crucería estrellada sobre ménsulas labradas, junto con sus ventanas geminadas con asientos de piedra (festejadores) desde los que se divisa la Sierra del Buitre y la huerta de Moratalla.</p>'
+                    'content' => '<p>La joya del conjunto es su <strong>Torre del Homenaje</strong>, adscrita al estilo gótico-militar levantino. En su interior destaca la <strong>Sala del Trono</strong>, cubierta por una soberbia bóveda de crucería estrellada sobre ménsulas labradas, junto con sus ventanas geminadas con asientos de piedra (festejadores) desde los que se divisa la <a href="page.php?id=440">Parroquia de Santa María de la Asunción</a>, la Sierra del Buitre y la huerta de Moratalla. Puedes ampliar el contexto histórico en la ficha de <a href="page.php?id=290"><strong>Historia de Moratalla</strong></a>.</p>'
                 ]
             ],
             'faqs' => [
+                [
+                    'q' => '¿Dónde puedo ver la tarjeta con la descripción y las 28 fotografías del Castillo de Moratalla?',
+                    'a' => 'Haz clic directamente en la tarjeta "Castillo fortaleza de Moratalla" (page.php?id=433) que aparece destacada en esta misma guía para abrir la galería completa de 28 fotografías.'
+                ],
                 [
                     'q' => '¿Por qué es tan importante la Torre del Homenaje de Moratalla?',
                     'a' => 'Porque es uno de los mejores ejemplos de arquitectura militar gótica del siglo XV en el sureste español, conservando su bóveda de crucería original y su corona de matacanes y almenas.'
@@ -800,42 +1229,44 @@ function getSeo90Pages(): array {
         'pinturas-rupestres-de-moratalla' => [
             'slug'             => 'pinturas-rupestres-de-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #4 · Prioritaria #5',
+            'phase'            => 'Patrimonio Mundial UNESCO',
             'priority_rank'    => 9,
             'short_title'      => 'Pinturas Rupestres UNESCO',
-            'title'            => 'Pinturas Rupestres de Moratalla | Patrimonio UNESCO y Centro de Arte Rupestre',
+            'title'            => 'Pinturas Rupestres de Moratalla | Patrimonio UNESCO y Casa de Cristo',
             'h1'               => 'Las Pinturas Rupestres de Moratalla Explicadas: Patrimonio de la Humanidad UNESCO',
             'subtitle'         => 'Con más de 60 cavidades catalogadas, Moratalla concentra el mayor tesoro de arte rupestre prehistórico de la Región de Murcia.',
-            'meta_description' => 'Descubre las pinturas rupestres de Moratalla (Patrimonio UNESCO): Cañaica del Calar, Fuente del Sabuco, Casa de Cristo y cómo visitar el arte levantino.',
+            'meta_description' => 'Descubre las pinturas rupestres de Moratalla (Patrimonio UNESCO): ficha de Arte Rupestre, Santuario de la Casa de Cristo, Cañaica del Calar y Fuente del Sabuco.',
             'keywords'         => 'pinturas rupestres de Moratalla, arte rupestre Moratalla, Cañaica del Calar, Casa de Cristo Moratalla, Patrimonio UNESCO Moratalla',
             'icon'             => 'fas fa-palette',
-            'hero_image'       => 'uploads/banners/banner_1778708226.jpg',
+            'hero_image'       => 'uploads/seo/guia-rupestre.svg',
+            'logo_image'       => 'uploads/seo/guia-rupestre.svg',
             'reading_time'     => '9 min de lectura',
-            'word_target'      => 'Artículo SEO #4 / Prioritaria',
+            'word_target'      => 'Guía Arte Rupestre',
             'map_query'        => 'Centro de Arte Rupestre Casa de Cristo, Moratalla',
+            'related_cards'    => ['arte_rupestre', 'casa_cristo', 'historia_ludena', 'las_arcas'],
             'quick_facts'      => [
+                ['label' => 'Tarjetas Oficiales', 'value' => 'Arte Rupestre (page.php?id=451) y Santuario Casa de Cristo (page.php?id=441)'],
                 ['label' => 'Declaración UNESCO', 'value' => '1998 (Arte Rupestre del Arco Mediterráneo de la Península Ibérica)'],
                 ['label' => 'Estilos Presentes', 'value' => 'Arte Levantino (naturalista) y Arte Esquemático'],
-                ['label' => 'Conjuntos Principales', 'value' => 'Cañaica del Calar, Fuente del Sabuco, La Risca, Hondares y Molino de Capel'],
-                ['label' => 'Punto de Partida', 'value' => 'Centro de Interpretación del Arte Rupestre en Casa de Cristo']
+                ['label' => 'Conjuntos Principales', 'value' => 'Cañaica del Calar, Fuente del Sabuco, La Risca, Hondares y Molino de Capel']
             ],
             'sections' => [
                 [
                     'id'      => 'importancia-unesco',
                     'title'   => '1. Más de la mitad del arte rupestre de Murcia está en Moratalla',
-                    'content' => '<p>En 1998 la UNESCO declaró Patrimonio Mundial el <strong>Arte Rupestre del Arco Mediterráneo de la Península Ibérica</strong>. Dentro de la Región de Murcia, el término municipal de Moratalla alberga más del 50% de los abrigos y estaciones rupestres catalogados, convirtiéndose en una referencia arqueológica europea para comprender la vida y las creencias de las comunidades prehistóricas entre el 6000 y el 2000 a. C.</p>'
+                    'content' => '<p>En 1998 la UNESCO declaró Patrimonio Mundial el <strong>Arte Rupestre del Arco Mediterráneo de la Península Ibérica</strong>. Dentro de la Región de Murcia, el término municipal de Moratalla alberga más del 50% de los abrigos y estaciones rupestres catalogados, recogidos en nuestra tarjeta patrimonial de <a href="page.php?id=451"><strong>Arte Rupestre de Moratalla (page.php?id=451)</strong></a>.</p>'
                 ],
                 [
                     'id'      => 'canaica-sabuco-casa-cristo',
-                    'title'   => '2. Cañaica del Calar, Fuente del Sabuco y el Centro de Casa de Cristo',
-                    'content' => '<p>En los abrigos de <strong>Cañaica del Calar</strong> y <strong>Fuente del Sabuco</strong> (en el entorno de Calar de la Santa y El Sabinar) conviven el <strong>Arte Levantino</strong> —con estilizadas figuras de arqueros, ciervos, cabras montesas y escenas de caza llenas de movimiento— y el <strong>Arte Esquemático</strong> de los primeros agricultores y pastores neolíticos.</p>
-                    <p>Antes de subir a los abrigos, es imprescindible visitar el <strong>Centro de Interpretación del Arte Rupestre en Casa de Cristo</strong>, que ofrece reproducciones a escala real, recursos interactivos y visitas guiadas.</p>'
+                    'title'   => '2. Cañaica del Calar, Fuente del Sabuco y el Santuario de la Casa de Cristo',
+                    'content' => '<p>En los abrigos de <strong>Cañaica del Calar</strong> y <strong>Fuente del Sabuco</strong> (en el entorno de <a href="page.php?id=442">Calar de la Santa</a> y <a href="page.php?id=443">El Sabinar</a>) conviven el <strong>Arte Levantino</strong> —con estilizadas figuras de arqueros, ciervos, cabras montesas y escenas de caza— y el <strong>Arte Esquemático</strong> neolítico.</p>
+                    <p>Antes de subir a los abrigos, es imprescindible visitar el Centro de Interpretación ubicado en el <a href="page.php?id=441"><strong>Santuario de la Casa de Cristo (ver tarjeta y 15 fotografías)</strong></a>, que ofrece reproducciones a escala real y visitas guiadas.</p>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Dónde ver las pinturas rupestres de Moratalla?',
-                    'a' => 'La visita debe iniciarse en el Centro Regional de Interpretación del Arte Rupestre situado en el Monasterio de la Casa de Cristo (a 7 km de Moratalla), donde se explica todo el legado prehistórico y se coordinan las rutas interpretativas hacia conjuntos como Cañaica del Calar.'
+                    'q' => '¿Dónde consultar las tarjetas sobre Arte Rupestre y Casa de Cristo en la web?',
+                    'a' => 'Puedes abrir directamente la tarjeta de Arte Rupestre (page.php?id=451) y la del Santuario de la Casa de Cristo (page.php?id=441, con 15 fotografías) disponibles en el bloque de tarjetas de esta página.'
                 ]
             ],
             'related_slugs' => [
@@ -849,45 +1280,56 @@ function getSeo90Pages(): array {
         'semana-santa-de-moratalla' => [
             'slug'             => 'semana-santa-de-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 1 y 3 · Prioritaria #6',
+            'phase'            => 'Semana Santa y Cofradías',
             'priority_rank'    => 10,
             'short_title'      => 'Semana Santa de Moratalla',
-            'title'            => 'Semana Santa de Moratalla | Tambores, Cofradías y Tradición Única',
+            'title'            => 'Semana Santa de Moratalla | Tambores, Cofradías y 87 Fotografías Históricas',
             'h1'               => 'Semana Santa de Moratalla: Pasión, Túnicas de Colores y el Estruendo del Tambor',
-            'subtitle'         => 'Descubre cómo conviven el recogimiento de las procesiones centenarias y la explosión colectiva de las Tamboradas de Moratalla.',
-            'meta_description' => 'Guía de la Semana Santa de Moratalla: días de tamborada (Jueves Santo, Viernes Santo y Domingo de Resurrección), cofradías, procesiones y tradición.',
+            'subtitle'         => 'Descubre las procesiones, cofradías y tamboradas de Moratalla junto con su tarjeta oficial de 87 fotografías y el Museo del Tambor.',
+            'meta_description' => 'Guía de la Semana Santa de Moratalla conectada con la crónica y galería de 87 fotos (page.php?id=453), Museo del Tambor (id=430) y todas sus cofradías.',
             'keywords'         => 'Semana Santa de Moratalla, tambores de Moratalla, procesiones Moratalla, Jueves Santo Moratalla, Viernes Santo Moratalla',
             'icon'             => 'fas fa-church',
-            'hero_image'       => 'uploads/asociaciones/asoc_nazareno_padrejesusnazareno_0.jpg',
+            'hero_image'       => 'uploads/seo/guia-semana-santa.svg',
+            'logo_image'       => 'uploads/seo/guia-semana-santa.svg',
             'reading_time'     => '9 min de lectura',
-            'word_target'      => 'Página Prioritaria Semana Santa',
+            'word_target'      => 'Guía de Semana Santa',
             'map_query'        => 'Plaza de la Iglesia, Moratalla',
+            'related_cards'    => ['semana_santa_ficha', 'museo_tambor', 'bic_tamborada', 'cofradia_nazareno', 'exaltacion_tambor_2008'],
             'quick_facts'      => [
+                ['label' => 'Tarjeta Principal', 'value' => 'Semana Santa de Moratalla (page.php?id=453 · 87 fotografías)'],
+                ['label' => 'Museo y Declaración', 'value' => 'Museo del Tambor (id=430 · 15 fotos) y Declaración BIC (id=458)'],
                 ['label' => 'Días de Tamborada', 'value' => 'Jueves Santo, Viernes Santo y Domingo de Resurrección'],
-                ['label' => 'Reconocimiento', 'value' => 'Patrimonio Cultural Inmaterial de la Humanidad (UNESCO, 2018)'],
-                ['label' => 'Singularidad', 'value' => 'Túnicas artesanales con capuz de rostro descubierto y motivos bordados o de volante']
+                ['label' => 'Cofradías con Ficha', 'value' => 'Jesús Nazareno (id=409), Santo Sepulcro (id=454), Sangre (id=455), Soledad (id=456)']
             ],
             'sections' => [
                 [
                     'id'      => 'dualidad-semana-santa',
-                    'title'   => '1. Una Semana Santa con personalidad propia',
-                    'content' => '<p>La <strong>Semana Santa de Moratalla</strong> posee una personalidad inconfundible en el sureste español. En ella se entrelazan dos mundos que se respetan y complementan: la solemnidad de sus cofradías pasionarias —como la de <a href="category.php?id=166">Nuestro Padre Jesús Nazareno</a>, el Cristo de la Sangre, la Virgen de los Dolores, San Juan o el Santo Sepulcro— y la fuerza arrolladora de los miles de tamboristas que inundan las calles en <a href="guia.php?slug=tamboradas-de-moratalla">las Tamboradas</a>.</p>'
+                    'title'   => '1. Una Semana Santa con personalidad propia y fichas históricas en la web',
+                    'content' => '<p>La <a href="page.php?id=453"><strong>Semana Santa de Moratalla (ver crónica y 87 fotografías)</strong></a> posee una personalidad inconfundible en el sureste español. En ella se entrelazan la solemnidad de sus cofradías pasionarias y la fuerza arrolladora de los miles de tamboristas que inundan las calles.</p>
+                    <p>En nuestro archivo puedes consultar directamente las tarjetas dedicadas a cada hermandad y cofradía:</p>
+                    <ul>
+                        <li><a href="page.php?id=409"><strong>Ilustre Cofradía de Nuestro Padre Jesús Nazareno</strong></a> (con galería de 26 fotografías).</li>
+                        <li><a href="page.php?id=454"><strong>Cofradía del Santo Sepulcro y Santo Silencio</strong></a>.</li>
+                        <li><a href="page.php?id=455"><strong>Cofradía de la Preciosísima Sangre</strong></a>.</li>
+                        <li><a href="page.php?id=456"><strong>Hermandad de Nuestra Señora de la Soledad</strong></a>.</li>
+                        <li><a href="page.php?id=457"><strong>Patronato de Jesucristo Aparecido y Virgen de la Rogativa</strong></a>.</li>
+                    </ul>'
                 ],
                 [
                     'id'      => 'calendario-procesiones-y-tambor',
-                    'title'   => '2. Los momentos clave: Del Miércoles Santo al Domingo de Resurrección',
+                    'title'   => '2. Del Miércoles Santo al Domingo de Resurrección y el Museo del Tambor',
                     'content' => '<ul>
-                        <li><strong>Miércoles Santo (La "Embarrá"):</strong> Preludio de hermandad en el que las peñas y cuadrillas preparan los tambores, templan los parches de piel y velan la llegada del Jueves Santo.</li>
-                        <li><strong>Jueves Santo y Viernes Santo:</strong> Desde la mañana hasta la noche, una marea multicolor de túnicas y tambores recorre La Farola, la Calle Mayor y el casco antiguo, abriendo paso respetuosamente al cortejo de las procesiones.</li>
-                        <li><strong>Domingo de Resurrección:</strong> Última gran jornada de tambor y júbilo popular para despedir la Semana Santa.</li>
+                        <li><strong>Miércoles Santo (La "Embarrá"):</strong> Preludio de hermandad en el que las peñas y cuadrillas preparan los tambores y templan los parches de piel.</li>
+                        <li><strong>Jueves Santo y Viernes Santo:</strong> Desde la mañana hasta la noche, una marea multicolor de túnicas y tambores recorre La Farola, la Calle Mayor y el casco antiguo, abriendo paso respetuosamente a las procesiones.</li>
+                        <li><strong>Domingo de Resurrección:</strong> Última gran jornada de tambor y júbilo popular.</li>
                     </ul>
-                    <p>Explora el archivo fotográfico histórico en las secciones de <a href="category.php?id=44"><strong>Semana Santa</strong></a> y <a href="category.php?id=168"><strong>Asociación de Tamboristas</strong></a>.</p>'
+                    <p>No dejes de visitar la tarjeta del <a href="page.php?id=430"><strong>Museo del Tambor de Moratalla (15 fotografías)</strong></a> y el documento oficial de la <a href="page.php?id=458"><strong>Declaración de Interés Cultural Inmaterial</strong></a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Qué días se toca el tambor en la Semana Santa de Moratalla?',
-                    'a' => 'En Moratalla se toca el tambor oficialmente durante tres jornadas completas: Jueves Santo, Viernes Santo y Domingo de Resurrección.'
+                    'q' => '¿Dónde ver las 87 fotografías de la Semana Santa de Moratalla?',
+                    'a' => 'Accede directamente a la tarjeta oficial de Semana Santa (page.php?id=453), donde encontrarás el texto de Pedro Martínez López y la galería fotográfica de 87 imágenes.'
                 ]
             ],
             'related_slugs' => [
@@ -900,36 +1342,39 @@ function getSeo90Pages(): array {
         'tamboradas-de-moratalla' => [
             'slug'             => 'tamboradas-de-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #5 · Prioritaria #7',
+            'phase'            => 'Patrimonio Inmaterial UNESCO',
             'priority_rank'    => 11,
             'short_title'      => 'La Tradición del Tambor',
-            'title'            => 'Tamboradas de Moratalla | La Tradición del Tambor Patrimonio UNESCO',
+            'title'            => 'Tamboradas de Moratalla | Museo del Tambor, Túnicas y Patrimonio UNESCO',
             'h1'               => 'La Tradición del Tambor en Moratalla: Toque, Túnicas y Patrimonio de la Humanidad',
-            'subtitle'         => 'Cómo el toque libre y anárquico de los tambores de Moratalla se convirtió en Patrimonio Cultural Inmaterial de la Humanidad.',
-            'meta_description' => 'Conoce la tradición del tambor en Moratalla: origen de las tamboradas, las túnicas tradicionales, el toque moratallero y su declaración como Patrimonio UNESCO.',
-            'keywords'         => 'tamboradas de Moratalla, tradición del tambor Moratalla, tambores Moratalla UNESCO, tamboristas Moratalla',
+            'subtitle'         => 'Cómo el toque libre de los tambores de Moratalla se convirtió en Patrimonio Cultural Inmaterial de la Humanidad.',
+            'meta_description' => 'Conoce la tradición del tambor en Moratalla: tarjeta del Museo del Tambor (page.php?id=430), Declaración BIC (id=458) y archivo de la Asociación de Tamboristas.',
+            'keywords'         => 'tamboradas de Moratalla, tradición del tambor Moratalla, tambores Moratalla UNESCO, tamboristas Moratalla, Museo del Tambor Moratalla',
             'icon'             => 'fas fa-drum',
-            'hero_image'       => 'uploads/asociaciones/asoc_tamboristas_2004_0.jpg',
+            'hero_image'       => 'uploads/seo/guia-semana-santa.svg',
+            'logo_image'       => 'uploads/seo/guia-semana-santa.svg',
             'reading_time'     => '8 min de lectura',
-            'word_target'      => 'Artículo SEO #5 / Prioritaria',
-            'map_query'        => 'Moratalla, Murcia',
+            'word_target'      => 'Monografía del Tambor',
+            'map_query'        => 'Museo del Tambor, Moratalla, Murcia',
+            'related_cards'    => ['museo_tambor', 'bic_tamborada', 'semana_santa_ficha', 'exaltacion_tambor_2008', 'cofradia_nazareno'],
             'quick_facts'      => [
+                ['label' => 'Tarjetas Destacadas', 'value' => 'Museo del Tambor (id=430 · 15 fotos) y Declaración Inmaterial (id=458)'],
                 ['label' => 'Estilo de Toque', 'value' => 'Libre, espontáneo y de "pique" o diálogo entre tamboristas'],
-                ['label' => 'Indumentaria', 'value' => 'Túnica de terciopelo, raso o volantes con capuz sin antifaz (rostro descubierto)'],
-                ['label' => 'Hitos Nacionales', 'value' => 'Sede de las Jornadas Nacionales de Exaltación del Tambor y el Bombo']
+                ['label' => 'Indumentaria', 'value' => 'Túnica de terciopelo, raso o volantes con capuz a rostro descubierto'],
+                ['label' => 'Archivo Asociación', 'value' => 'Exaltaciones de 2004 (id=126, id=410) y 2008 (id=411 · 30 fotos)']
             ],
             'sections' => [
                 [
                     'id'      => 'toque-y-tunica',
-                    'title'   => '1. El toque moratallero y la riqueza artesanal de sus túnicas',
-                    'content' => '<p>Lo que hace única a la <strong>tamborada de Moratalla</strong> es que no sigue un guion rígido ni un toque único uniformado: los tamboristas tocan a rostro descubierto, con el capuz levantado y adornado con espejos, cintas y bordados artesanales. En la calle se forman corros espontáneos donde los tamboristas "se pican" amistosamente manteniendo el ritmo durante horas.</p>
-                    <p>En noviembre de 2018, la UNESCO inscribió las Tamboradas —y con ellas la tradición de Moratalla impulsada junto al Consorcio Nacional de los Pueblos del Tambor y la <a href="category.php?id=168">Asociación de Tamboristas de Moratalla</a>— en la Lista Representativa del Patrimonio Cultural Inmaterial de la Humanidad.</p>'
+                    'title'   => '1. El toque moratallero, el Museo del Tambor y la Declaración Inmaterial',
+                    'content' => '<p>Lo que hace única a la <strong>tamborada de Moratalla</strong> es su toque libre a rostro descubierto, con el capuz levantado y adornado con espejos, cintas y bordados artesanales. Toda esta riqueza de túnicas de volantes y tambores de artesanía se conserva y expone en la tarjeta del <a href="page.php?id=430"><strong>MUSEO DEL TAMBOR de Moratalla (page.php?id=430 · 15 fotografías)</strong></a>.</p>
+                    <p>Asimismo, puedes consultar la ficha oficial de la <a href="page.php?id=458"><strong>Declaración de Interés Cultural Inmaterial (page.php?id=458)</strong></a> y los álbumes históricos de la <a href="category.php?id=168"><strong>Asociación de Tamboristas</strong></a>, como la <a href="page.php?id=411">Exaltación del Tambor y el Bombo 2008 (30 fotos)</a>, la <a href="page.php?id=126">Exaltación de 2004</a> y la <a href="page.php?id=410">Semana Santa 2004 (30 fotos)</a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Cómo es la túnica tradicional del tamborista de Moratalla?',
-                    'a' => 'A diferencia de los penitentes de procesión, el tamborista de Moratalla lleva el rostro descubierto bajo un capuz alto ricamente decorado, y túnicas de vivos colores confeccionadas en raso, terciopelo o con miles de pequeños volantes cosidos a mano.'
+                    'q' => '¿Dónde ver las fotografías del Museo del Tambor de Moratalla?',
+                    'a' => 'En la tarjeta oficial del Museo del Tambor (page.php?id=430), que cuenta con descripción y 15 fotografías de su colección permanente.'
                 ]
             ],
             'related_slugs' => [
@@ -942,45 +1387,48 @@ function getSeo90Pages(): array {
         'rutas-de-senderismo-en-moratalla' => [
             'slug'             => 'rutas-de-senderismo-en-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #6 · Prioritaria #9',
+            'phase'            => 'Naturaleza y Montaña',
             'priority_rank'    => 12,
             'short_title'      => 'Rutas de Senderismo',
             'title'            => 'Las Mejores Rutas de Senderismo en Moratalla | Ríos, Gargantas y Cumbres',
             'h1'               => 'Las 6 Mejores Rutas de Senderismo en Moratalla para Todos los Niveles',
-            'subtitle'         => 'Desde paseos familiares junto al río Alhárabe hasta la ascensión al techo de la Región de Murcia en el Macizo de Revolcadores.',
-            'meta_description' => 'Guía con las mejores rutas de senderismo en Moratalla: Río Alhárabe, Estrecho de Bolvonegro, Poza de Somogil, Revolcadores, Sierra del Buitre y Benizar.',
+            'subtitle'         => 'Desde paseos junto al río Alhárabe y el Puente de Hellín hasta la ascensión al techo de Murcia en el Macizo de Revolcadores.',
+            'meta_description' => 'Guía con las mejores rutas de senderismo en Moratalla: Río Alhárabe, Puente de Hellín, Las Arcas, Bolvonegro, Casa de Cristo, Revolcadores y Club Filippedes.',
             'keywords'         => 'mejores rutas senderismo Moratalla, rutas de senderismo en Moratalla, río Alhárabe ruta, Bolvonegro Moratalla, Revolcadores ruta',
             'icon'             => 'fas fa-hiking',
-            'hero_image'       => 'uploads/banners/banner_1778708226.jpg',
+            'hero_image'       => 'uploads/seo/guia-senderismo.svg',
+            'logo_image'       => 'uploads/seo/guia-senderismo.svg',
             'reading_time'     => '10 min de lectura',
-            'word_target'      => 'Artículo SEO #6 / Prioritaria',
+            'word_target'      => 'Guía de Senderismo',
             'map_query'        => 'Estrecho de Bolvonegro, Moratalla',
+            'related_cards'    => ['situacion_rutas_filippedes', 'puente_hellin', 'las_arcas', 'casa_cristo', 'arte_rupestre'],
             'quick_facts'      => [
-                ['label' => 'Rutas Familiares', 'value' => 'Senda del Río Alhárabe (La Puerta) y Entorno de Casa de Cristo'],
-                ['label' => 'Rutas Medias', 'value' => 'Estrecho de Bolvonegro, Poza de Somogil y Rincón de las Cuevas (Benizar)'],
-                ['label' => 'Alta Montaña', 'value' => 'Macizo de Revolcadores y Los Odres (2.015 m) y Sierra del Buitre']
+                ['label' => 'Rutas Familiares', 'value' => 'Senda del Río Alhárabe, Puente de Hellín (id=445) y Casa de Cristo (id=441)'],
+                ['label' => 'Rutas Medias', 'value' => 'Estrecho de Bolvonegro, Las Arcas (id=446 · 21 fotos) y Poza de Somogil'],
+                ['label' => 'Alta Montaña y Clubes', 'value' => 'Revolcadores (2.015 m), Club Filippedes (id=452) y Club Ciclista (id=427)']
             ],
             'sections' => [
                 [
                     'id'      => 'rutas-fluviales',
-                    'title'   => '1. Rutas del agua: Río Alhárabe, Estrecho de Bolvonegro y Somogil',
-                    'content' => '<p>El agua ha esculpido algunos de los senderos más bellos del sureste peninsular:</p>
+                    'title'   => '1. Rutas del agua: Río Alhárabe, Puente de Hellín, Las Arcas y Bolvonegro',
+                    'content' => '<p>El agua ha esculpido algunos de los senderos más bellos del sureste peninsular, jalonados por hitos patrimoniales con tarjeta propia en nuestra web:</p>
                     <ul>
-                        <li><strong>Senda del Río Alhárabe y Estrecho de Bolvonegro (PR-MU):</strong> Partiendo de las inmediaciones del Camping La Puerta o del Puente de Hellín, el sendero acompaña al bosque de ribera hasta el sobrecogedor cañón de rocas oscuras (ofitas y margas) de Bolvonegro.</li>
+                        <li><strong>Senda del Río Alhárabe, <a href="page.php?id=445">Puente de Hellín</a> y Estrecho de Bolvonegro:</strong> Partiendo de La Puerta o del histórico <a href="page.php?id=445">Puente de Hellín (ver ficha)</a>, el sendero acompaña al bosque de ribera hasta el cañón de Bolvonegro y el entorno del acueducto de <a href="page.php?id=446"><strong>Las Arcas (ver 21 fotografías)</strong></a>.</li>
                         <li><strong>Ruta a la Poza de Somogil:</strong> Aguas arriba del Alhárabe, donde el río forma pozas cristalinas alimentadas por manantiales templados.</li>
                         <li><strong>Ruta del Agua y Castillo de Benizar:</strong> Recorrido circular por el nacimiento de las Tosquillas, el Rincón de las Cuevas y la fortaleza roquera de Benizar.</li>
                     </ul>'
                 ],
                 [
                     'id'      => 'rutas-cumbres',
-                    'title'   => '2. Cumbres de Moratalla: Revolcadores (Los Odres) y Sierra del Buitre',
-                    'content' => '<p>Para los montañeros, la ascensión al <strong>Macizo de Revolcadores y el Pico de Los Odres (2.015 m)</strong> desde Inazares o Cañada de la Cruz es la ruta reina de la Región de Murcia. Más cerca del casco urbano, la subida desde <a href="guia.php?slug=monumentos-y-patrimonio-moratalla">Casa de Cristo</a> a la <strong>Sierra del Buitre (1.427 m)</strong> o al Pico del Fraile regala panorámicas inolvidables.</p>'
+                    'title'   => '2. Cumbres de Moratalla: Revolcadores, Sierra del Buitre y Clubes de Montaña',
+                    'content' => '<p>Para los montañeros, la ascensión al <strong>Macizo de Revolcadores y Los Odres (2.015 m)</strong> desde Inazares o <a href="page.php?id=444">Cañada de la Cruz</a> es la ruta reina de la Región de Murcia. Más cerca del casco urbano, la subida desde el <a href="page.php?id=441"><strong>Santuario de la Casa de Cristo (15 fotos)</strong></a> a la <strong>Sierra del Buitre</strong> regala panorámicas inolvidables.</p>
+                    <p>Conoce la actividad montañera y deportiva del municipio en las tarjetas del <a href="page.php?id=452"><strong>Club Deportivo Filippedes - Moratalla</strong></a>, el <a href="page.php?id=427"><strong>Club Ciclista de Moratalla</strong></a> y la ficha de <a href="page.php?id=279"><strong>Situación geográfica</strong></a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
                     'q' => '¿Cuál es la ruta de senderismo más fácil en Moratalla para ir con niños?',
-                    'a' => 'El paseo fluvial junto al río Alhárabe en la zona de La Puerta hasta el inicio del Estrecho de Bolvonegro y los senderos señalizados en el pinar de Casa de Cristo son las mejores opciones para familias.'
+                    'a' => 'El paseo fluvial junto al río Alhárabe en La Puerta y el Puente de Hellín (page.php?id=445) o los senderos del pinar del Santuario de la Casa de Cristo (page.php?id=441) son ideales para familias.'
                 ]
             ],
             'related_slugs' => [
@@ -994,48 +1442,50 @@ function getSeo90Pages(): array {
         'fiestas-populares-de-moratalla' => [
             'slug'             => 'fiestas-populares-de-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #7 · Prioritaria #10',
+            'phase'            => 'Calendario Festivo y Tradiciones',
             'priority_rank'    => 13,
             'short_title'      => 'Fiestas Populares y Calendario',
-            'title'            => 'Fiestas de Moratalla | Calendario Completo, Cristo del Rayo y San Antón',
+            'title'            => 'Fiestas de Moratalla | Calendario Completo, Cristo del Rayo y Pedanías',
             'h1'               => 'Fiestas Populares de Moratalla: Calendario Festivo Completo Mes a Mes',
-            'subtitle'         => 'Del fuego de San Antón y los tambores de Semana Santa a los históricos encierros por vereda del Santísimo Cristo del Rayo en julio.',
-            'meta_description' => 'Calendario completo de las Fiestas de Moratalla (Murcia): Fiestas del Santísimo Cristo del Rayo en julio, Semana Santa, San Antón, San Jorge y romerías.',
+            'subtitle'         => 'Conectado con el Calendario Interactivo de Fiestas (page.php?id=163), el Santísimo Cristo del Rayo, San Antón, San Miguel y las pedanías.',
+            'meta_description' => 'Calendario completo de las Fiestas de Moratalla (Murcia): accede a las tarjetas del Cristo del Rayo, Calendario de Fiestas (id=163), Semana Santa, San Antón y Feria de San Miguel.',
             'keywords'         => 'Fiestas de Moratalla, Cristo del Rayo Moratalla, calendario fiestas Moratalla, encierros de Moratalla, San Antón Moratalla',
             'icon'             => 'fas fa-glass-cheers',
-            'hero_image'       => 'uploads/banners/banner_1778708256.jpg',
+            'hero_image'       => 'uploads/seo/guia-fiestas.svg',
+            'logo_image'       => 'uploads/seo/guia-fiestas.svg',
             'reading_time'     => '8 min de lectura',
-            'word_target'      => 'Artículo SEO #7 / Prioritaria',
+            'word_target'      => 'Guía de Fiestas',
             'map_query'        => 'Calle Mayor, Moratalla',
+            'related_cards'    => ['calendario_fiestas', 'cristo_del_rayo', 'semana_santa_ficha', 'san_anton_feria', 'museo_tambor'],
             'quick_facts'      => [
-                ['label' => 'Fiestas Patronales', 'value' => 'Del 11 al 17 de julio (Santísimo Cristo del Rayo)'],
-                ['label' => 'Día del Milagro', 'value' => '15 de junio (Bajada del Santísimo Cristo del Rayo)'],
-                ['label' => 'Invierno y Primavera', 'value' => 'San Antón (17 enero), Semana Santa, San Jorge (23 abril) y Romería de la Rogativa (mayo)']
+                ['label' => 'Calendario Interactivo', 'value' => 'Tarjeta oficial de Fiestas de Moratalla y Pedanías (page.php?id=163)'],
+                ['label' => 'Fiestas Patronales', 'value' => 'Del 11 al 17 de julio: Santísimo Cristo del Rayo (category.php?id=45 y 191)'],
+                ['label' => 'Invierno y Primavera', 'value' => 'San Antón (id=164), Semana Santa (id=453) y Romería de la Rogativa'],
+                ['label' => 'Verano y Otoño', 'value' => 'Calar de la Santa (id=442), El Sabinar (id=443), Cañada de la Cruz (id=444) y San Miguel (id=449)']
             ],
             'sections' => [
                 [
                     'id'      => 'cristo-del-rayo',
                     'title'   => '1. Fiestas del Santísimo Cristo del Rayo (Junio y Julio)',
-                    'content' => '<p>El corazón festivo del verano en Moratalla late en torno al <strong>Santísimo Cristo del Rayo</strong>. El <strong>15 de junio</strong> se conmemora el voto del milagro de 1621 con la solemne Bajada de la venerada imagen. Posteriormente, del <strong>11 al 17 de julio</strong>, se celebran las Fiestas Mayores, famosas en toda España por sus <strong>encierros taurinos por vereda</strong> —documentados desde el siglo XVII—, donde las reses son conducidas a caballo desde los montes hasta las calles acotadas del pueblo entre peñas, música de banda y un ambiente único.</p>
-                    <p>Puedes consultar las crónicas y programas históricos en la sección <a href="category.php?id=39"><strong>Fiestas de Moratalla</strong></a>.</p>'
+                    'content' => '<p>El corazón festivo del verano en Moratalla late en torno al <a href="category.php?id=45"><strong>Santísimo Cristo del Rayo</strong></a>. El <strong>15 de junio</strong> se conmemora el voto del milagro de 1621 (<a href="page.php?id=169">ver referencia histórica</a>) en la <a href="page.php?id=440">Parroquia de Santa María de la Asunción</a>. Posteriormente, del <strong>11 al 17 de julio</strong>, se celebran las Fiestas Mayores (<a href="category.php?id=191">ver sección Fiestas Cristo del Rayo</a>), famosas por sus centenarios <strong>encierros taurinos por vereda</strong>.</p>
+                    <p><i class="fas fa-calendar-check" style="color:var(--primary);"></i> <strong>Tarjetas Interactivas de Fiestas:</strong> Consulta la página <a href="page.php?id=163"><strong>Calendario de Fiestas de Moratalla y Pedanías (page.php?id=163)</strong></a>, que reúne las tarjetas de cada festividad con sus fechas, historia y coordenadas GPS.</p>'
                 ],
                 [
                     'id'      => 'calendario-anual',
-                    'title'   => '2. Calendario anual de fiestas y romerías en Moratalla y sus pedanías',
+                    'title'   => '2. Todas las fichas de fiestas en Moratalla y sus pedanías',
                     'content' => '<ul>
-                        <li><strong>17 de enero – San Antón:</strong> Tradicionales hogueras ("luminarias") en los barrios, asados vecinales y bendición de animales.</li>
-                        <li><strong>Marzo / Abril – Semana Santa y Tamboradas:</strong> Procesiones y toque del tambor declarados Patrimonio de la Humanidad.</li>
-                        <li><strong>23 de abril – San Jorge:</strong> Patrón histórico de la villa, con romería y jornada de convivencia en el monte.</li>
-                        <li><strong>Mayo – Romería de la Virgen de la Rogativa y San Isidro:</strong> Peregrinación tradicional al Santuario de la Rogativa.</li>
-                        <li><strong>Agosto y Septiembre – Fiestas de las Pedanías:</strong> Celebraciones populares en Benizar, Campo de San Juan, El Sabinar, Calar de la Santa, Béjar y Mazuza.</li>
-                        <li><strong>Diciembre – Santa Bárbara y Navidad:</strong> Dulces de Pascua, aguilando tradicional y belenes.</li>
+                        <li><strong>17 de enero – <a href="page.php?id=164">San Antón</a>:</strong> Tradicionales hogueras, rollos y bendición de animales (<a href="category.php?id=40">ver galería de 15 fotos de San Antón</a>).</li>
+                        <li><strong>Marzo / Abril – <a href="page.php?id=453">Semana Santa (87 fotos)</a> y <a href="page.php?id=458">Tamboradas</a>:</strong> Patrimonio Cultural Inmaterial de la Humanidad.</li>
+                        <li><strong>Mayo – Romería de la Virgen de la Rogativa (<a href="page.php?id=457">ver Patronato</a>):</strong> Peregrinación tradicional al Santuario de la Rogativa.</li>
+                        <li><strong>Agosto – Fiestas Patronales de las Pedanías:</strong> Consulta las fichas específicas de <a href="page.php?id=442"><strong>Calar de la Santa (Virgen de la Asunción)</strong></a>, <a href="page.php?id=443"><strong>El Sabinar (San Bartolomé)</strong></a> y <a href="page.php?id=444"><strong>Cañada de la Cruz (Purísima Concepción)</strong></a>.</li>
+                        <li><strong>29 de septiembre – <a href="page.php?id=449">San Miguel - Feria</a>:</strong> Histórica feria ganadera y comercial de otoño en Moratalla (<a href="page.php?id=449">ver ficha</a>).</li>
                     </ul>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Cuándo son las fiestas patronales de Moratalla?',
-                    'a' => 'Las fiestas mayores en honor al Santísimo Cristo del Rayo tienen su día grande religioso el 15 de junio y su semana grande de fiestas populares y encierros por vereda del 11 al 17 de julio.'
+                    'q' => '¿Dónde puedo ver el calendario con las tarjetas de todas las fiestas de Moratalla y sus pedanías?',
+                    'a' => 'En la tarjeta interactiva de Fiestas (page.php?id=163) y en la categoría general de Fiestas (category.php?id=39), donde cada celebración cuenta con su propia ficha.'
                 ]
             ],
             'related_slugs' => [
@@ -1049,40 +1499,43 @@ function getSeo90Pages(): array {
         'recetas-tradicionales-gastronomia-moratalla' => [
             'slug'             => 'recetas-tradicionales-gastronomia-moratalla',
             'type'             => 'articulo',
-            'phase'            => 'Fase 2 · Artículo #8',
+            'phase'            => 'Recetario Tradicional',
             'priority_rank'    => 14,
             'short_title'      => 'Recetas Tradicionales',
             'title'            => 'Recetas Tradicionales de Moratalla | Cocina Casera y Dulces de Antaño',
             'h1'               => 'Gastronomía Típica de Moratalla: Recetas Tradicionales que Pasan de Generación en Generación',
-            'subtitle'         => 'Secretos de los fogones moratalleros: cómo se elaboran las migas, los andrajos, la olla de cerdo y los dulces de horno.',
-            'meta_description' => 'Recetas tradicionales de Moratalla (Murcia): aprende los secretos del arroz con conejo y caracoles, migas ruleras, andrajos, mazapán y dulces típicos.',
+            'subtitle'         => 'Conectado con las fichas de Recetas de Moratalla (page.php?id=428) y Gastronomía Moratallera (page.php?id=263).',
+            'meta_description' => 'Recetas tradicionales de Moratalla (Murcia): accede a las fichas de Recetas de Moratalla (id=428) y Gastronomía Moratallera (id=263).',
             'keywords'         => 'recetas tradicionales de Moratalla, cocina típica de Moratalla, mazapán de Moratalla receta, migas de Moratalla',
             'icon'             => 'fas fa-book-open',
-            'hero_image'       => 'uploads/banners/banner_1778708256.jpg',
+            'hero_image'       => 'uploads/seo/pilar-gastronomia.svg',
+            'logo_image'       => 'uploads/seo/pilar-gastronomia.svg',
             'reading_time'     => '8 min de lectura',
-            'word_target'      => 'Artículo SEO #8',
+            'word_target'      => 'Recetario Local',
             'map_query'        => 'Moratalla, Murcia',
+            'related_cards'    => ['recetas_ficha', 'gastronomia_ficha', 'san_anton_feria'],
             'quick_facts'      => [
+                ['label' => 'Tarjetas de Recetas', 'value' => 'Recetas de Moratalla (page.php?id=428) y Gastronomía Moratallera (page.php?id=263)'],
                 ['label' => 'Base Culinaria', 'value' => 'Aceite de oliva local, harina candeal, almendra, caza y huerta'],
-                ['label' => 'Acceso Digital', 'value' => 'Vinculado con la sección de Gastronomía y el directorio de Restaurantes']
+                ['label' => 'Dónde Degustarlas', 'value' => 'Directorio de Bares y Restaurantes (restaurantes.php)']
             ],
             'sections' => [
                 [
                     'id'      => 'recetas-saladas',
                     'title'   => '1. El recetario salado: Del fuego de leña a la mesa',
-                    'content' => '<p>Las recetas tradicionales de Moratalla nacieron para alimentar a las familias en las labores del campo y la sierra. Entre ellas sobresalen las <strong>migas de harina</strong> trabajadas con paciencia en sartén de hierro hasta quedar sueltas y doradas; los <strong>andrajos</strong> con tortas finas de masa; el <strong>ajoharina</strong> con níscalos (guíscanos) de los pinares; y el <strong>arroz con conejo y caracoles</strong> aromatizado con azafrán de hebra y romero.</p>'
+                    'content' => '<p>Las recetas tradicionales documentadas en nuestra tarjeta de <a href="page.php?id=428"><strong>Recetas de Moratalla (page.php?id=428)</strong></a> y en <a href="page.php?id=263"><strong>Gastronomía Moratallera (page.php?id=263)</strong></a> nacieron para alimentar a las familias en las labores del campo y la sierra. Entre ellas sobresalen las <strong>migas de harina</strong> trabajadas en sartén de hierro; los <strong>andrajos</strong> con tortas finas de masa; el <strong>ajoharina</strong> con níscalos (guíscanos) de los pinares; y el <strong>arroz con conejo y caracoles</strong> aromatizado con azafrán de hebra y romero.</p>'
                 ],
                 [
                     'id'      => 'reposteria-tradicional',
                     'title'   => '2. Dulces de Pascua, sartén y el Mazapán de Moratalla',
-                    'content' => '<p>En las panaderías y confiterías artesanas de Moratalla siguen vivos los hornos de leña donde se cuecen el <a href="guia.php?slug=gastronomia-de-moratalla"><strong>Mazapán de Moratalla</strong></a>, los rollos de naranja, los mantecados, las tortas de chicharrones y los suspiros de almendra.</p>
+                    'content' => '<p>En las panaderías y confiterías artesanas de Moratalla siguen vivos los hornos donde se cuecen el <a href="guia.php?slug=gastronomia-de-moratalla"><strong>Mazapán de Moratalla</strong></a>, los rollos de San Antón (<a href="page.php?id=164">ver fiesta de San Antón</a>), los mantecados, las tortas de chicharrones y los suspiros de almendra.</p>
                     <p>Descubre dónde probar todos estos sabores en nuestra guía de <a href="restaurantes.php"><strong>Bares y Restaurantes de Moratalla</strong></a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
-                    'q' => '¿Qué dulce típico comprar en Moratalla para llevar de recuerdo?',
-                    'a' => 'Sin duda, una pieza de Mazapán artesanal de Moratalla relleno de cabello de ángel y yema, junto con miel de romero de la sierra, aceite de oliva local y embutidos caseros.'
+                    'q' => '¿Dónde consultar las fichas originales de recetas en moratalla-murcia.com?',
+                    'a' => 'Haz clic en las tarjetas "Recetas de Moratalla" (page.php?id=428) y "Gastronomía Moratallera" (page.php?id=263) incluidas en esta misma página.'
                 ]
             ],
             'related_slugs' => [
@@ -1095,43 +1548,45 @@ function getSeo90Pages(): array {
         'que-hacer-en-moratalla-fin-de-semana' => [
             'slug'             => 'que-hacer-en-moratalla-fin-de-semana',
             'type'             => 'articulo',
-            'phase'            => 'Fase 1 · Long-Tail Prioritaria',
+            'phase'            => 'Escapada de 2 y 3 Días',
             'priority_rank'    => 15,
             'short_title'      => 'Moratalla en un Fin de Semana',
             'title'            => 'Qué Hacer en Moratalla un Fin de Semana | Itinerario de 2 y 3 Días',
             'h1'               => 'Qué Hacer en Moratalla un Fin de Semana: El Plan Perfecto Día por Día',
-            'subtitle'         => 'Itinerario práctico de viernes a domingo combinando patrimonio medieval, senderismo fluvial, arte rupestre y gastronomía.',
-            'meta_description' => '¿No sabes qué hacer en Moratalla un fin de semana? Te proponemos el mejor itinerario de 2 y 3 días con rutas, monumentos, dónde comer y dónde dormir.',
+            'subtitle'         => 'Itinerario práctico de viernes a domingo combinando el Castillo, la Asunción, Casa de Cristo, el río Alhárabe y la gastronomía.',
+            'meta_description' => '¿No sabes qué hacer en Moratalla un fin de semana? Te proponemos el mejor itinerario de 2 y 3 días con enlaces a todas las fichas de monumentos, rutas, restaurantes y casas rurales.',
             'keywords'         => 'qué hacer en Moratalla un fin de semana, fin de semana en Moratalla, escapada Moratalla 2 días, pueblos bonitos cerca de Moratalla',
             'icon'             => 'fas fa-calendar-check',
-            'hero_image'       => 'uploads/theme/moratalla.jpg',
+            'hero_image'       => 'uploads/seo/pilar-turismo-rural.svg',
+            'logo_image'       => 'uploads/seo/pilar-turismo-rural.svg',
             'reading_time'     => '7 min de lectura',
-            'word_target'      => 'Guía Long-Tail Fin de Semana',
+            'word_target'      => 'Itinerario Fin de Semana',
             'map_query'        => 'Moratalla, Murcia',
+            'related_cards'    => ['castillo', 'asuncion', 'casa_cristo', 'las_arcas', 'gastronomia_ficha', 'alojamientos_ficha'],
             'quick_facts'      => [
-                ['label' => 'Día 1 (Sábado)', 'value' => 'Castillo-Fortaleza, Casco Antiguo, Comida Típica y Casa de Cristo'],
-                ['label' => 'Día 2 (Domingo)', 'value' => 'Río Alhárabe, Estrecho de Bolvonegro y compra de Mazapán de Moratalla'],
-                ['label' => 'Día 3 (Opcional)', 'value' => 'Benizar, Cañaica del Calar o ascensión a Revolcadores']
+                ['label' => 'Día 1 (Sábado)', 'value' => 'Castillo (id=433), La Asunción (id=440), Comida Típica y Casa de Cristo (id=441)'],
+                ['label' => 'Día 2 (Domingo)', 'value' => 'Río Alhárabe, Puente de Hellín (id=445), Las Arcas (id=446) y Mazapán'],
+                ['label' => 'Día 3 (Opcional)', 'value' => 'Arte Rupestre (id=451), Benizar, El Sabinar (id=443) o Revolcadores']
             ],
             'sections' => [
                 [
                     'id'      => 'sabado-patrimonio',
                     'title'   => 'Sábado: Historia viva, Castillo medieval y pinares de Casa de Cristo',
-                    'content' => '<p><strong>Por la mañana:</strong> Llegada a Moratalla y subida por el <a href="guia.php?slug=ruta-casco-antiguo-moratalla">casco antiguo</a> hasta la <a href="guia.php?slug=monumentos-y-patrimonio-moratalla">Iglesia de la Asunción</a> y el <a href="guia.php?slug=castillo-de-moratalla">Castillo-Fortaleza</a>.</p>
-                    <p><strong>Al mediodía:</strong> Comida tradicional en uno de los <a href="restaurantes.php">restaurantes de Moratalla</a>.</p>
-                    <p><strong>Por la tarde:</strong> Subida al Santuario de la Casa de Cristo y visita al <a href="guia.php?slug=pinturas-rupestres-de-moratalla">Centro de Interpretación del Arte Rupestre</a> contemplando el atardecer desde sus miradores.</p>'
+                    'content' => '<p><strong>Por la mañana:</strong> Llegada a Moratalla y subida desde el <a href="page.php?id=435">Convento de San Francisco</a> y la <a href="page.php?id=434">Ermita de Santa Ana</a> hasta la <a href="page.php?id=440"><strong>Parroquia de Santa María de la Asunción (29 fotos)</strong></a> y el <a href="page.php?id=433"><strong>Castillo fortaleza de Moratalla (28 fotos)</strong></a>.</p>
+                    <p><strong>Al mediodía:</strong> Comida tradicional en uno de los <a href="restaurantes.php">restaurantes de Moratalla</a> degustando los platos de <a href="page.php?id=263">Gastronomía Moratallera</a>.</p>
+                    <p><strong>Por la tarde:</strong> Subida al <a href="page.php?id=441"><strong>Santuario de la Casa de Cristo (15 fotos)</strong></a> y visita al Centro de Interpretación del <a href="page.php?id=451">Arte Rupestre</a> contemplando el atardecer desde sus miradores.</p>'
                 ],
                 [
                     'id'      => 'domingo-naturaleza',
-                    'title'   => 'Domingo: Senderismo en el Río Alhárabe y despedida dulce',
-                    'content' => '<p><strong>Por la mañana:</strong> Ruta a pie por el <a href="guia.php?slug=rutas-de-senderismo-en-moratalla">Río Alhárabe y el Estrecho de Bolvonegro</a> o excursión a la pedanía de Benizar.</p>
-                    <p><strong>Antes de volver:</strong> No olvides pasar por las panaderías del pueblo para llevarte un auténtico <a href="guia.php?slug=gastronomia-de-moratalla">Mazapán de Moratalla</a> y reservar tu próxima estancia en <a href="alojamientos.php">Alojamientos Rurales de Moratalla</a>.</p>'
+                    'title'   => 'Domingo: Senderismo en el Río Alhárabe, Las Arcas y despedida dulce',
+                    'content' => '<p><strong>Por la mañana:</strong> Ruta a pie por el <a href="guia.php?slug=rutas-de-senderismo-en-moratalla">Río Alhárabe</a>, cruzando el <a href="page.php?id=445">Puente de Hellín</a> y acercándose al acueducto de <a href="page.php?id=446"><strong>Las Arcas (21 fotos)</strong></a> o excursión a Benizar.</p>
+                    <p><strong>Antes de volver:</strong> No olvides llevarte un auténtico Mazapán artesanal (<a href="page.php?id=428">ver Recetas de Moratalla</a>) y reservar tu próxima estancia en <a href="alojamientos.php">Alojamientos Rurales de Moratalla</a>.</p>'
                 ]
             ],
             'faqs' => [
                 [
                     'q' => '¿Qué pueblos bonitos y parajes hay cerca del casco urbano de Moratalla?',
-                    'a' => 'Dentro del propio término de Moratalla destacan pedanías con mucho encanto como Benizar, Otos, Mazuza, Campo de San Juan, El Sabinar, Calar de la Santa y La Rogativa, además de su cercanía con Caravaca de la Cruz, Calasparra y Cehegín en la comarca del Noroeste.'
+                    'a' => 'Dentro del término de Moratalla destacan pedanías como Benizar, Otos, Mazuza, Campo de San Juan, El Sabinar (page.php?id=443), Calar de la Santa (page.php?id=442), Cañada de la Cruz (page.php?id=444) y La Rogativa.'
                 ]
             ],
             'related_slugs' => [
@@ -1145,14 +1600,14 @@ function getSeo90Pages(): array {
 }
 
 /**
- * Devuelve las 10 Páginas SEO Prioritarias del Plan de 90 Días con su enlace directo
+ * Devuelve las 10 Guías Prioritarias con su enlace directo
  */
 function getSeoTop10PriorityLinks(): array {
     return [
         [
             'rank'  => 1,
             'title' => 'Qué ver en Moratalla',
-            'desc'  => 'Guía completa de imprescindibles, mapa e itinerarios.',
+            'desc'  => 'Guía completa de imprescindibles, mapa y fichas con fotos.',
             'icon'  => 'fas fa-compass',
             'url'   => 'guia.php?slug=guia-completa-moratalla'
         ],
@@ -1173,49 +1628,49 @@ function getSeoTop10PriorityLinks(): array {
         [
             'rank'  => 4,
             'title' => 'Castillo de Moratalla',
-            'desc'  => 'La fortaleza medieval y su emblemática Torre del Homenaje.',
+            'desc'  => 'La fortaleza medieval, Torre del Homenaje y tarjeta con 28 fotos.',
             'icon'  => 'fas fa-chess-rook',
             'url'   => 'guia.php?slug=castillo-de-moratalla'
         ],
         [
             'rank'  => 5,
             'title' => 'Pinturas rupestres de Moratalla',
-            'desc'  => 'Arte prehistórico Patrimonio de la Humanidad UNESCO.',
+            'desc'  => 'Arte prehistórico UNESCO, Casa de Cristo y Cañaica del Calar.',
             'icon'  => 'fas fa-palette',
             'url'   => 'guia.php?slug=pinturas-rupestres-de-moratalla'
         ],
         [
             'rank'  => 6,
             'title' => 'Semana Santa de Moratalla',
-            'desc'  => 'Cofradías, procesiones y tradición centenaria.',
+            'desc'  => 'Cofradías, procesiones y tarjeta especial con 87 fotografías.',
             'icon'  => 'fas fa-church',
             'url'   => 'guia.php?slug=semana-santa-de-moratalla'
         ],
         [
             'rank'  => 7,
             'title' => 'Tamboradas de Moratalla',
-            'desc'  => 'Toque libre, túnicas artesanales y Patrimonio Inmaterial UNESCO.',
+            'desc'  => 'Museo del Tambor (15 fotos), túnicas y Declaración UNESCO.',
             'icon'  => 'fas fa-drum',
             'url'   => 'guia.php?slug=tamboradas-de-moratalla'
         ],
         [
             'rank'  => 8,
             'title' => 'Gastronomía típica y dónde comer',
-            'desc'  => 'Mazapán de Moratalla, platos de sierra y restaurantes.',
+            'desc'  => 'Mazapán de Moratalla, recetario tradicional y restaurantes.',
             'icon'  => 'fas fa-utensils',
             'url'   => 'guia.php?slug=gastronomia-de-moratalla'
         ],
         [
             'rank'  => 9,
             'title' => 'Rutas de senderismo',
-            'desc'  => 'Río Alhárabe, Estrecho de Bolvonegro, Somogil y Revolcadores.',
+            'desc'  => 'Río Alhárabe, Puente de Hellín, Bolvonegro y Revolcadores.',
             'icon'  => 'fas fa-hiking',
             'url'   => 'guia.php?slug=rutas-de-senderismo-en-moratalla'
         ],
         [
             'rank'  => 10,
             'title' => 'Fiestas populares',
-            'desc'  => 'Santísimo Cristo del Rayo, encierros por vereda y calendario.',
+            'desc'  => 'Cristo del Rayo, Calendario de Fiestas, San Antón y pedanías.',
             'icon'  => 'fas fa-glass-cheers',
             'url'   => 'guia.php?slug=fiestas-populares-de-moratalla'
         ]
