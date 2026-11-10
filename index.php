@@ -157,21 +157,60 @@ try {
 ?>
 <!-- FIN CELEBRACIONES -->
 
-<?php if (!empty($seo90Active)): ?>
-<!-- ═══ BARRA SUPERIOR DISCRETA DE ACCESOS RÁPIDOS ═══ -->
-<section class="seo-home-slim-wrap">
+<?php
+$seoCfgHome = !empty($seo90Active) && function_exists('getSeoConfig') ? getSeoConfig($pdo) : [];
+if (!empty($seo90Active) && ($seoCfgHome['seo_show_home_top'] ?? '1') === '1'):
+?>
+<!-- ═══ PANEL SUPERIOR EQUILIBRADO: VISIBLE, ATRACTIVO Y SIN OCULTAR LAS NOTICIAS ═══ -->
+<section class="seo-home-top-banner">
     <div class="container">
-        <div class="seo-home-slim-bar">
-            <span class="seo-slim-label"><i class="fas fa-compass"></i> Guías y Recursos:</span>
-            <div class="seo-slim-links">
-                <a href="guia.php?slug=guia-completa-moratalla"><i class="fas fa-map-signs"></i> Qué Ver</a>
-                <a href="guia.php?slug=monumentos-y-patrimonio-moratalla"><i class="fas fa-chess-rook"></i> Patrimonio</a>
-                <a href="guia.php?slug=historia-de-moratalla"><i class="fas fa-landmark"></i> Historia</a>
-                <a href="guia.php?slug=turismo-rural-moratalla"><i class="fas fa-tree"></i> Turismo Rural</a>
-                <a href="guia.php?slug=gastronomia-de-moratalla"><i class="fas fa-utensils"></i> Gastronomía</a>
-                <a href="alojamientos.php"><i class="fas fa-bed"></i> Casas Rurales</a>
-                <a href="restaurantes.php"><i class="fas fa-store"></i> Dónde Comer</a>
-                <a href="guia.php" class="seo-slim-more">Ver todas <i class="fas fa-angle-right"></i></a>
+        <div class="seo-top-banner-card">
+            <div class="seo-top-banner-head">
+                <div class="seo-top-banner-title-group">
+                    <span class="seo-top-badge"><i class="fas fa-compass"></i> Guía Oficial y Patrimonio Digital</span>
+                    <h2>Descubre Moratalla: Historia, Naturaleza, Tambores y Turismo Rural</h2>
+                </div>
+                <a href="guia.php" class="seo-top-all-btn">
+                    <i class="fas fa-book-open"></i> Ver todas las Guías <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            <div class="seo-top-nav-grid">
+                <a href="guia.php?slug=guia-completa-moratalla" class="seo-top-pill highlight">
+                    <i class="fas fa-map-signs"></i>
+                    <span>Qué Ver en Moratalla</span>
+                </a>
+                <a href="guia.php?slug=monumentos-y-patrimonio-moratalla" class="seo-top-pill">
+                    <i class="fas fa-chess-rook"></i>
+                    <span>Monumentos y Patrimonio</span>
+                </a>
+                <a href="guia.php?slug=historia-de-moratalla" class="seo-top-pill">
+                    <i class="fas fa-landmark"></i>
+                    <span>Historia</span>
+                </a>
+                <a href="guia.php?slug=turismo-rural-moratalla" class="seo-top-pill">
+                    <i class="fas fa-tree"></i>
+                    <span>Turismo Rural</span>
+                </a>
+                <a href="guia.php?slug=rutas-de-senderismo-en-moratalla" class="seo-top-pill">
+                    <i class="fas fa-hiking"></i>
+                    <span>Rutas Senderismo</span>
+                </a>
+                <a href="guia.php?slug=pinturas-rupestres-de-moratalla" class="seo-top-pill">
+                    <i class="fas fa-palette"></i>
+                    <span>Arte Rupestre</span>
+                </a>
+                <a href="guia.php?slug=semana-santa-de-moratalla" class="seo-top-pill">
+                    <i class="fas fa-drum"></i>
+                    <span>Semana Santa y Tambor</span>
+                </a>
+                <a href="alojamientos.php" class="seo-top-pill gold">
+                    <i class="fas fa-bed"></i>
+                    <span>Casas Rurales</span>
+                </a>
+                <a href="restaurantes.php" class="seo-top-pill gold">
+                    <i class="fas fa-utensils"></i>
+                    <span>Dónde Comer</span>
+                </a>
             </div>
         </div>
     </div>
@@ -298,30 +337,33 @@ try {
     </div>
 </div>
 
-<?php if (!empty($seo90Active)):
-    $homeGuides = getSeo90Pages();
-    $homeTop10  = getSeoTop10PriorityLinks();
+<?php if (!empty($seo90Active) && ($seoCfgHome['seo_show_home_bottom'] ?? '1') === '1'):
+    $homeGuides = getSeo90Pages(false, $pdo);
 ?>
-<!-- ═══ SECCIÓN INFERIOR COMPACTA Y DISCRETA DE GUÍAS Y PATRIMONIO ═══ -->
+<!-- ═══ SECCIÓN INFERIOR EQUILIBRADA DE GUÍAS Y PATRIMONIO ═══ -->
 <section class="seo-home-discreet-section">
     <div class="container">
         <div class="seo-discreet-box">
             <div class="seo-discreet-header">
                 <div>
-                    <span class="seo-discreet-kicker"><i class="fas fa-book-open"></i> Archivo y Guías Locales</span>
-                    <h3>Descubre el Patrimonio, la Historia y la Naturaleza de Moratalla</h3>
+                    <span class="seo-discreet-kicker"><i class="fas fa-compass"></i> Guías y Patrimonio de Moratalla</span>
+                    <h3>Explora Nuestras Guías de Turismo, Historia, Naturaleza y Gastronomía</h3>
                 </div>
-                <a href="guia.php" class="seo-discreet-all-link">Ver todas las guías <i class="fas fa-arrow-right"></i></a>
+                <a href="guia.php" class="seo-discreet-all-link">Ver todas las guías y fichas <i class="fas fa-arrow-right"></i></a>
             </div>
 
-            <div class="seo-mini-pillars-grid">
+            <div class="seo-balanced-pillars-grid">
                 <?php foreach ($homeGuides as $gSlug => $gItem): ?>
                     <?php if ($gItem['type'] === 'pilar'): ?>
-                        <a href="guia.php?slug=<?php echo htmlspecialchars($gSlug); ?>" class="seo-mini-pillar-card">
-                            <img src="<?php echo htmlspecialchars($gItem['logo_image'] ?? $gItem['hero_image']); ?>" alt="<?php echo htmlspecialchars($gItem['short_title']); ?>" class="seo-mini-pillar-thumb" loading="lazy" decoding="async">
-                            <div class="seo-mini-pillar-text">
-                                <strong><?php echo htmlspecialchars($gItem['short_title']); ?></strong>
-                                <span><?php echo htmlspecialchars($gItem['phase']); ?></span>
+                        <a href="guia.php?slug=<?php echo htmlspecialchars($gSlug); ?>" class="seo-balanced-pillar-card">
+                            <div class="seo-bp-img">
+                                <img src="<?php echo htmlspecialchars($gItem['logo_image'] ?? $gItem['hero_image']); ?>" alt="<?php echo htmlspecialchars($gItem['short_title']); ?>" loading="lazy" decoding="async">
+                                <span class="seo-bp-tag"><i class="<?php echo htmlspecialchars($gItem['icon']); ?>"></i> <?php echo htmlspecialchars($gItem['phase']); ?></span>
+                            </div>
+                            <div class="seo-bp-body">
+                                <h4><?php echo htmlspecialchars($gItem['short_title']); ?></h4>
+                                <p><?php echo htmlspecialchars($gItem['subtitle']); ?></p>
+                                <span class="seo-bp-cta">Abrir guía <i class="fas fa-arrow-right"></i></span>
                             </div>
                         </a>
                     <?php endif; ?>
@@ -329,6 +371,7 @@ try {
             </div>
 
             <div class="seo-mini-chips-row">
+                <span class="seo-chips-title"><i class="fas fa-star"></i> Accesos directos:</span>
                 <a href="guia.php?slug=castillo-de-moratalla" class="seo-mini-chip"><i class="fas fa-chess-rook"></i> Castillo de Moratalla</a>
                 <a href="page.php?id=440" class="seo-mini-chip"><i class="fas fa-church"></i> Parroquia de la Asunción</a>
                 <a href="page.php?id=441" class="seo-mini-chip"><i class="fas fa-place-of-worship"></i> Casa de Cristo</a>

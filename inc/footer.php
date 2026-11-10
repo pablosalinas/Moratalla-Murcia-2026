@@ -68,30 +68,32 @@
             </div>
         </div>
 
-        <?php if (function_exists('isSeo90Active') && isSeo90Active()): ?>
-        <!-- Enlaces rápidos discretos en el pie de página -->
+        <?php
+        $seoFooterConfig = function_exists('getSeoConfig') ? getSeoConfig(isset($pdo) ? $pdo : null) : [];
+        $showSeoFooter = function_exists('isSeo90Active') && isSeo90Active() && (($seoFooterConfig['seo_show_footer'] ?? '1') === '1');
+        if ($showSeoFooter):
+            $seoFooterPages = function_exists('getSeo90Pages') ? getSeo90Pages(false, isset($pdo) ? $pdo : null) : [];
+        ?>
+        <!-- Enlaces rápidos discretos en el pie de página (gestionables desde Configuración SEO) -->
         <div class="container seo-footer-slim">
-            <a href="guia.php?slug=guia-completa-moratalla">Guía de Moratalla</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=turismo-rural-moratalla">Turismo Rural</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=historia-de-moratalla">Historia</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=monumentos-y-patrimonio-moratalla">Patrimonio</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=castillo-de-moratalla">Castillo</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=pinturas-rupestres-de-moratalla">Arte Rupestre</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=semana-santa-de-moratalla">Semana Santa y Tambor</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=rutas-de-senderismo-en-moratalla">Senderismo</a>
-            <span class="sep">·</span>
-            <a href="guia.php?slug=gastronomia-de-moratalla">Gastronomía</a>
+            <?php
+            $footerMax = 10;
+            $fIdx = 0;
+            foreach ($seoFooterPages as $fSlug => $fItem):
+                if ($fIdx >= $footerMax) break;
+                if ($fIdx > 0): ?><span class="sep">·</span><?php endif;
+                ?>
+                <a href="guia.php?slug=<?php echo urlencode($fSlug); ?>"><?php echo htmlspecialchars($fItem['short_title']); ?></a>
+                <?php
+                $fIdx++;
+            endforeach;
+            ?>
             <span class="sep">·</span>
             <a href="alojamientos.php">Casas Rurales</a>
             <span class="sep">·</span>
             <a href="restaurantes.php">Restaurantes</a>
+            <span class="sep">·</span>
+            <a href="guia.php">Todas las Guías</a>
         </div>
         <?php endif; ?>
 
@@ -1026,7 +1028,8 @@
 
     <?php
     $curScriptName = basename($_SERVER['PHP_SELF'] ?? '');
-    if ($curScriptName !== 'index.php' && (!function_exists('isSeo90Active') || isSeo90Active())):
+    $showFloatingHome = (!function_exists('isSeo90Active') || isSeo90Active()) && (($seoFooterConfig['seo_show_floating_home'] ?? '1') === '1');
+    if ($curScriptName !== 'index.php' && $showFloatingHome):
     ?>
     <!-- BOTÓN FLOTANTE SIEMPRE VISIBLE PARA VOLVER A LA PÁGINA PRINCIPAL -->
     <a href="index.php" id="floatingHomeBtn" class="seo-floating-home-btn" title="Volver a la Página Principal">

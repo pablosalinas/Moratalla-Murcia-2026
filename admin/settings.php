@@ -5,6 +5,7 @@ require_once 'inc/layout.php';
 require_once '../config.php';
 require_once '../inc/mailer.php';
 require_once 'inc/ai_news_helper.php';
+require_once '../inc/seo_90dias_data.php';
 
 $pdo = getDB();
 // Asegurar que la contraseña encriptada y el correo info@moratalla-murcia.com estén inicializados en la BD
@@ -92,6 +93,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newsDateTo = isset($_POST['news_search_date_to']) ? (normalizeDateToYmd($_POST['news_search_date_to']) ?? '') : '';
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_from', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateFrom, $newsDateFrom]);
         $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('news_search_date_to', ?) ON DUPLICATE KEY UPDATE setting_value = ?")->execute([$newsDateTo, $newsDateTo]);
+
+        // Guardar Configuración del Módulo SEO y Guías
+        if (function_exists('saveSeoConfig')) {
+            $seoUpdate = [
+                'seo_90dias_enabled'     => isset($_POST['seo_90dias_enabled']) ? '1' : '0',
+                'seo_show_menu'          => isset($_POST['seo_show_menu']) ? '1' : '0',
+                'seo_show_home_top'      => isset($_POST['seo_show_home_top']) ? '1' : '0',
+                'seo_show_home_bottom'   => isset($_POST['seo_show_home_bottom']) ? '1' : '0',
+                'seo_show_footer'        => isset($_POST['seo_show_footer']) ? '1' : '0',
+                'seo_show_floating_home' => isset($_POST['seo_show_floating_home']) ? '1' : '0',
+                'seo_home_title'         => trim($_POST['seo_home_title'] ?? ''),
+                'seo_home_desc'          => trim($_POST['seo_home_desc'] ?? ''),
+                'seo_global_keywords'    => trim($_POST['seo_global_keywords'] ?? '')
+            ];
+            saveSeoConfig($pdo, $seoUpdate);
+        }
         
         $message = "Configuración actualizada con éxito.";
     }
@@ -100,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Obtener valores actuales
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+$seoCfgAdmin = function_exists('getSeoConfig') ? getSeoConfig($pdo) : [];
 
 $currentTicker = isset($settings['ticker_text']) ? $settings['ticker_text'] : '';
 $currentSpeed = isset($settings['ticker_speed']) ? $settings['ticker_speed'] : '30';
@@ -311,6 +329,70 @@ adminHeader("Configuración General");
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Límite de Ciclos del Carrusel (Por sesión)</label>
             <input type="number" name="celebration_cycle_limit" min="0" value="<?php echo htmlspecialchars($currentCycleLimit); ?>" style="width: 100%; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
             <small style="color: #666; display: block; margin-top: 0.5rem;">Cuántas veces se repetirán los efectos visuales antes de desactivarse para no molestar a la lectura. Si marcas 0, el carrusel será infinito (por defecto: 0).</small>
+        </div>
+
+        <!-- CONFIGURACIÓN DEL MÓDULO SEO Y GUÍAS TURÍSTICAS -->
+        <div id="seo_config_section" style="margin-bottom: 2.5rem; background: #f0fdf4; padding: 1.5rem; border-radius: 12px; border: 2px solid #86efac;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid #bbf7d0;">
+                <div>
+                    <h3 style="margin: 0; color: #064e3b; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-compass" style="color: #d97706;"></i> Configuración de SEO, Páginas Pilar y Guías Turísticas
+                    </h3>
+                    <p style="margin: 0.25rem 0 0; font-size: 0.88rem; color: #047857;">
+                        Activa o desactiva cada bloque visual de SEO y edita o administra todas las Páginas Pilar y Guías desde aquí.
+                    </p>
+                </div>
+                <a href="seo.php" class="btn" style="background: #065f46; color: #ffffff; font-weight: 700; padding: 0.65rem 1.2rem; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(6, 95, 70, 0.25);">
+                    <i class="fas fa-edit"></i> Gestionar Guías y Páginas Pilar (Crear / Editar / Ocultar)
+                </a>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.9rem; margin-bottom: 1.3rem;">
+                <label style="display: flex; align-items: center; gap: 10px; background: white; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer; font-weight: 700; color: #064e3b;">
+                    <input type="checkbox" name="seo_90dias_enabled" value="1" <?php echo (($seoCfgAdmin['seo_90dias_enabled'] ?? '1') === '1') ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #059669;">
+                    <span>Activar Módulo SEO Global</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; background: white; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer; font-weight: 600; color: #065f46;">
+                    <input type="checkbox" name="seo_show_menu" value="1" <?php echo (($seoCfgAdmin['seo_show_menu'] ?? '1') === '1') ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #059669;">
+                    <span>Mostrar "Guías" en el Menú Principal</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; background: white; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer; font-weight: 600; color: #065f46;">
+                    <input type="checkbox" name="seo_show_home_top" value="1" <?php echo (($seoCfgAdmin['seo_show_home_top'] ?? '1') === '1') ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #059669;">
+                    <span>Mostrar Panel Superior de Guías en Portada</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; background: white; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer; font-weight: 600; color: #065f46;">
+                    <input type="checkbox" name="seo_show_home_bottom" value="1" <?php echo (($seoCfgAdmin['seo_show_home_bottom'] ?? '1') === '1') ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #059669;">
+                    <span>Mostrar Tarjetas de Guías al Pie de Portada</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; background: white; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer; font-weight: 600; color: #065f46;">
+                    <input type="checkbox" name="seo_show_footer" value="1" <?php echo (($seoCfgAdmin['seo_show_footer'] ?? '1') === '1') ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #059669;">
+                    <span>Mostrar Enlaces Rápidos en Pie de Página</span>
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; background: white; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer; font-weight: 600; color: #065f46;">
+                    <input type="checkbox" name="seo_show_floating_home" value="1" <?php echo (($seoCfgAdmin['seo_show_floating_home'] ?? '1') === '1') ? 'checked' : ''; ?> style="width: 18px; height: 18px; accent-color: #059669;">
+                    <span>Mostrar Botón Flotante "Página Principal"</span>
+                </label>
+            </div>
+
+            <div style="display: grid; gap: 1rem; background: white; padding: 1.1rem; border-radius: 10px; border: 1px solid #bbf7d0;">
+                <div>
+                    <label style="display: block; font-size: 0.88rem; font-weight: 700; color: #064e3b; margin-bottom: 0.35rem;">Título SEO de la Portada (Meta Title)</label>
+                    <input type="text" name="seo_home_title" value="<?php echo htmlspecialchars($seoCfgAdmin['seo_home_title'] ?? ''); ?>" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.88rem; font-weight: 700; color: #064e3b; margin-bottom: 0.35rem;">Metadescripción SEO de la Portada (Meta Description)</label>
+                    <textarea name="seo_home_desc" rows="2" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.92rem; font-family: inherit;"><?php echo htmlspecialchars($seoCfgAdmin['seo_home_desc'] ?? ''); ?></textarea>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.88rem; font-weight: 700; color: #064e3b; margin-bottom: 0.35rem;">Palabras Clave Globales (Meta Keywords)</label>
+                    <input type="text" name="seo_global_keywords" value="<?php echo htmlspecialchars($seoCfgAdmin['seo_global_keywords'] ?? ''); ?>" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;">
+                </div>
+            </div>
         </div>
         
         <button type="submit" class="btn btn-primary">

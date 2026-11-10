@@ -90,6 +90,140 @@ function isSeo90Active(): bool {
 }
 
 /**
+ * Obtiene la configuración granular del módulo SEO desde la tabla settings
+ */
+function getSeoConfig(?PDO $pdo = null): array {
+    if (!$pdo) {
+        $pdo = (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) ? $GLOBALS['pdo'] : (function_exists('getDB') ? getDB() : null);
+    }
+
+    $defaults = [
+        'seo_90dias_enabled'     => isSeo90Active() ? '1' : '0',
+        'seo_show_menu'          => '1',
+        'seo_show_home_top'      => '1',
+        'seo_show_home_bottom'   => '1',
+        'seo_show_footer'        => '1',
+        'seo_show_floating_home' => '1',
+        'seo_home_title'         => 'Moratalla | Guía Turística, Patrimonio Histórico y Cultura en Murcia',
+        'seo_home_desc'          => 'Descubre Moratalla: patrimonio histórico, pinturas rupestres UNESCO, castillo medieval, turismo rural, Semana Santa, tambores y rutas naturales en el corazón de Murcia.',
+        'seo_global_keywords'    => 'Moratalla, Turismo en Moratalla, Qué ver en Moratalla, Moratalla Murcia, Casas rurales Moratalla, Castillo de Moratalla, Iglesia de Santa María de la Asunción, Pinturas rupestres de Moratalla, Semana Santa de Moratalla, Tamboradas de Moratalla'
+    ];
+
+    if ($pdo) {
+        try {
+            $keys = array_keys($defaults);
+            $placeholders = implode(',', array_fill(0, count($keys), '?'));
+            $stmt = $pdo->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ($placeholders)");
+            $stmt->execute($keys);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $k = $row['setting_key'];
+                if ($row['setting_value'] !== null && $row['setting_value'] !== '') {
+                    $defaults[$k] = $row['setting_value'];
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    return $defaults;
+}
+
+/**
+ * Guarda valores de configuración SEO en la tabla settings (100% aditivo)
+ */
+function saveSeoConfig(PDO $pdo, array $values): void {
+    foreach ($values as $k => $v) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM settings WHERE setting_key = ?");
+        $stmt->execute([$k]);
+        if ((int)$stmt->fetchColumn() > 0) {
+            $upd = $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = ?");
+            $upd->execute([(string)$v, $k]);
+        } else {
+            $ins = $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)");
+            $ins->execute([$k, (string)$v]);
+        }
+    }
+    if (isset($values['seo_90dias_enabled'])) {
+        setSeo90ActiveState($values['seo_90dias_enabled'] === '1');
+    }
+}
+
+/**
+ * Crea de forma aditiva la tabla seo_guides y siembra las guías iniciales si está vacía
+ */
+function ensureSeoGuidesTable(?PDO $pdo = null): void {
+    if (!$pdo) {
+        $pdo = (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) ? $GLOBALS['pdo'] : (function_exists('getDB') ? getDB() : null);
+    }
+    if (!$pdo) return;
+
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `seo_guides` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `slug` VARCHAR(190) NOT NULL UNIQUE,
+            `type` VARCHAR(50) NOT NULL DEFAULT 'articulo',
+            `phase` VARCHAR(150) DEFAULT '',
+            `priority_rank` INT DEFAULT 99,
+            `short_title` VARCHAR(255) NOT NULL,
+            `title` VARCHAR(255) NOT NULL,
+            `h1` VARCHAR(255) NOT NULL,
+            `subtitle` TEXT,
+            `meta_description` TEXT,
+            `keywords` TEXT,
+            `icon` VARCHAR(100) DEFAULT 'fas fa-compass',
+            `hero_image` VARCHAR(255) DEFAULT 'uploads/seo/pilar-guia-completa.svg',
+            `logo_image` VARCHAR(255) DEFAULT 'uploads/seo/pilar-guia-completa.svg',
+            `reading_time` VARCHAR(80) DEFAULT '8 min de lectura',
+            `map_query` VARCHAR(255) DEFAULT 'Moratalla, Murcia',
+            `quick_facts_json` LONGTEXT,
+            `sections_json` LONGTEXT,
+            `faqs_json` LONGTEXT,
+            `related_cards_json` TEXT,
+            `related_slugs_json` TEXT,
+            `activo` TINYINT(1) NOT NULL DEFAULT 1,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+        $count = (int)$pdo->query("SELECT COUNT(*) FROM seo_guides")->fetchColumn();
+        if ($count === 0) {
+            $defaults = getDefaultSeo90Pages();
+            $ins = $pdo->prepare("INSERT INTO seo_guides
+                (slug, type, phase, priority_rank, short_title, title, h1, subtitle, meta_description, keywords, icon, hero_image, logo_image, reading_time, map_query, quick_facts_json, sections_json, faqs_json, related_cards_json, related_slugs_json, activo)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
+            foreach ($defaults as $slug => $g) {
+                $ins->execute([
+                    $g['slug'] ?? $slug,
+                    $g['type'] ?? 'articulo',
+                    $g['phase'] ?? '',
+                    (int)($g['priority_rank'] ?? 99),
+                    $g['short_title'] ?? '',
+                    $g['title'] ?? '',
+                    $g['h1'] ?? '',
+                    $g['subtitle'] ?? '',
+                    $g['meta_description'] ?? '',
+                    $g['keywords'] ?? '',
+                    $g['icon'] ?? 'fas fa-compass',
+                    $g['hero_image'] ?? 'uploads/seo/pilar-guia-completa.svg',
+                    $g['logo_image'] ?? ($g['hero_image'] ?? 'uploads/seo/pilar-guia-completa.svg'),
+                    $g['reading_time'] ?? '8 min de lectura',
+                    $g['map_query'] ?? 'Moratalla, Murcia',
+                    json_encode($g['quick_facts'] ?? [], JSON_UNESCAPED_UNICODE),
+                    json_encode($g['sections'] ?? [], JSON_UNESCAPED_UNICODE),
+                    json_encode($g['faqs'] ?? [], JSON_UNESCAPED_UNICODE),
+                    json_encode($g['related_cards'] ?? [], JSON_UNESCAPED_UNICODE),
+                    json_encode($g['related_slugs'] ?? [], JSON_UNESCAPED_UNICODE)
+                ]);
+            }
+        }
+    } catch (\Throwable $e) {
+        // Silencioso en caso de fallo de conexión
+    }
+}
+
+/**
  * Catálogo de Tarjetas y Fichas existentes en la Base de Datos de Producción (moratalla-murcia.com)
  * Incluye su ID real en producción, enlace directo, descripción, contador de fotografías y portada.
  */
@@ -497,12 +631,13 @@ function getCardsForGuide(string $slug, ?PDO $pdo = null): array {
  * Optimización automática de Títulos SEO y Metadescripciones
  */
 function getSeoOptimizedMeta(string $scriptName, array $context = []): array {
-    $defaultTitle = "Moratalla (Murcia) | Guía Turística, Patrimonio Histórico y Cultura";
-    $defaultDesc  = "Descubre Moratalla: patrimonio histórico, pinturas rupestres UNESCO, castillo medieval, turismo rural, Semana Santa, tambores y rutas naturales en el corazón de Murcia.";
+    $seoCfg       = getSeoConfig();
+    $defaultTitle = !empty($seoCfg['seo_home_title']) ? $seoCfg['seo_home_title'] : "Moratalla (Murcia) | Guía Turística, Patrimonio Histórico y Cultura";
+    $defaultDesc  = !empty($seoCfg['seo_home_desc']) ? $seoCfg['seo_home_desc'] : "Descubre Moratalla: patrimonio histórico, pinturas rupestres UNESCO, castillo medieval, turismo rural, Semana Santa, tambores y rutas naturales en el corazón de Murcia.";
 
     if ($scriptName === 'index.php') {
         return [
-            'title'       => "Moratalla | Guía Turística, Patrimonio Histórico y Cultura en Murcia",
+            'title'       => $defaultTitle,
             'description' => $defaultDesc,
             'schema_type' => 'TouristDestination'
         ];
@@ -706,10 +841,66 @@ function getSeoSeasonalPlans(): array {
 }
 
 /**
- * Devuelve el catálogo completo de las 5 Páginas Pilar + Guías Temáticas con imágenes de referencia contextuales
- * y enlaces directos a las tarjetas existentes en la base de datos de producción.
+ * Devuelve las guías SEO desde la base de datos (tabla seo_guides), permitiendo su modificación,
+ * creación y borrado lógico (activo = 0) desde el Panel de Administración.
  */
-function getSeo90Pages(): array {
+function getSeo90Pages(bool $includeInactive = false, ?PDO $pdo = null): array {
+    if (!$pdo) {
+        $pdo = (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) ? $GLOBALS['pdo'] : (function_exists('getDB') ? getDB() : null);
+    }
+
+    if ($pdo) {
+        try {
+            ensureSeoGuidesTable($pdo);
+            $sql = "SELECT * FROM seo_guides" . ($includeInactive ? "" : " WHERE activo = 1") . " ORDER BY (type = 'pilar') DESC, priority_rank ASC, id ASC";
+            $stmt = $pdo->query($sql);
+            if ($stmt) {
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($rows) || $includeInactive) {
+                    $pages = [];
+                    foreach ($rows as $r) {
+                        $slug = $r['slug'];
+                        $pages[$slug] = [
+                            'id'               => (int)$r['id'],
+                            'slug'             => $slug,
+                            'type'             => $r['type'] ?: 'articulo',
+                            'phase'            => $r['phase'] ?? '',
+                            'priority_rank'    => (int)($r['priority_rank'] ?? 99),
+                            'short_title'      => $r['short_title'] ?? '',
+                            'title'            => $r['title'] ?? '',
+                            'h1'               => $r['h1'] ?? '',
+                            'subtitle'         => $r['subtitle'] ?? '',
+                            'meta_description' => $r['meta_description'] ?? '',
+                            'keywords'         => $r['keywords'] ?? '',
+                            'icon'             => $r['icon'] ?: 'fas fa-compass',
+                            'hero_image'       => $r['hero_image'] ?: 'uploads/seo/pilar-guia-completa.svg',
+                            'logo_image'       => $r['logo_image'] ?: ($r['hero_image'] ?: 'uploads/seo/pilar-guia-completa.svg'),
+                            'reading_time'     => $r['reading_time'] ?: '8 min de lectura',
+                            'map_query'        => $r['map_query'] ?: 'Moratalla, Murcia',
+                            'quick_facts'      => json_decode($r['quick_facts_json'] ?: '[]', true) ?: [],
+                            'sections'         => json_decode($r['sections_json'] ?: '[]', true) ?: [],
+                            'faqs'             => json_decode($r['faqs_json'] ?: '[]', true) ?: [],
+                            'related_cards'    => json_decode($r['related_cards_json'] ?: '[]', true) ?: [],
+                            'related_slugs'    => json_decode($r['related_slugs_json'] ?: '[]', true) ?: [],
+                            'activo'           => (int)$r['activo'],
+                            'updated_at'       => $r['updated_at'] ?? ''
+                        ];
+                    }
+                    return $pages;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fallback al catálogo por defecto si no hay conexión a BD
+        }
+    }
+
+    return getDefaultSeo90Pages();
+}
+
+/**
+ * Catálogo base por defecto de las 5 Páginas Pilar + Guías Temáticas
+ */
+function getDefaultSeo90Pages(): array {
     return [
         // =========================================================================
         // LAS 5 PÁGINAS PILAR PRINCIPALES

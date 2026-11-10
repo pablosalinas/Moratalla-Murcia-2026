@@ -191,17 +191,20 @@ try {
 // Variables SEO y Metadatos Dinámicos
 require_once __DIR__ . '/seo_90dias_data.php';
 $seo90Active = isSeo90Active();
+$seoConfigGlobal = getSeoConfig($pdo);
 
-$seoKeywords = "Moratalla, Turismo en Moratalla, Qué ver en Moratalla, Moratalla Murcia, Casas rurales Moratalla, Castillo de Moratalla, Iglesia de Santa María de la Asunción, Pinturas rupestres de Moratalla, Semana Santa de Moratalla, Tamboradas de Moratalla, qué hacer en Moratalla un fin de semana, mejores rutas senderismo Moratalla, dónde comer en Moratalla, pueblos bonitos cerca de Moratalla, historia de Moratalla Murcia, río Alhárabe, Bolvonegro, Casa de Cristo, La Rogativa, Benizar, Revolcadores";
+$seoKeywords = !empty($seoConfigGlobal['seo_global_keywords'])
+    ? $seoConfigGlobal['seo_global_keywords']
+    : "Moratalla, Turismo en Moratalla, Qué ver en Moratalla, Moratalla Murcia, Casas rurales Moratalla, Castillo de Moratalla, Iglesia de Santa María de la Asunción, Pinturas rupestres de Moratalla, Semana Santa de Moratalla, Tamboradas de Moratalla";
 if (!empty($seoCustomKeywords)) {
     $seoKeywords = $seoCustomKeywords . ", " . $seoKeywords;
 }
 
 $defaultTitle = $seo90Active
-    ? "Moratalla | Guía Turística, Patrimonio Histórico y Cultura en Murcia"
+    ? ($seoConfigGlobal['seo_home_title'] ?: "Moratalla | Guía Turística, Patrimonio Histórico y Cultura en Murcia")
     : "moratalla-murcia.com - Patrimonio Histórico Digital";
 $defaultDesc = $seo90Active
-    ? "Descubre Moratalla: patrimonio histórico, pinturas rupestres UNESCO, castillo medieval, turismo rural, fiestas populares y rutas naturales en el corazón de Murcia."
+    ? ($seoConfigGlobal['seo_home_desc'] ?: "Descubre Moratalla: patrimonio histórico, pinturas rupestres UNESCO, castillo medieval, turismo rural, fiestas populares y rutas naturales en el corazón de Murcia.")
     : "Moratalla (Murcia). Archivo histórico digital, turismo, asociaciones, Semana Santa, tambores y cultura local. Proyecto de conservación de memoria histórica.";
 
 if ($seo90Active) {
@@ -377,7 +380,7 @@ function renderHorizontalMenu() {
         }
 
         // 5. Función constructora del árbol HTML en memoria con protección de recursión (profundidad máxima 4)
-        $buildTree = function($parentId, $depth = 0) use (&$buildTree, &$categoriesByParent, &$pagesByCategory, &$extLinksByCategory, &$newsByCategory) {
+        $buildTree = function($parentId, $depth = 0) use (&$buildTree, &$categoriesByParent, &$pagesByCategory, &$extLinksByCategory, &$newsByCategory, $pdo) {
             if ($depth > 4) return '';
             $cats = $categoriesByParent[$parentId] ?? [];
             $pages = $parentId > 0 ? array_values($pagesByCategory[$parentId] ?? []) : [];
@@ -390,25 +393,33 @@ function renderHorizontalMenu() {
             $html = ($parentId === 0) ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
 
             if ($parentId === 0 && function_exists('isSeo90Active') && isSeo90Active()) {
-                $html .= "<li class='seo-nav-highlight'>";
-                $html .= "<a href='guia.php' data-hint='Guías completas: Qué ver, Turismo Rural, Historia, Patrimonio, Rutas y Gastronomía'><i class='fas fa-compass' style='color:var(--accent); margin-right:5px; width:15px; text-align:center;'></i>Guías <i class='fas fa-angle-down nav-arrow'></i></a>";
-                $html .= "<ul class='dropdown'>";
-                $html .= "<li><a href='guia.php?slug=guia-completa-moratalla'><i class='fas fa-compass' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Guía Completa: Qué Ver</strong></a></li>";
-                $html .= "<li><a href='guia.php?slug=turismo-rural-moratalla'><i class='fas fa-tree' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Turismo Rural en Moratalla</strong></a></li>";
-                $html .= "<li><a href='guia.php?slug=historia-de-moratalla'><i class='fas fa-landmark' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Historia de Moratalla</strong></a></li>";
-                $html .= "<li><a href='guia.php?slug=monumentos-y-patrimonio-moratalla'><i class='fas fa-chess-rook' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Monumentos y Patrimonio</strong></a></li>";
-                $html .= "<li><a href='guia.php?slug=gastronomia-de-moratalla'><i class='fas fa-utensils' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Gastronomía Típica</strong></a></li>";
-                $html .= "<li style='height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;'></li>";
-                $html .= "<li><a href='guia.php?slug=castillo-de-moratalla'><i class='fas fa-chess-rook' style='margin-right:8px; width:16px;'></i>Castillo de Moratalla</a></li>";
-                $html .= "<li><a href='guia.php?slug=pinturas-rupestres-de-moratalla'><i class='fas fa-palette' style='margin-right:8px; width:16px;'></i>Pinturas Rupestres UNESCO</a></li>";
-                $html .= "<li><a href='guia.php?slug=semana-santa-de-moratalla'><i class='fas fa-church' style='margin-right:8px; width:16px;'></i>Semana Santa de Moratalla</a></li>";
-                $html .= "<li><a href='guia.php?slug=tamboradas-de-moratalla'><i class='fas fa-drum' style='margin-right:8px; width:16px;'></i>Tamboradas de Moratalla</a></li>";
-                $html .= "<li><a href='guia.php?slug=rutas-de-senderismo-en-moratalla'><i class='fas fa-hiking' style='margin-right:8px; width:16px;'></i>Rutas de Senderismo</a></li>";
-                $html .= "<li><a href='guia.php?slug=fiestas-populares-de-moratalla'><i class='fas fa-glass-cheers' style='margin-right:8px; width:16px;'></i>Calendario de Fiestas</a></li>";
-                $html .= "<li><a href='alojamientos.php'><i class='fas fa-bed' style='margin-right:8px; width:16px; color:#d4af37;'></i>Dónde Dormir (Casas Rurales)</a></li>";
-                $html .= "<li><a href='restaurantes.php'><i class='fas fa-utensils' style='margin-right:8px; width:16px; color:#d4af37;'></i>Dónde Comer (Restaurantes)</a></li>";
-                $html .= "</ul>";
-                $html .= "</li>";
+                $seoCfgMenu = function_exists('getSeoConfig') ? getSeoConfig($pdo) : ['seo_show_menu' => '1'];
+                if (($seoCfgMenu['seo_show_menu'] ?? '1') === '1') {
+                    $menuGuides = function_exists('getSeo90Pages') ? getSeo90Pages(false, $pdo) : [];
+                    $html .= "<li class='seo-nav-highlight'>";
+                    $html .= "<a href='guia.php' data-hint='Guías completas: Qué ver, Turismo Rural, Historia, Patrimonio, Rutas y Gastronomía'><i class='fas fa-compass' style='color:var(--accent); margin-right:5px; width:15px; text-align:center;'></i>Guías <i class='fas fa-angle-down nav-arrow'></i></a>";
+                    $html .= "<ul class='dropdown'>";
+                    foreach ($menuGuides as $mgSlug => $mgItem) {
+                        if (($mgItem['type'] ?? '') === 'pilar') {
+                            $mgIcon = htmlspecialchars($mgItem['icon'] ?? 'fas fa-compass');
+                            $mgTitle = htmlspecialchars($mgItem['short_title']);
+                            $html .= "<li><a href='guia.php?slug=" . htmlspecialchars($mgSlug) . "'><i class='{$mgIcon}' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>{$mgTitle}</strong></a></li>";
+                        }
+                    }
+                    $html .= "<li style='height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;'></li>";
+                    foreach ($menuGuides as $mgSlug => $mgItem) {
+                        if (($mgItem['type'] ?? '') !== 'pilar') {
+                            $mgIcon = htmlspecialchars($mgItem['icon'] ?? 'fas fa-book-open');
+                            $mgTitle = htmlspecialchars($mgItem['short_title']);
+                            $html .= "<li><a href='guia.php?slug=" . htmlspecialchars($mgSlug) . "'><i class='{$mgIcon}' style='margin-right:8px; width:16px;'></i>{$mgTitle}</a></li>";
+                        }
+                    }
+                    $html .= "<li style='height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;'></li>";
+                    $html .= "<li><a href='alojamientos.php'><i class='fas fa-bed' style='margin-right:8px; width:16px; color:#d4af37;'></i>Dónde Dormir (Casas Rurales)</a></li>";
+                    $html .= "<li><a href='restaurantes.php'><i class='fas fa-utensils' style='margin-right:8px; width:16px; color:#d4af37;'></i>Dónde Comer (Restaurantes)</a></li>";
+                    $html .= "</ul>";
+                    $html .= "</li>";
+                }
             }
 
             foreach ($cats as $cat) {

@@ -60,6 +60,7 @@ function adminHeader($title = "Admin Panel") {
                 <div class="nav-divider"></div>
                 <a href="manual.php" class="nav-link"><i class="fas fa-book"></i> Manual de Usuario</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>
+                <a href="seo.php" class="nav-link"><i class="fas fa-compass"></i> SEO y Guías</a>
                 <a href="banners.php" class="nav-link"><i class="fas fa-image"></i> Banner Interactivo</a>
                 <a href="celebrations.php" class="nav-link"><i class="fas fa-glass-cheers"></i> Acontecimientos</a>
                 <a href="stats.php" class="nav-link"><i class="fas fa-chart-pie"></i> Estadísticas</a>
