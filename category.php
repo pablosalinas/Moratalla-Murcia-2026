@@ -90,7 +90,7 @@ require_once 'inc/header.php';
 <section class="hero-page" style="background: linear-gradient(135deg, rgba(27,67,50,0.85) 0%, rgba(8,28,21,0.95) 100%), url('uploads/theme/moratalla.jpg'); background-size: cover; background-position: center; background-attachment: fixed; padding: 3rem 0; text-align: center; color: white; border-bottom: 4px solid var(--accent);">
     <div class="container">
         <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 1.5rem 3rem; border-radius: 15px; display: inline-block; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-            <h2 style="color: white; margin-bottom: 0.3rem; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;"><?php echo htmlspecialchars($category['name']); ?></h2>
+            <h1 style="color: white; margin-bottom: 0.3rem; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;"><?php echo htmlspecialchars($category['name']); ?></h1>
             <p style="color: var(--accent); font-weight: 600; font-size: 0.9rem; margin-bottom: 0; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-home"></i> Inicio <i class="fas fa-chevron-right" style="font-size: 0.7rem; margin: 0 10px; opacity: 0.5; color: white;"></i> <span style="color: white;"><?php echo htmlspecialchars($category['name']); ?></span></p>
         </div>
     </div>
@@ -177,7 +177,7 @@ require_once 'inc/header.php';
                                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2rem; opacity: 0.8; text-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
                                 </div>
                             <?php else: ?>
-                                <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                                <img src="<?php echo htmlspecialchars($news['image_path']); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img" loading="lazy" decoding="async">
                             <?php endif; ?>
                         <?php else: ?>
                             <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.2);">

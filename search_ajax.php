@@ -182,6 +182,32 @@ $counts = [
 
 if ($scope === 'web' || $scope === 'both') {
 
+// 0. GUÍAS PILAR Y ARTÍCULOS DEL PLAN SEO 90 DÍAS
+require_once __DIR__ . '/inc/seo_90dias_data.php';
+if (function_exists('isSeo90Active') && isSeo90Active()) {
+    $seoGuides = getSeo90Pages();
+    foreach ($seoGuides as $gSlug => $gItem) {
+        $fullText = $gItem['title'] . ' ' . $gItem['h1'] . ' ' . $gItem['subtitle'] . ' ' . $gItem['keywords'];
+        foreach ($gItem['sections'] as $sec) {
+            $fullText .= ' ' . $sec['title'] . ' ' . strip_tags($sec['content']);
+        }
+        if (matchesWordsFilter($fullText, $words, $mode)) {
+            $results[] = [
+                'group'    => 'paginas',
+                'badge'    => ($gItem['type'] === 'pilar') ? 'Guía Pilar Oficial' : 'Artículo / Guía SEO',
+                'icon'     => $gItem['icon'] ?? '🧭',
+                'title'    => $gItem['short_title'] . ' — ' . $gItem['h1'],
+                'subtitle' => $gItem['phase'] . ' · ' . $gItem['reading_time'],
+                'snippet'  => buildSearchSnippet($gItem['subtitle'] . ' ' . $fullText, $words),
+                'image'    => $gItem['hero_image'] ?? '',
+                'url'      => 'guia.php?slug=' . urlencode($gSlug)
+            ];
+            $counts['paginas']++;
+            $counts['all']++;
+        }
+    }
+}
+
 // Mapa rápido de categorías para clasificar páginas (Asociaciones, Artesanos, etc.)
 $catMap = [];
 try {

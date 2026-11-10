@@ -62,11 +62,47 @@
 
             <!-- Redes Sociales debajo de los escudos -->
             <div style="display: flex; gap: 2.5rem; justify-content: center; font-size: 1.5rem;">
-                <a href="#" style="color: white; opacity: 0.8;"><i class="fab fa-facebook"></i></a>
-                <a href="#" style="color: white; opacity: 0.8;"><i class="fab fa-instagram"></i></a>
-                <a href="#" style="color: white; opacity: 0.8;"><i class="fab fa-youtube"></i></a>
+                <a href="#" style="color: white; opacity: 0.8;" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+                <a href="#" style="color: white; opacity: 0.8;" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                <a href="#" style="color: white; opacity: 0.8;" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
             </div>
         </div>
+
+        <?php if (function_exists('isSeo90Active') && isSeo90Active()): ?>
+        <!-- Mapa de Enlaces SEO en el Pie de Página (Páginas Pilar y Prioritarias) -->
+        <div class="container seo-footer-links-grid">
+            <div class="seo-footer-col">
+                <h4><i class="fas fa-compass" style="color:var(--accent);"></i> Guías Pilar de Moratalla</h4>
+                <ul>
+                    <li><a href="guia.php?slug=guia-completa-moratalla">Qué Ver en Moratalla (Guía Completa)</a></li>
+                    <li><a href="guia.php?slug=turismo-rural-moratalla">Turismo Rural en Moratalla</a></li>
+                    <li><a href="guia.php?slug=historia-de-moratalla">Historia de Moratalla</a></li>
+                    <li><a href="guia.php?slug=monumentos-y-patrimonio-moratalla">Monumentos y Patrimonio</a></li>
+                    <li><a href="guia.php?slug=gastronomia-de-moratalla">Gastronomía Típica de Moratalla</a></li>
+                </ul>
+            </div>
+            <div class="seo-footer-col">
+                <h4><i class="fas fa-star" style="color:var(--accent);"></i> Imprescindibles y Patrimonio</h4>
+                <ul>
+                    <li><a href="guia.php?slug=castillo-de-moratalla">Castillo-Fortaleza de Moratalla</a></li>
+                    <li><a href="guia.php?slug=pinturas-rupestres-de-moratalla">Pinturas Rupestres UNESCO</a></li>
+                    <li><a href="guia.php?slug=semana-santa-de-moratalla">Semana Santa de Moratalla</a></li>
+                    <li><a href="guia.php?slug=tamboradas-de-moratalla">Tamboradas de Moratalla</a></li>
+                    <li><a href="guia.php?slug=ruta-casco-antiguo-moratalla">Ruta por el Casco Antiguo</a></li>
+                </ul>
+            </div>
+            <div class="seo-footer-col">
+                <h4><i class="fas fa-hiking" style="color:var(--accent);"></i> Naturaleza, Rutas y Servicios</h4>
+                <ul>
+                    <li><a href="guia.php?slug=rutas-de-senderismo-en-moratalla">Mejores Rutas de Senderismo</a></li>
+                    <li><a href="guia.php?slug=fiestas-populares-de-moratalla">Fiestas Populares y Cristo del Rayo</a></li>
+                    <li><a href="alojamientos.php">Casas Rurales y Alojamientos</a></li>
+                    <li><a href="restaurantes.php">Dónde Comer: Bares y Restaurantes</a></li>
+                    <li><a href="contacto.php">Contacto y Archivo Histórico</a></li>
+                </ul>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Copyright final -->
         <div class="container" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-size: 0.85rem; opacity: 0.7; text-align: center;">

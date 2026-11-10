@@ -157,17 +157,79 @@ try {
 ?>
 <!-- FIN CELEBRACIONES -->
 
-<div class="container main-content" style="margin-top: 2rem;">
+<?php if (!empty($seo90Active)): ?>
+<!-- ═══ BLOQUE DE BIENVENIDA Y JERARQUÍA VISUAL (PLAN SEO 90 DÍAS) ═══ -->
+<section class="seo-home-intro">
+    <div class="container">
+        <div class="seo-home-intro-card">
+            <div class="seo-home-intro-text">
+                <span class="seo-kicker"><i class="fas fa-landmark"></i> Patrimonio Histórico Digital y Guía Oficial</span>
+                <h1>Moratalla: Historia Viva, Naturaleza, Tambores y Turismo Rural en Murcia</h1>
+                <p>Explora el mayor archivo histórico digital de Moratalla junto con nuestras guías completas de patrimonio, pinturas rupestres UNESCO, rutas de senderismo, gastronomía tradicional, alojamientos y actualidad municipal.</p>
+                <div class="seo-quick-nav-pills">
+                    <a href="guia.php?slug=guia-completa-moratalla" class="seo-qpill primary"><i class="fas fa-compass"></i> Qué Ver en Moratalla</a>
+                    <a href="alojamientos.php" class="seo-qpill"><i class="fas fa-bed"></i> Casas Rurales</a>
+                    <a href="restaurantes.php" class="seo-qpill"><i class="fas fa-utensils"></i> Dónde Comer</a>
+                    <a href="guia.php?slug=rutas-de-senderismo-en-moratalla" class="seo-qpill"><i class="fas fa-hiking"></i> Rutas Senderismo</a>
+                    <a href="guia.php?slug=pinturas-rupestres-de-moratalla" class="seo-qpill"><i class="fas fa-palette"></i> Pinturas Rupestres</a>
+                    <a href="guia.php?slug=semana-santa-de-moratalla" class="seo-qpill"><i class="fas fa-drum"></i> Semana Santa y Tambor</a>
+                </div>
+            </div>
+            <div class="seo-home-stats-grid">
+                <a href="guia.php?slug=castillo-de-moratalla" class="seo-stat-box">
+                    <i class="fas fa-chess-rook"></i>
+                    <strong>Siglo XV</strong>
+                    <span>Castillo y Torre del Homenaje</span>
+                </a>
+                <a href="guia.php?slug=pinturas-rupestres-de-moratalla" class="seo-stat-box">
+                    <i class="fas fa-award"></i>
+                    <strong>2x UNESCO</strong>
+                    <span>Arte Rupestre y Tamboradas</span>
+                </a>
+                <a href="guia.php?slug=rutas-de-senderismo-en-moratalla" class="seo-stat-box">
+                    <i class="fas fa-mountain"></i>
+                    <strong>2.015 m</strong>
+                    <span>Techo de Murcia (Revolcadores)</span>
+                </a>
+                <a href="guia.php" class="seo-stat-box">
+                    <i class="fas fa-book-open"></i>
+                    <strong>+15 Guías</strong>
+                    <span>Rutas, Historia y Gastronomía</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<div class="container main-content" style="margin-top: <?php echo !empty($seo90Active) ? '1rem' : '2rem'; ?>;">
     <div class="content-card">
-        <h2 style="font-size: 2.2rem; color: var(--primary); margin-bottom: 2rem; text-align: center;">Noticias y Eventos Destacados</h2>
+        <?php if (!empty($seo90Active)): ?>
+            <div class="seo-news-header-row">
+                <div>
+                    <span class="seo-kicker"><i class="fas fa-bolt"></i> Actualidad Local</span>
+                    <h2 style="font-size: 2rem; color: var(--primary); margin: 0.2rem 0 0;">Noticias y Eventos Destacados</h2>
+                </div>
+                <div class="seo-news-filters" role="tablist" aria-label="Filtrar noticias y eventos">
+                    <button type="button" class="seo-nf-btn active" data-filter="all" onclick="filterHomeNews('all', this)">Todos</button>
+                    <button type="button" class="seo-nf-btn" data-filter="news" onclick="filterHomeNews('news', this)"><i class="fas fa-newspaper"></i> Noticias</button>
+                    <button type="button" class="seo-nf-btn" data-filter="event" onclick="filterHomeNews('event', this)"><i class="fas fa-calendar-alt"></i> Eventos</button>
+                </div>
+            </div>
+        <?php else: ?>
+            <h2 style="font-size: 2.2rem; color: var(--primary); margin-bottom: 2rem; text-align: center;">Noticias y Eventos Destacados</h2>
+        <?php endif; ?>
         
-        <div class="news-grid">
+        <div class="news-grid" id="homeNewsGrid">
             <?php
             $stmt = $pdo->query("SELECT * FROM news_events WHERE is_active_home = 1 AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date >= NOW()) ORDER BY sort_order ASC, event_date DESC, id DESC");
             $hasNews = false;
             $isFirstNews = true;
+            $newsIndex = 0;
+            $initialVisibleLimit = 6;
             while ($news = $stmt->fetch()) {
                 $hasNews = true;
+                $newsIndex++;
                 $isEvent = !empty($news['event_date']);
                 $dateText = $isEvent ? date('d/m/Y', strtotime($news['event_date'])) : date('d/m/Y', strtotime($news['created_at']));
                 $excerpt = mb_strimwidth(strip_tags($news['content']), 0, 140, '...');
@@ -199,8 +261,10 @@ try {
                 
                 $featuredClass = $isFirstNews ? 'news-card-featured' : '';
                 $isFirstNews = false;
+                $extraCollapseClass = (!empty($seo90Active) && $newsIndex > $initialVisibleLimit) ? 'seo-news-collapsed' : '';
+                $itemType = $isEvent ? 'event' : 'news';
                 ?>
-                <div class="news-card <?php echo $featuredClass; ?>" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
+                <div class="news-card <?php echo $featuredClass . ' ' . $extraCollapseClass; ?>" data-news-type="<?php echo $itemType; ?>" data-news-idx="<?php echo $newsIndex; ?>" onclick="openNewsModal(<?php echo htmlspecialchars(json_encode([
                     'title' => $news['title'],
                     'date' => $dateText,
                     'isEvent' => $isEvent,
@@ -225,11 +289,11 @@ try {
                                 </div>
                             <?php elseif ($newsIsVideo): ?>
                                 <div style="position:relative; width:100%; height:100%; overflow:hidden;">
-                                    <video src="<?php echo htmlspecialchars($mainImagePath); ?>" class="news-card-img" style="object-fit: cover; width: 100%; height: 100%; background: #000;" autoplay loop muted playsinline></video>
+                                    <video src="<?php echo htmlspecialchars($mainImagePath); ?>" class="news-card-img" style="object-fit: cover; width: 100%; height: 100%; background: #000;" autoplay loop muted playsinline preload="metadata"></video>
                                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2rem; opacity: 0.8; text-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
                                 </div>
                             <?php else: ?>
-                                <img src="<?php echo htmlspecialchars($mainImagePath); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img">
+                                <img src="<?php echo htmlspecialchars($mainImagePath); ?>" alt="<?php echo htmlspecialchars($news['title']); ?>" class="news-card-img" loading="lazy" decoding="async">
                             <?php endif; ?>
                         <?php else: ?>
                             <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.2);">
@@ -257,11 +321,174 @@ try {
             ?>
         </div>
 
-        <div style="margin-top: 5rem; padding: 3rem; background: var(--bg-alt); border-radius: 20px; text-align: center;">
+        <?php if (!empty($seo90Active) && $newsIndex > $initialVisibleLimit): ?>
+            <div style="text-align: center; margin-top: 2.2rem;" id="seoToggleMoreNewsWrap">
+                <button type="button" id="seoToggleMoreNewsBtn" class="btn-nav btn-nav-back btn-nav-sm" onclick="toggleAllHomeNews()">
+                    <i class="fas fa-plus-circle"></i> Mostrar todas las noticias y eventos (<?php echo ($newsIndex - $initialVisibleLimit); ?> más)
+                </button>
+            </div>
+        <?php endif; ?>
+
+        <div style="margin-top: 4rem; padding: 2.5rem; background: var(--bg-alt); border-radius: 20px; text-align: center;">
             <p style="color: var(--text-light); font-style: italic; max-width: 800px; margin: 0 auto;">"Moratalla no es solo un lugar, es un conjunto de historias, gentes y paisajes que perduran en el tiempo."</p>
         </div>
     </div>
 </div>
+
+<?php if (!empty($seo90Active)):
+    $homeGuides   = getSeo90Pages();
+    $homeTop10    = getSeoTop10PriorityLinks();
+    $homeSeasons  = getSeoSeasonalPlans();
+?>
+<!-- ═══ SECCIÓN FASE 1: LAS 5 PÁGINAS PILAR DE MORATALLA ═══ -->
+<section class="seo-home-pillars-section">
+    <div class="container">
+        <div class="seo-section-heading">
+            <span class="seo-kicker"><i class="fas fa-compass"></i> Descubre Moratalla en Profundidad</span>
+            <h2>Guías Principales de Turismo, Historia y Patrimonio</h2>
+            <p>Cinco guías de referencia con fotografías locales, mapas interactivos, preguntas frecuentes y recursos verificados.</p>
+        </div>
+
+        <div class="seo-pillars-grid">
+            <?php foreach ($homeGuides as $gSlug => $gItem): ?>
+                <?php if ($gItem['type'] === 'pilar'): ?>
+                    <a href="guia.php?slug=<?php echo htmlspecialchars($gSlug); ?>" class="seo-pillar-card">
+                        <div class="seo-pillar-img-wrap">
+                            <img src="<?php echo htmlspecialchars($gItem['hero_image']); ?>" alt="<?php echo htmlspecialchars($gItem['short_title']); ?>" loading="lazy" decoding="async">
+                            <span class="seo-pillar-tag"><i class="<?php echo htmlspecialchars($gItem['icon']); ?>"></i> Guía Pilar</span>
+                        </div>
+                        <div class="seo-pillar-body">
+                            <h3><?php echo htmlspecialchars($gItem['short_title']); ?></h3>
+                            <p><?php echo htmlspecialchars($gItem['subtitle']); ?></p>
+                            <span class="seo-pillar-cta">Explorar Guía <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SECCIÓN FASE 2 Y 3: LAS 10 PÁGINAS PRIORITARIAS + ARTÍCULOS ESPECIALIZADOS ═══ -->
+<section class="seo-home-top10-section">
+    <div class="container">
+        <div class="content-card">
+            <div class="seo-section-heading">
+                <span class="seo-kicker"><i class="fas fa-star"></i> Los 10 Imprescindibles de Moratalla</span>
+                <h2>Rutas, Monumentos, Tradiciones y Sabores de Moratalla</h2>
+                <p>Accede directamente a los temas más buscados por viajeros, vecinos e investigadores sobre Moratalla (Murcia).</p>
+            </div>
+
+            <div class="seo-top10-grid">
+                <?php foreach ($homeTop10 as $tItem): ?>
+                    <a href="<?php echo htmlspecialchars($tItem['url']); ?>" class="seo-top10-card">
+                        <span class="seo-top10-num"><?php echo str_pad((string)$tItem['rank'], 2, '0', STR_PAD_LEFT); ?></span>
+                        <div class="seo-top10-info">
+                            <strong><i class="<?php echo htmlspecialchars($tItem['icon']); ?>"></i> <?php echo htmlspecialchars($tItem['title']); ?></strong>
+                            <span><?php echo htmlspecialchars($tItem['desc']); ?></span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <div style="text-align: center; margin-top: 2.2rem; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+                <a href="guia.php" class="btn-nav btn-nav-home btn-nav-sm">
+                    <i class="fas fa-book-reader"></i> Ver los 15 Artículos y Guías Completas
+                </a>
+                <a href="guia.php?slug=que-hacer-en-moratalla-fin-de-semana" class="btn-nav btn-nav-back btn-nav-sm">
+                    <i class="fas fa-calendar-check"></i> Itinerario de Fin de Semana en Moratalla
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SECCIÓN FASE 3: PLANIFICADOR ESTACIONAL ("MORATALLA LAS 4 ESTACIONES") ═══ -->
+<section class="seo-home-seasons-section">
+    <div class="container">
+        <div class="seo-section-heading">
+            <span class="seo-kicker"><i class="fas fa-calendar-alt"></i> Moratalla Todo el Año</span>
+            <h2>¿Cuándo Visitar Moratalla? Planes por Temporada</h2>
+            <p>Desde el estruendo del tambor en Semana Santa y los encierros de julio hasta el senderismo primaveral y los bosques de otoño.</p>
+        </div>
+
+        <div class="seo-seasons-grid">
+            <?php foreach ($homeSeasons as $sItem): ?>
+                <div class="seo-season-card">
+                    <div class="seo-season-top" style="background: <?php echo htmlspecialchars($sItem['bg']); ?>; color: <?php echo htmlspecialchars($sItem['color']); ?>;">
+                        <span class="seo-season-period"><i class="<?php echo htmlspecialchars($sItem['icon']); ?>"></i> <?php echo htmlspecialchars($sItem['period']); ?></span>
+                        <span class="seo-season-badge"><?php echo htmlspecialchars($sItem['badge']); ?></span>
+                    </div>
+                    <div class="seo-season-body">
+                        <h3><?php echo htmlspecialchars($sItem['title']); ?></h3>
+                        <p><?php echo htmlspecialchars($sItem['summary']); ?></p>
+                        <ul class="seo-season-list">
+                            <?php foreach ($sItem['highlights'] as $hl): ?>
+                                <li><i class="fas fa-check"></i> <?php echo htmlspecialchars($hl); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <a href="<?php echo htmlspecialchars($sItem['cta_url']); ?>" class="seo-season-cta">
+                            <?php echo htmlspecialchars($sItem['cta_text']); ?> <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<script>
+let homeNewsExpanded = false;
+let homeNewsCurrentFilter = 'all';
+
+function filterHomeNews(type, btnEl) {
+    homeNewsCurrentFilter = type;
+    document.querySelectorAll('.seo-nf-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+
+    const cards = document.querySelectorAll('#homeNewsGrid .news-card');
+    const moreWrap = document.getElementById('seoToggleMoreNewsWrap');
+
+    cards.forEach(card => {
+        const cardType = card.getAttribute('data-news-type');
+        const idx = parseInt(card.getAttribute('data-news-idx') || '1', 10);
+        if (type === 'all') {
+            if (!homeNewsExpanded && idx > <?php echo (int)$initialVisibleLimit; ?>) {
+                card.classList.add('seo-news-collapsed');
+                card.style.display = '';
+            } else {
+                card.classList.remove('seo-news-collapsed');
+                card.style.display = '';
+            }
+        } else {
+            card.classList.remove('seo-news-collapsed');
+            card.style.display = (cardType === type) ? '' : 'none';
+        }
+    });
+
+    if (moreWrap) {
+        moreWrap.style.display = (type === 'all') ? 'block' : 'none';
+    }
+}
+
+function toggleAllHomeNews() {
+    homeNewsExpanded = !homeNewsExpanded;
+    const cards = document.querySelectorAll('#homeNewsGrid .news-card');
+    const btn = document.getElementById('seoToggleMoreNewsBtn');
+    cards.forEach(card => {
+        const idx = parseInt(card.getAttribute('data-news-idx') || '1', 10);
+        if (idx > <?php echo (int)$initialVisibleLimit; ?>) {
+            card.classList.toggle('seo-news-collapsed', !homeNewsExpanded);
+        }
+    });
+    if (btn) {
+        btn.innerHTML = homeNewsExpanded
+            ? '<i class="fas fa-minus-circle"></i> Mostrar vista resumida (6 destacadas)'
+            : '<i class="fas fa-plus-circle"></i> Mostrar todas las noticias y eventos (<?php echo max(0, $newsIndex - $initialVisibleLimit); ?> más)';
+    }
+}
+</script>
+<?php endif; ?>
 
 <?php
 // ─── Sección Curiosidades (accesos externos visibles) ───────────────────────

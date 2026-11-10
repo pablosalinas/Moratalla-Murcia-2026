@@ -101,7 +101,7 @@ if ($isSinglePageCategory) {
     <div class="container">
         <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); padding: 1.5rem 3rem; border-radius: 15px; display: inline-block; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
             <p style="opacity: 0.9; margin-bottom: 0.3rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-folder-open" style="color: var(--accent);"></i> <?php echo htmlspecialchars($page['cat_name']); ?></p>
-            <h2 style="color: white; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;"><?php echo htmlspecialchars($page['title']); ?></h2>
+            <h1 style="color: white; font-size: 2.2rem; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px; margin: 0;"><?php echo htmlspecialchars($page['title']); ?></h1>
         </div>
     </div>
 </section>
@@ -148,7 +148,7 @@ if ($isSinglePageCategory) {
                                     <video src="<?php echo $fullPath; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block; background: #000;" preload="metadata"></video>
                                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 2.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: none;"><i class="fas fa-play-circle"></i></div>
                                 <?php else: ?>
-                                    <img src="<?php echo $displaySrc; ?>" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
+                                    <img src="<?php echo $displaySrc; ?>" alt="<?php echo htmlspecialchars(!empty($img['caption']) ? $img['caption'] : $page['title']); ?>" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: contain; padding: 10px; display: block;">
                                 <?php endif; ?>
                                 <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1rem; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; text-align: center; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s ease;" class="hover-view">
                                     <?php if (!empty($img['caption'])): ?>
@@ -245,6 +245,31 @@ if ($isSinglePageCategory) {
         <article class="html-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text);">
             <?php echo $page['content']; ?>
         </article>
+
+        <?php if (!empty($seo90Active)): ?>
+        <div class="seo-internal-linking-box" style="margin-top: 3.5rem;">
+            <div class="seo-il-badge"><i class="fas fa-compass"></i> Explora las Guías Principales de Moratalla</div>
+            <h3>Descubre más sobre el Patrimonio, Historia y Turismo de Moratalla</h3>
+            <div class="seo-il-pillars-grid">
+                <a href="guia.php?slug=guia-completa-moratalla" class="seo-il-card">
+                    <i class="fas fa-compass"></i>
+                    <div><strong>Guía de Turismo</strong><span>Qué ver en Moratalla</span></div>
+                </a>
+                <a href="guia.php?slug=historia-de-moratalla" class="seo-il-card">
+                    <i class="fas fa-landmark"></i>
+                    <div><strong>Historia de Moratalla</strong><span>Memoria y orígenes</span></div>
+                </a>
+                <a href="guia.php?slug=monumentos-y-patrimonio-moratalla" class="seo-il-card">
+                    <i class="fas fa-chess-rook"></i>
+                    <div><strong>Patrimonio y Castillo</strong><span>Monumentos históricos</span></div>
+                </a>
+                <a href="guia.php?slug=fiestas-populares-de-moratalla" class="seo-il-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div><strong>Fiestas y Tradiciones</strong><span>Semana Santa y Cristo del Rayo</span></div>
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
         
         <div class="nav-buttons-container" style="justify-content: space-between; align-items: center; border-top: 1px solid var(--gray-100); padding-top: 3rem;">
             <?php if ($backLink !== "index.php"): ?>

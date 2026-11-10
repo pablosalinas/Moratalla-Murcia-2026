@@ -3,9 +3,17 @@
 require_once 'inc/auth.php';
 checkAuth();
 require_once '../config.php';
+require_once '../inc/seo_90dias_data.php';
 require_once 'inc/layout.php';
 
 $pdo = getDB();
+
+if (isset($_GET['toggle_seo_90'])) {
+    setSeo90ActiveState($_GET['toggle_seo_90'] === '1');
+    header("Location: index.php?seo_msg=1");
+    exit;
+}
+$seoActiveAdmin = isSeo90Active();
 
 // Basic stats
 $catCount = $pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
@@ -42,7 +50,7 @@ adminHeader("Dashboard");
     </div>
 </div>
 
-<div class="card" style="margin-top: 3rem;">
+<div class="card" style="margin-top: 2rem;">
     <h3>Últimas Páginas Importadas</h3>
     <table>
         <thead>

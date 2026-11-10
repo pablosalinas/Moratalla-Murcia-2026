@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /scratch/
+Disallow: /migrations/
 
 Sitemap: https://www.moratalla-murcia.com/moratalla/sitemap.xml

@@ -189,12 +189,42 @@ try {
 // --- FIN CONTROL ESTADÍSTICAS ---
 
 // Variables SEO y Metadatos Dinámicos
-$seoKeywords = "moratalla, mOratalla, morAtalla,Moratalla, Murcia, Turismo Moratalla, Trieta Moratalla, Espana Moratalla,cultura moratalla, casas rurales moratalla, rural, alojamientos moratalla,alharabe, benamor, casa cristo moratalla, encantada, san jorge, buitre, sabinar moratalla, otos moratalla, ca ada de la cruz, benizar, mazuza, calar de la santa, campo san juan, campo bejar, rogativa, zaen, murtas, nogueras, bajil,  rupestres, rupestre,pinturas, pintura,mediterraneo,banda, rondalla,Pablo Salinas,casas rurales, naturaleza, monta a, campo, monte, pueblo, castillo, iglesia, calles, fiestas, musica, Maria del Carmen Rodriguez Rodriguez, Pablo Salinas Rodriguez, Francisco Salinas Rodriguez,futbol, automovilismo, tamborada,ciclismo, rocasas, albury, pepe el pintor, villa juana, el olivar, villa zorrilla";
-$defaultTitle = "moratalla-murcia.com - Patrimonio Histórico Digital";
-$defaultDesc = "Moratalla (Murcia). Archivo histórico digital, turismo, asociaciones, Semana Santa, tambores y cultura local. Proyecto de conservación de memoria histórica.";
+require_once __DIR__ . '/seo_90dias_data.php';
+$seo90Active = isSeo90Active();
 
-$finalTitle = isset($pageTitle) ? $pageTitle . " - moratalla-murcia.com" : $defaultTitle;
-$finalDesc = isset($pageDescription) && !empty($pageDescription) ? $pageDescription : $defaultDesc;
+$seoKeywords = "Moratalla, Turismo en Moratalla, Qué ver en Moratalla, Moratalla Murcia, Casas rurales Moratalla, Castillo de Moratalla, Iglesia de Santa María de la Asunción, Pinturas rupestres de Moratalla, Semana Santa de Moratalla, Tamboradas de Moratalla, qué hacer en Moratalla un fin de semana, mejores rutas senderismo Moratalla, dónde comer en Moratalla, pueblos bonitos cerca de Moratalla, historia de Moratalla Murcia, río Alhárabe, Bolvonegro, Casa de Cristo, La Rogativa, Benizar, Revolcadores";
+if (!empty($seoCustomKeywords)) {
+    $seoKeywords = $seoCustomKeywords . ", " . $seoKeywords;
+}
+
+$defaultTitle = $seo90Active
+    ? "Moratalla | Guía Turística, Patrimonio Histórico y Cultura en Murcia"
+    : "moratalla-murcia.com - Patrimonio Histórico Digital";
+$defaultDesc = $seo90Active
+    ? "Descubre Moratalla: patrimonio histórico, pinturas rupestres UNESCO, castillo medieval, turismo rural, fiestas populares y rutas naturales en el corazón de Murcia."
+    : "Moratalla (Murcia). Archivo histórico digital, turismo, asociaciones, Semana Santa, tambores y cultura local. Proyecto de conservación de memoria histórica.";
+
+if ($seo90Active) {
+    $currentScript = basename($_SERVER['PHP_SELF'] ?? 'index.php');
+    $seoContext = [
+        'category_name'    => isset($category['name']) ? $category['name'] : '',
+        'hint_text'        => isset($category['hint_text']) ? $category['hint_text'] : '',
+        'page_title'       => isset($page['title']) ? $page['title'] : (isset($pageTitle) ? $pageTitle : ''),
+        'cat_name'         => isset($page['cat_name']) ? $page['cat_name'] : '',
+        'page_description' => isset($pageDescription) ? $pageDescription : ''
+    ];
+    if ($currentScript === 'guia.php' || $currentScript === 'seo-panel.php') {
+        $finalTitle = isset($pageTitle) ? $pageTitle : $defaultTitle;
+        $finalDesc  = isset($pageDescription) && !empty($pageDescription) ? $pageDescription : $defaultDesc;
+    } else {
+        $optMeta    = getSeoOptimizedMeta($currentScript, $seoContext);
+        $finalTitle = $optMeta['title'];
+        $finalDesc  = $optMeta['description'];
+    }
+} else {
+    $finalTitle = isset($pageTitle) ? $pageTitle . " - moratalla-murcia.com" : $defaultTitle;
+    $finalDesc = isset($pageDescription) && !empty($pageDescription) ? $pageDescription : $defaultDesc;
+}
 
 // Obtener ajustes
 $settingsStmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
@@ -359,6 +389,28 @@ function renderHorizontalMenu() {
 
             $html = ($parentId === 0) ? '<ul class="nav-menu container" id="main-nav">' : '<ul class="dropdown">';
 
+            if ($parentId === 0 && function_exists('isSeo90Active') && isSeo90Active()) {
+                $html .= "<li class='seo-nav-highlight'>";
+                $html .= "<a href='guia.php' data-hint='Guías completas: Qué ver, Turismo Rural, Historia, Patrimonio, Rutas y Gastronomía'><i class='fas fa-compass' style='color:var(--accent); margin-right:6px;'></i> Guías y Turismo <i class='fas fa-angle-down nav-arrow'></i></a>";
+                $html .= "<ul class='dropdown'>";
+                $html .= "<li><a href='guia.php?slug=guia-completa-moratalla'><i class='fas fa-compass' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Guía Completa: Qué Ver</strong></a></li>";
+                $html .= "<li><a href='guia.php?slug=turismo-rural-moratalla'><i class='fas fa-tree' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Turismo Rural en Moratalla</strong></a></li>";
+                $html .= "<li><a href='guia.php?slug=historia-de-moratalla'><i class='fas fa-landmark' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Historia de Moratalla</strong></a></li>";
+                $html .= "<li><a href='guia.php?slug=monumentos-y-patrimonio-moratalla'><i class='fas fa-chess-rook' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Monumentos y Patrimonio</strong></a></li>";
+                $html .= "<li><a href='guia.php?slug=gastronomia-de-moratalla'><i class='fas fa-utensils' style='margin-right:8px; width:16px; color:var(--primary);'></i><strong>Gastronomía Típica</strong></a></li>";
+                $html .= "<li style='height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; padding: 0;'></li>";
+                $html .= "<li><a href='guia.php?slug=castillo-de-moratalla'><i class='fas fa-chess-rook' style='margin-right:8px; width:16px;'></i>Castillo de Moratalla</a></li>";
+                $html .= "<li><a href='guia.php?slug=pinturas-rupestres-de-moratalla'><i class='fas fa-palette' style='margin-right:8px; width:16px;'></i>Pinturas Rupestres UNESCO</a></li>";
+                $html .= "<li><a href='guia.php?slug=semana-santa-de-moratalla'><i class='fas fa-church' style='margin-right:8px; width:16px;'></i>Semana Santa de Moratalla</a></li>";
+                $html .= "<li><a href='guia.php?slug=tamboradas-de-moratalla'><i class='fas fa-drum' style='margin-right:8px; width:16px;'></i>Tamboradas de Moratalla</a></li>";
+                $html .= "<li><a href='guia.php?slug=rutas-de-senderismo-en-moratalla'><i class='fas fa-hiking' style='margin-right:8px; width:16px;'></i>Rutas de Senderismo</a></li>";
+                $html .= "<li><a href='guia.php?slug=fiestas-populares-de-moratalla'><i class='fas fa-glass-cheers' style='margin-right:8px; width:16px;'></i>Calendario de Fiestas</a></li>";
+                $html .= "<li><a href='alojamientos.php'><i class='fas fa-bed' style='margin-right:8px; width:16px; color:#d4af37;'></i>Dónde Dormir (Casas Rurales)</a></li>";
+                $html .= "<li><a href='restaurantes.php'><i class='fas fa-utensils' style='margin-right:8px; width:16px; color:#d4af37;'></i>Dónde Comer (Restaurantes)</a></li>";
+                $html .= "</ul>";
+                $html .= "</li>";
+            }
+
             foreach ($cats as $cat) {
                 $catId = (int)$cat['id'];
                 $childSubmenu = $buildTree($catId, $depth + 1);
@@ -447,6 +499,8 @@ function renderHorizontalMenu() {
         $canonicalQuery = '';
         if (isset($_GET['id'])) {
             $canonicalQuery = '?id=' . (int)$_GET['id'];
+        } elseif (isset($_GET['slug'])) {
+            $canonicalQuery = '?slug=' . urlencode(trim($_GET['slug']));
         }
         $currentUrl = "https://www.moratalla-murcia.com" . $canonicalPath . $canonicalQuery; 
     ?>
@@ -648,13 +702,16 @@ function renderHorizontalMenu() {
                 $bannerStmt = $pdo->query("SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order ASC, id DESC");
                 $banners = $bannerStmt->fetchAll();
                 if (count($banners) > 0) {
-                    foreach ($banners as $banner) {
+                    foreach ($banners as $bIdx => $banner) {
                         $ext = strtolower(pathinfo($banner['image_path'], PATHINFO_EXTENSION));
                         $isVideo = in_array($ext, ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', '3gp']);
+                        $imgPerfAttrs = ($bIdx === 0)
+                            ? 'fetchpriority="high" decoding="async"'
+                            : 'loading="lazy" decoding="async"';
 
                         if ($isVideo) {
                             echo '<div class="swiper-slide" style="position: relative; width: 100%; height: 100%;">';
-                            echo '<video class="banner-video-el" src="' . htmlspecialchars($banner['image_path']) . '" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;" muted playsinline onclick="openBannerModal(this.src, true)"></video>';
+                            echo '<video class="banner-video-el" src="' . htmlspecialchars($banner['image_path']) . '" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block;" muted playsinline preload="metadata" onclick="openBannerModal(this.src, true)"></video>';
                             echo '<div class="video-mute-btn" style="position: absolute; bottom: 15px; right: 15px; z-index: 10; background: rgba(0,0,0,0.6); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;" onclick="event.stopPropagation(); toggleVideoMute(this, this.previousElementSibling)">';
                             echo '<i class="fas fa-volume-mute"></i>';
                             echo '</div>';
@@ -679,7 +736,7 @@ function renderHorizontalMenu() {
                             echo '<picture>';
                             echo '<source media="(max-width: 768px)" srcset="' . htmlspecialchars($mobilePath) . '">';
                             echo '<source media="(min-width: 769px)" srcset="' . htmlspecialchars($desktopPath) . '">';
-                            echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title']) . '" style="cursor: pointer;" onclick="openBannerModal(this.currentSrc || this.src)">';
+                            echo '<img src="' . htmlspecialchars($desktopPath) . '" alt="' . htmlspecialchars($banner['title'] ?: 'Moratalla Patrimonio y Naturaleza') . '" ' . $imgPerfAttrs . ' style="cursor: pointer;" onclick="openBannerModal(this.currentSrc || this.src)">';
                             echo '</picture>';
                             if ($banner['title']) {
                                 echo '<div class="slide-caption">' . htmlspecialchars($banner['title']) . '</div>';
@@ -689,7 +746,7 @@ function renderHorizontalMenu() {
                     }
                 } else {
                     // Fallback if no banners are active
-                    echo '<div class="swiper-slide"><img src="uploads/theme/moratalla.jpg" alt="Moratalla"></div>';
+                    echo '<div class="swiper-slide"><img src="uploads/theme/moratalla.jpg" alt="Moratalla" fetchpriority="high" decoding="async"></div>';
                 }
                 ?>
             </div>

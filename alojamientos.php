@@ -167,7 +167,7 @@ require_once 'inc/header.php';
             <div style="position: relative; height: 180px; background: linear-gradient(135deg, #1b4332, #081c15); overflow: hidden; cursor: <?php echo ($a['total_images'] > 0 ? 'pointer' : 'default'); ?>;"
                  <?php if ($a['total_images'] > 0): ?>onclick="abrirGaleria(<?php echo $a['id']; ?>)" title="Ver galería de fotos"<?php endif; ?>>
                 <?php if ($cover): ?>
-                    <img src="<?php echo htmlspecialchars($cover); ?>" alt="<?php echo htmlspecialchars($a['nombre']); ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" class="rest-cover-img">
+                    <img src="<?php echo htmlspecialchars($cover); ?>" alt="<?php echo htmlspecialchars($a['nombre']); ?>" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease;" class="rest-cover-img">
                 <?php else: ?>
                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-hotel" style="font-size: 3.5rem; color: rgba(255,255,255,0.2);"></i>
