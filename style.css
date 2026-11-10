@@ -2141,16 +2141,18 @@ img {
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.6rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.65rem;
     border-bottom: 1px solid rgba(45, 106, 79, 0.14);
 }
 
-.seo-top-banner-title {
+.seo-top-banner-title,
+.seo-top-banner-title-group {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .seo-top-badge {
@@ -2161,12 +2163,14 @@ img {
     color: #fde68a;
     padding: 0.3rem 0.75rem;
     border-radius: 50px;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
-.seo-top-banner-title h2 {
+.seo-top-banner-title h2,
+.seo-top-banner-title-group h2 {
     font-size: 1.05rem;
     font-weight: 800;
     color: var(--primary-dark);
@@ -2181,13 +2185,14 @@ img {
     background: var(--primary);
     color: #ffffff;
     text-decoration: none;
-    font-size: 0.86rem;
+    font-size: 0.85rem;
     font-weight: 700;
     padding: 0.45rem 1rem;
     border-radius: 50px;
     transition: all 0.2s ease;
     white-space: nowrap;
     box-shadow: 0 3px 10px rgba(45, 106, 79, 0.22);
+    flex-shrink: 0;
 }
 
 .seo-top-all-btn:hover {
@@ -2196,33 +2201,42 @@ img {
     color: #fde68a;
 }
 
+/* Rejilla ordenada de 5 columnas x 2 filas en escritorio (sin solapamientos ni botones huérfanos) */
 .seo-top-nav-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
-    gap: 0.55rem;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.6rem;
 }
 
 .seo-top-pill {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    font-size: 0.88rem;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--primary-dark);
     text-decoration: none;
-    padding: 0.55rem 0.85rem;
+    padding: 0.58rem 0.75rem;
     border-radius: 10px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     transition: all 0.2s ease;
-    white-space: nowrap;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.seo-top-pill span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .seo-top-pill i {
     color: var(--primary);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+    flex-shrink: 0;
 }
 
 .seo-top-pill.highlight {
@@ -2328,14 +2342,15 @@ img {
 .seo-balanced-pillar-card {
     display: flex;
     align-items: center;
-    gap: 0.95rem;
-    padding: 0.85rem 1rem;
+    gap: 0.9rem;
+    padding: 0.8rem 0.95rem;
     border-radius: 14px;
     background: var(--bg-alt);
     border: 1px solid var(--gray-200);
     text-decoration: none;
     color: inherit;
     transition: all 0.22s ease;
+    overflow: hidden;
 }
 
 .seo-balanced-pillar-card:hover {
@@ -2345,16 +2360,32 @@ img {
     box-shadow: 0 8px 20px rgba(27, 67, 50, 0.1);
 }
 
+.seo-bp-img,
 .seo-balanced-pillar-thumb {
-    width: 64px;
-    height: 64px;
-    border-radius: 11px;
-    object-fit: cover;
+    width: 80px;
+    height: 66px;
+    border-radius: 10px;
+    overflow: hidden;
     flex-shrink: 0;
-    border: 1.5px solid rgba(27, 67, 50, 0.18);
+    border: 1.5px solid rgba(27, 67, 50, 0.2);
     background: #081c15;
+    position: relative;
 }
 
+.seo-bp-img img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 80px !important;
+    max-height: 66px !important;
+    object-fit: cover;
+    display: block;
+}
+
+.seo-bp-tag {
+    display: none;
+}
+
+.seo-bp-body,
 .seo-balanced-pillar-text {
     min-width: 0;
     flex: 1;
@@ -2363,34 +2394,49 @@ img {
     gap: 0.18rem;
 }
 
+.seo-bp-body h4,
 .seo-balanced-pillar-text strong {
-    font-size: 0.96rem;
+    font-size: 0.94rem;
     font-weight: 800;
     color: var(--primary-dark);
     line-height: 1.25;
+    margin: 0;
 }
 
+.seo-bp-body p,
 .seo-balanced-pillar-text span {
-    font-size: 0.82rem;
+    font-size: 0.79rem;
     color: var(--text-light);
     line-height: 1.35;
+    margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.seo-balanced-arrow {
+.seo-bp-cta {
+    font-size: 0.76rem;
+    font-weight: 700;
     color: var(--primary);
-    font-size: 0.85rem;
-    opacity: 0.65;
-    flex-shrink: 0;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 0.1rem;
 }
 
-.seo-balanced-pillar-card:hover .seo-balanced-arrow {
-    transform: translateX(3px);
-    opacity: 1;
+.seo-chips-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 0.2rem;
+}
+
+.seo-chips-title i {
+    color: var(--accent);
 }
 
 .seo-mini-chips-row {
@@ -2637,6 +2683,12 @@ img {
     gap: 5px;
 }
 
+@media (max-width: 1080px) {
+    .seo-top-nav-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .seo-top-banner-card {
         padding: 0.9rem 1rem;
@@ -2647,12 +2699,12 @@ img {
         gap: 0.6rem;
     }
     .seo-top-nav-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.45rem;
     }
     .seo-top-pill {
-        font-size: 0.82rem;
-        padding: 0.5rem 0.65rem;
+        font-size: 0.81rem;
+        padding: 0.5rem 0.6rem;
     }
     .seo-guide-hero-flex {
         flex-direction: column;
@@ -2662,5 +2714,11 @@ img {
         width: 100%;
         max-width: 240px;
         height: 130px;
+    }
+}
+
+@media (max-width: 440px) {
+    .seo-top-nav-grid {
+        grid-template-columns: 1fr;
     }
 }

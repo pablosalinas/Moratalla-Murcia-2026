@@ -181,11 +181,11 @@ if (!empty($seo90Active) && ($seoCfgHome['seo_show_home_top'] ?? '1') === '1'):
                 </a>
                 <a href="guia.php?slug=monumentos-y-patrimonio-moratalla" class="seo-top-pill">
                     <i class="fas fa-chess-rook"></i>
-                    <span>Monumentos y Patrimonio</span>
+                    <span>Monumentos y Castillo</span>
                 </a>
                 <a href="guia.php?slug=historia-de-moratalla" class="seo-top-pill">
                     <i class="fas fa-landmark"></i>
-                    <span>Historia</span>
+                    <span>Historia y Cultura</span>
                 </a>
                 <a href="guia.php?slug=turismo-rural-moratalla" class="seo-top-pill">
                     <i class="fas fa-tree"></i>
@@ -193,15 +193,19 @@ if (!empty($seo90Active) && ($seoCfgHome['seo_show_home_top'] ?? '1') === '1'):
                 </a>
                 <a href="guia.php?slug=rutas-de-senderismo-en-moratalla" class="seo-top-pill">
                     <i class="fas fa-hiking"></i>
-                    <span>Rutas Senderismo</span>
+                    <span>Rutas y Senderismo</span>
                 </a>
                 <a href="guia.php?slug=pinturas-rupestres-de-moratalla" class="seo-top-pill">
                     <i class="fas fa-palette"></i>
-                    <span>Arte Rupestre</span>
+                    <span>Arte Rupestre UNESCO</span>
                 </a>
                 <a href="guia.php?slug=semana-santa-de-moratalla" class="seo-top-pill">
                     <i class="fas fa-drum"></i>
                     <span>Semana Santa y Tambor</span>
+                </a>
+                <a href="guia.php?slug=fiestas-populares-de-moratalla" class="seo-top-pill">
+                    <i class="fas fa-glass-cheers"></i>
+                    <span>Fiestas Populares</span>
                 </a>
                 <a href="alojamientos.php" class="seo-top-pill gold">
                     <i class="fas fa-bed"></i>
@@ -357,8 +361,7 @@ if (!empty($seo90Active) && ($seoCfgHome['seo_show_home_top'] ?? '1') === '1'):
                     <?php if ($gItem['type'] === 'pilar'): ?>
                         <a href="guia.php?slug=<?php echo htmlspecialchars($gSlug); ?>" class="seo-balanced-pillar-card">
                             <div class="seo-bp-img">
-                                <img src="<?php echo htmlspecialchars($gItem['logo_image'] ?? $gItem['hero_image']); ?>" alt="<?php echo htmlspecialchars($gItem['short_title']); ?>" loading="lazy" decoding="async">
-                                <span class="seo-bp-tag"><i class="<?php echo htmlspecialchars($gItem['icon']); ?>"></i> <?php echo htmlspecialchars($gItem['phase']); ?></span>
+                                <img src="<?php echo htmlspecialchars($gItem['logo_image'] ?? $gItem['hero_image']); ?>" alt="<?php echo htmlspecialchars($gItem['short_title']); ?>" width="80" height="66" loading="lazy" decoding="async">
                             </div>
                             <div class="seo-bp-body">
                                 <h4><?php echo htmlspecialchars($gItem['short_title']); ?></h4>
