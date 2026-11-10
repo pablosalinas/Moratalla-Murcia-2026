@@ -1033,6 +1033,17 @@
     });
     </script>
 
+    <?php
+    $curScriptName = basename($_SERVER['PHP_SELF'] ?? '');
+    if ($curScriptName !== 'index.php' && (!function_exists('isSeo90Active') || isSeo90Active())):
+    ?>
+    <!-- BOTÓN FLOTANTE SIEMPRE VISIBLE PARA VOLVER A LA PÁGINA PRINCIPAL -->
+    <a href="index.php" id="floatingHomeBtn" class="seo-floating-home-btn" title="Volver a la Página Principal">
+        <i class="fas fa-home"></i>
+        <span>Página Principal</span>
+    </a>
+    <?php endif; ?>
+
     <!-- BOTÓN FLOTANTE DE ACCESO RÁPIDO AL BUSCADOR GLOBAL -->
     <button type="button" id="floatingGlobalSearchBtn" class="gs-floating-trigger" onclick="openGlobalSearchModal()" title="Abrir Buscador Global (Ctrl+K)">
         <i class="fas fa-search"></i>
@@ -1144,6 +1155,52 @@
     </div>
 
     <style>
+        /* Botón Flotante Siempre Visible para Volver a la Página Principal */
+        .seo-floating-home-btn {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            z-index: 99990;
+            background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+            color: #ffffff !important;
+            text-decoration: none !important;
+            border: 2px solid #d4af37;
+            border-radius: 50px;
+            padding: 0.72rem 1.25rem;
+            font-size: 0.92rem;
+            font-weight: 800;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 24px rgba(27, 67, 50, 0.38);
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        .seo-floating-home-btn i {
+            color: #fde68a;
+            font-size: 1rem;
+        }
+        .seo-floating-home-btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 12px 28px rgba(27, 67, 50, 0.52);
+            color: #ffffff !important;
+        }
+        @media (max-width: 600px) {
+            .seo-floating-home-btn {
+                bottom: 18px;
+                left: 14px;
+                padding: 0.62rem 1rem;
+                font-size: 0.84rem;
+            }
+            .gs-floating-trigger {
+                bottom: 18px !important;
+                right: 14px !important;
+                padding: 0.62rem 1rem !important;
+                font-size: 0.84rem !important;
+            }
+        }
+
         /* Botón Flotante del Buscador Global */
         .gs-floating-trigger {
             position: fixed;

@@ -101,6 +101,14 @@ require_once 'inc/header.php';
     </section>
 
     <div class="container main-content" style="padding-top: 2.2rem;">
+        <div class="nav-buttons-container" style="justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <a href="guia.php" class="btn-nav btn-nav-back btn-nav-sm">
+                <i class="fas fa-arrow-left"></i> Todas las Guías
+            </a>
+            <a href="index.php" class="btn-nav btn-nav-home btn-nav-sm">
+                <i class="fas fa-home"></i> Página Principal
+            </a>
+        </div>
         <div class="seo-guide-layout">
             <!-- COLUMNA PRINCIPAL -->
             <main class="seo-guide-main">
@@ -311,6 +319,11 @@ require_once 'inc/header.php';
     </section>
 
     <div class="container main-content">
+        <div class="nav-buttons-container" style="justify-content: flex-start; align-items: center; margin-bottom: 1.5rem;">
+            <a href="index.php" class="btn-nav btn-nav-home btn-nav-sm">
+                <i class="fas fa-home"></i> Volver a la Página Principal
+            </a>
+        </div>
         <div class="content-card">
             <div class="seo-section-heading">
                 <span class="seo-kicker"><i class="fas fa-crown"></i> Fase 1 · Guías Fundamentales</span>
@@ -360,6 +373,12 @@ require_once 'inc/header.php';
                         </a>
                     <?php endif; ?>
                 <?php endforeach; ?>
+            </div>
+
+            <div class="nav-buttons-container" style="justify-content: center; align-items: center; border-top: 1px solid var(--gray-200); padding-top: 2.5rem; margin-top: 3rem;">
+                <a href="index.php" class="btn-nav btn-nav-home btn-nav-sm">
+                    <i class="fas fa-home"></i> Volver a la Página Principal
+                </a>
             </div>
         </div>
     </div>

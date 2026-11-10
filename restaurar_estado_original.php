@@ -94,5 +94,8 @@ if ($doRestore) {
             <a href="index.php" class="btn btn-secondary">Cancelar y Volver</a>
         </form>
     </div>
+    <a href="index.php" style="position:fixed;bottom:24px;left:24px;z-index:99990;background:linear-gradient(135deg,#1b4332 0%,#2d6a4f 100%);color:#fff;text-decoration:none;border:2px solid #d4af37;border-radius:50px;padding:0.72rem 1.25rem;font-size:0.92rem;font-weight:800;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(27,67,50,0.38);">
+        🏠 <span>Página Principal</span>
+    </a>
 </body>
 </html>
