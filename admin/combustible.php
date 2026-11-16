@@ -211,13 +211,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($nombre !== '') {
             if ($id > 0) {
-                if ($isSuper) {
-                    $stmt = $pdo->prepare("UPDATE veh_estaciones SET nombre=?, marca=?, localidad=?, direccion=?, notas=? WHERE id=? AND activo=1");
-                    $stmt->execute(array($nombre, $marca, $localidad, $direccion, $notas, $id));
-                } else {
-                    $stmt = $pdo->prepare("UPDATE veh_estaciones SET nombre=?, marca=?, localidad=?, direccion=?, notas=? WHERE id=? AND usuario_id=? AND activo=1");
-                    $stmt->execute(array($nombre, $marca, $localidad, $direccion, $notas, $id, $userId));
-                }
+                $stmt = $pdo->prepare("UPDATE veh_estaciones SET nombre=?, marca=?, localidad=?, direccion=?, notas=? WHERE id=? AND activo=1");
+                $stmt->execute(array($nombre, $marca, $localidad, $direccion, $notas, $id));
                 $msg = "Estación de servicio actualizada correctamente.";
             } else {
                 $stmt = $pdo->prepare("INSERT INTO veh_estaciones (usuario_id, nombre, marca, localidad, direccion, notas, activo) VALUES (?, ?, ?, ?, ?, ?, 1)");
@@ -231,11 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 7. Baja lógica de Estación de Servicio (activo = 0)
     if ($formAction === 'deactivate_estacion') {
         $id = (int)$_POST['id'];
-        if ($isSuper) {
-            $pdo->prepare("UPDATE veh_estaciones SET activo = 0 WHERE id = ?")->execute(array($id));
-        } else {
-            $pdo->prepare("UPDATE veh_estaciones SET activo = 0 WHERE id = ? AND usuario_id = ?")->execute(array($id, $userId));
-        }
+        $pdo->prepare("UPDATE veh_estaciones SET activo = 0 WHERE id = ?")->execute(array($id));
         $msg = "Estación de servicio dada de baja lógicamente (activo = 0).";
         $tab = 'estaciones';
     }
@@ -668,13 +659,10 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         <div id="admin-ocr-msg" style="display:none; padding:0.55rem 0.8rem; border-radius:8px; background:#e0f2fe; color:#0369a1; font-size:0.82rem; margin-bottom:0.85rem;"></div>
 
 <?php
+$estacionesList = $pdo->query("SELECT * FROM veh_estaciones WHERE activo = 1 ORDER BY nombre ASC")->fetchAll();
 if ($isSuper) {
-    $estacionesList = $pdo->query("SELECT * FROM veh_estaciones WHERE activo = 1 ORDER BY nombre ASC")->fetchAll();
     $lastKmStmt = $pdo->query("SELECT vehiculo_id, MAX(km_odometro) AS ultimo_km FROM veh_repostajes WHERE activo = 1 GROUP BY vehiculo_id");
 } else {
-    $stE = $pdo->prepare("SELECT * FROM veh_estaciones WHERE usuario_id = ? AND activo = 1 ORDER BY nombre ASC");
-    $stE->execute(array($userId));
-    $estacionesList = $stE->fetchAll();
     $lastKmStmt = $pdo->prepare("SELECT vehiculo_id, MAX(km_odometro) AS ultimo_km FROM veh_repostajes WHERE usuario_id = ? AND activo = 1 GROUP BY vehiculo_id");
     $lastKmStmt->execute(array($userId));
 }
@@ -1106,13 +1094,7 @@ while ($lk = $lastKmStmt->fetch()) {
 
 <?php elseif ($tab === 'estaciones'): ?>
     <?php
-    if ($isSuper) {
-        $estListTab = $pdo->query("SELECT * FROM veh_estaciones WHERE activo = 1 ORDER BY nombre ASC")->fetchAll();
-    } else {
-        $stEstTab = $pdo->prepare("SELECT * FROM veh_estaciones WHERE usuario_id = ? AND activo = 1 ORDER BY nombre ASC");
-        $stEstTab->execute(array($userId));
-        $estListTab = $stEstTab->fetchAll();
-    }
+    $estListTab = $pdo->query("SELECT * FROM veh_estaciones WHERE activo = 1 ORDER BY nombre ASC")->fetchAll();
     ?>
     <div class="card" style="margin-bottom: 1.5rem;">
         <h3 style="margin-bottom: 1rem;"><i class="fas fa-store" style="color:#f59e0b;"></i> Alta / Modificación de Estación de Servicio</h3>
