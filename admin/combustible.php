@@ -710,13 +710,15 @@ while ($lk = $lastKmStmt->fetch()) {
                     <input type="number" step="0.01" name="importe_total" id="rep_importe" required placeholder="Ej: 75.00" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div>
-                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Estación de Servicio</label>
-                    <input type="text" name="estacion_servicio" id="rep_estacion" list="adm-estaciones-datalist" placeholder="Elige o escribe" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
-                    <datalist id="adm-estaciones-datalist">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Estación de Servicio (opcional)</label>
+                    <select name="estacion_servicio" id="rep_estacion" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                        <option value="">-- Sin especificar (Opcional) --</option>
                         <?php foreach ($estacionesList as $est): ?>
                             <option value="<?php echo htmlspecialchars($est['nombre']); ?>">
+                                <?php echo htmlspecialchars($est['nombre'] . (!empty($est['localidad']) ? ' (' . $est['localidad'] . ')' : '')); ?>
+                            </option>
                         <?php endforeach; ?>
-                    </datalist>
+                    </select>
                 </div>
                 <div>
                     <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Notas / Mantenimiento</label>
@@ -1282,8 +1284,16 @@ function loadRepIntoForm(r) {
     document.getElementById('rep_litros').value = r.litros;
     document.getElementById('rep_precio').value = r.precio_litro;
     document.getElementById('rep_importe').value = r.importe_total;
-    if (document.getElementById('rep_estacion')) {
-        document.getElementById('rep_estacion').value = r.estacion_servicio || '';
+    const estSel = document.getElementById('rep_estacion');
+    if (estSel) {
+        const estVal = r.estacion_servicio || '';
+        if (estVal && !Array.from(estSel.options).some(o => o.value === estVal)) {
+            const tmpOpt = document.createElement('option');
+            tmpOpt.value = estVal;
+            tmpOpt.textContent = estVal;
+            estSel.appendChild(tmpOpt);
+        }
+        estSel.value = estVal;
     }
     document.getElementById('rep_notas').value = r.notas || '';
     document.getElementById('form-rep-heading').innerHTML = '<i class="fas fa-edit" style="color:#f59e0b;"></i> Editando / Reasignando Repostaje #' + r.id;
