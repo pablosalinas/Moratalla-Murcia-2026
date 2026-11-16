@@ -1648,6 +1648,24 @@ function admReparseSheet() {
     admRenderPreview();
 }
 
+function admParseImportNum(val) {
+    if (val === null || val === undefined || val === '') return 0;
+    if (typeof val === 'number') return isFinite(val) ? val : 0;
+    let s = String(val).replace(/[^0-9,.\-]/g, '');
+    if (!s) return 0;
+    if (s.includes(',') && s.includes('.')) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else {
+        s = s.replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+}
+
 function admGetMappedRows() {
     const hasHeader = document.getElementById('adm-imp-header').checked;
     const cF = parseInt(document.getElementById('adm-map-fecha').value, 10);
@@ -1667,11 +1685,17 @@ function admGetMappedRows() {
         if (!fVal) continue;
         const rawN = cN >= 0 ? String(r[cN] ?? '').trim() : '';
         const cleanN = (rawN && isNaN(Number(rawN)) && !rawN.includes('PRECIO') && !rawN.includes('MINIMO')) ? rawN : '';
+        const lNum = cL >= 0 ? admParseImportNum(r[cL]) : 0;
+        const pNum = cP >= 0 ? admParseImportNum(r[cP]) : 0;
+        let iNum = cI >= 0 ? admParseImportNum(r[cI]) : 0;
+        if (iNum <= 0 && lNum > 0 && pNum > 0) {
+            iNum = Math.round(lNum * pNum * 100) / 100;
+        }
         out.push({
             fecha: fVal,
-            litros: cL >= 0 ? r[cL] : '',
-            precio_litro: cP >= 0 ? r[cP] : '',
-            importe_total: cI >= 0 ? r[cI] : '',
+            litros: lNum > 0 ? lNum.toFixed(3) : '',
+            precio_litro: pNum > 0 ? pNum.toFixed(4) : '',
+            importe_total: iNum > 0 ? iNum.toFixed(2) : '0.00',
             km_odometro: cK >= 0 ? r[cK] : '',
             notas: cleanN,
             estacion_servicio: cE >= 0 ? String(r[cE] ?? '').trim() : ''
@@ -1688,7 +1712,11 @@ function admRenderPreview() {
     tbody.innerHTML = '';
     rows.slice(0, 6).forEach(m => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${m.fecha}</td><td>${m.litros}</td><td>${m.precio_litro}</td><td>${m.importe_total}</td><td>${m.km_odometro}</td><td>${m.notas || ''}</td>`;
+        const lVal = admParseImportNum(m.litros);
+        const pVal = admParseImportNum(m.precio_litro);
+        const iVal = admParseImportNum(m.importe_total);
+        const fmt = (n, d) => n.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+        tr.innerHTML = `<td>${m.fecha}</td><td>${lVal > 0 ? fmt(lVal, 2) : '-'}</td><td>${pVal > 0 ? fmt(pVal, 3) : '-'}</td><td><strong>${fmt(iVal, 2)} €</strong></td><td>${m.km_odometro}</td><td>${m.notas || ''}</td>`;
         tbody.appendChild(tr);
     });
 }
