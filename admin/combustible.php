@@ -326,6 +326,7 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
     .fuel-header-banner {
@@ -534,6 +535,9 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         </a>
         <a href="?tab=vehiculos" class="fuel-tab <?php echo $tab === 'vehiculos' ? 'active' : ''; ?>">
             <i class="fas fa-car"></i> Vehículos (<?php echo count($vehiculos); ?>)
+        </a>
+        <a href="?tab=importar&vehiculo_id=<?php echo $selectedVehiculoId; ?>" class="fuel-tab <?php echo $tab === 'importar' ? 'active' : ''; ?>">
+            <i class="fas fa-file-excel"></i> Importar Excel / CSV
         </a>
         <?php if ($isSuper): ?>
             <a href="?tab=usuarios" class="fuel-tab <?php echo $tab === 'usuarios' ? 'active' : ''; ?>">
@@ -912,6 +916,105 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
             </tbody>
         </table>
     </div>
+
+<?php elseif ($tab === 'importar'): ?>
+    <div class="card">
+        <h3><i class="fas fa-file-excel" style="color:#16a34a;"></i> Importar Excel (.xlsx / .xls) o CSV a un Vehículo</h3>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:1rem; margin:0.8rem 0 1.25rem; font-size:0.85rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.45rem;">
+                <strong style="color:#0f766e;"><i class="fas fa-info-circle"></i> Estructura de Columnas y Configuración Libre</strong>
+                <button type="button" class="btn btn-sm" style="background:#e2e8f0; color:#0f172a;" onclick="adminDownloadTemplateCSV()">
+                    <i class="fas fa-download"></i> Descargar Plantilla CSV de Ejemplo
+                </button>
+            </div>
+            <p style="color:#475569; margin-bottom:0.35rem;">
+                • <strong>Formato predeterminado (igual al de tu hoja original)</strong>:
+                <code>Col A: FECHA</code> | <code>Col B: LITROS</code> | <code>Col C: PRECIO</code> | <code>Col D: IMPORTE</code> | <code>Col E: KM.</code> | <code>Notas (opcional)</code>.
+            </p>
+            <p style="color:#475569; margin:0;">
+                • <strong>Cualquier otro formato de Excel o CSV</strong>: Selecciona tu archivo abajo y usa los desplegables para indicar en qué columna de tu archivo está cada dato. El sistema calculará automáticamente consumos, diferencias y acumulados sin borrar ningún dato previo.
+            </p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1rem;">
+            <div>
+                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:5px;">1. Vehículo al que se importarán los datos *</label>
+                <select id="adm-imp-vehiculo" style="width:100%; padding:0.65rem; border:1.5px solid #0f766e; border-radius:8px; font-weight:600;">
+                    <?php foreach ($vehiculos as $v): ?>
+                        <option value="<?php echo (int)$v['id']; ?>" <?php echo ($selectedVehiculoId == (int)$v['id']) ? 'selected' : ''; ?>>
+                            🚗 <?php echo htmlspecialchars($v['nombre'] . ($v['matricula'] ? ' (' . $v['matricula'] . ')' : '')); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:5px;">2. Archivo Excel (.xlsx, .xls) o CSV (.csv) *</label>
+                <input type="file" id="adm-imp-file" accept=".xlsx,.xls,.csv,.txt" onchange="admHandleFile(this)" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
+            </div>
+        </div>
+
+        <div style="margin-bottom:1rem;">
+            <label style="font-size:0.85rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="adm-imp-header" checked onchange="admReparseSheet()">
+                La primera fila del archivo contiene los títulos/encabezados de columna
+            </label>
+        </div>
+
+        <div id="adm-imp-mapping-box" style="display:none; border-top:1px solid #e2e8f0; padding-top:1rem;">
+            <h4 style="margin-bottom:0.75rem; font-size:0.92rem;">3. Asignar qué columna de tu Excel/CSV corresponde a cada campo:</h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(155px, 1fr)); gap:0.75rem; margin-bottom:1rem;">
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">FECHA *</label>
+                    <select id="adm-map-fecha" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">LITROS *</label>
+                    <select id="adm-map-litros" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">PRECIO (€/L)</label>
+                    <select id="adm-map-precio" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">IMPORTE (€)</label>
+                    <select id="adm-map-importe" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">KM. (Odómetro) *</label>
+                    <select id="adm-map-km" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">NOTAS (Opcional)</label>
+                    <select id="adm-map-notas" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:0.76rem; font-weight:700; color:#64748b; display:block;">ESTACIÓN (Opcional)</label>
+                    <select id="adm-map-estacion" onchange="admRenderPreview()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></select>
+                </div>
+            </div>
+
+            <div id="adm-imp-summary" style="font-size:0.84rem; font-weight:700; color:#0f766e; margin-bottom:0.5rem;"></div>
+            <div style="overflow-x:auto; max-height:220px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:1rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Litros</th>
+                            <th>Precio €/L</th>
+                            <th>Importe €</th>
+                            <th>KM.</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adm-imp-preview-tbody"></tbody>
+                </table>
+            </div>
+
+            <button type="button" id="adm-btn-import" class="btn btn-primary" onclick="admExecuteImport()">
+                <i class="fas fa-cloud-upload-alt"></i> Confirmar e Importar Datos al Vehículo Seleccionado
+            </button>
+        </div>
+    </div>
 <?php endif; ?>
 
 <script>
@@ -1119,6 +1222,169 @@ function exportFuelPdfA4Vertical() {
     });
 
     doc.save('Informe_Combustible_A4_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// IMPORTADOR CONFIGURABLE DE EXCEL (.XLSX / .XLS) Y CSV EN ADMIN
+let admRawSheetRows = [];
+
+function adminDownloadTemplateCSV() {
+    const csvContent = "FECHA,LITROS,PRECIO,IMPORTE,KM.,NOTAS\n2025-03-01,48.50,1.429,69.31,183200,Repostaje normal\n2025-03-15,51.20,1.439,73.68,184120,Cambio filtro aire\n";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'Plantilla_Repostajes_Combustible.csv';
+    link.click();
+}
+
+function admColLetter(idx) {
+    let s = '';
+    let n = idx;
+    while (n >= 0) {
+        s = String.fromCharCode((n % 26) + 65) + s;
+        n = Math.floor(n / 26) - 1;
+    }
+    return s;
+}
+
+function admHandleFile(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array', raw: false, dateNF: 'yyyy-mm-dd' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        admRawSheetRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        admReparseSheet();
+    };
+    reader.readAsArrayBuffer(input.files[0]);
+}
+
+function admReparseSheet() {
+    if (!admRawSheetRows || admRawSheetRows.length === 0) return;
+    const hasHeader = document.getElementById('adm-imp-header').checked;
+    const firstRow = admRawSheetRows[0] || [];
+    const maxCols = Math.max(...admRawSheetRows.slice(0, 10).map(r => r.length), firstRow.length);
+
+    const ids = ['adm-map-fecha', 'adm-map-litros', 'adm-map-precio', 'adm-map-importe', 'adm-map-km', 'adm-map-notas', 'adm-map-estacion'];
+    ids.forEach((id, idx) => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = (idx >= 5) ? '<option value="-1">-- Ninguna --</option>' : '';
+        for (let c = 0; c < maxCols; c++) {
+            const label = hasHeader && firstRow[c] !== undefined && String(firstRow[c]).trim() !== ''
+                ? `Col ${admColLetter(c)}: ${String(firstRow[c]).trim()}`
+                : `Columna ${admColLetter(c)} (Ej: ${admRawSheetRows[hasHeader ? 1 : 0]?.[c] ?? ''})`;
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = label;
+            sel.appendChild(opt);
+        }
+    });
+
+    let dFecha = 0, dLitros = 1, dPrecio = 2, dImporte = 3, dKm = 4, dNotas = (maxCols > 16 ? 16 : (maxCols > 5 ? 5 : -1)), dEst = -1;
+    if (hasHeader) {
+        firstRow.forEach((h, idx) => {
+            const u = String(h || '').toUpperCase().trim();
+            if (u.includes('FECHA') || u === 'DATE') dFecha = idx;
+            else if (u === 'LITROS' || u === 'LTS' || u === 'VOLUMEN') dLitros = idx;
+            else if (u.includes('PRECIO') || u === '€/L' || u === 'EUR/L') dPrecio = idx;
+            else if (u.includes('IMPORTE') || u === 'TOTAL' || u === 'EUROS') dImporte = idx;
+            else if (u === 'KM.' || u === 'KM' || u.includes('KILOMETR') || u.includes('ODOMETR')) dKm = idx;
+            else if (u.includes('NOTA') || u.includes('INCIDENCIA') || u.includes('OBSERV')) dNotas = idx;
+            else if (u.includes('ESTACION') || u.includes('GASOLINERA')) dEst = idx;
+        });
+    }
+
+    document.getElementById('adm-map-fecha').value = String(dFecha);
+    document.getElementById('adm-map-litros').value = String(dLitros);
+    document.getElementById('adm-map-precio').value = String(dPrecio);
+    document.getElementById('adm-map-importe').value = String(dImporte);
+    document.getElementById('adm-map-km').value = String(dKm);
+    document.getElementById('adm-map-notas').value = String(dNotas < maxCols ? dNotas : -1);
+    document.getElementById('adm-map-estacion').value = String(dEst);
+
+    document.getElementById('adm-imp-mapping-box').style.display = 'block';
+    admRenderPreview();
+}
+
+function admGetMappedRows() {
+    const hasHeader = document.getElementById('adm-imp-header').checked;
+    const cF = parseInt(document.getElementById('adm-map-fecha').value, 10);
+    const cL = parseInt(document.getElementById('adm-map-litros').value, 10);
+    const cP = parseInt(document.getElementById('adm-map-precio').value, 10);
+    const cI = parseInt(document.getElementById('adm-map-importe').value, 10);
+    const cK = parseInt(document.getElementById('adm-map-km').value, 10);
+    const cN = parseInt(document.getElementById('adm-map-notas').value, 10);
+    const cE = parseInt(document.getElementById('adm-map-estacion').value, 10);
+
+    const start = hasHeader ? 1 : 0;
+    const out = [];
+    for (let i = start; i < admRawSheetRows.length; i++) {
+        const r = admRawSheetRows[i];
+        if (!r || r.length === 0) continue;
+        const fVal = cF >= 0 ? String(r[cF] ?? '').trim() : '';
+        if (!fVal) continue;
+        const rawN = cN >= 0 ? String(r[cN] ?? '').trim() : '';
+        const cleanN = (rawN && isNaN(Number(rawN)) && !rawN.includes('PRECIO') && !rawN.includes('MINIMO')) ? rawN : '';
+        out.push({
+            fecha: fVal,
+            litros: cL >= 0 ? r[cL] : '',
+            precio_litro: cP >= 0 ? r[cP] : '',
+            importe_total: cI >= 0 ? r[cI] : '',
+            km_odometro: cK >= 0 ? r[cK] : '',
+            notas: cleanN,
+            estacion_servicio: cE >= 0 ? String(r[cE] ?? '').trim() : ''
+        });
+    }
+    return out;
+}
+
+function admRenderPreview() {
+    const rows = admGetMappedRows();
+    document.getElementById('adm-imp-summary').textContent =
+        `Detectadas ${rows.length} filas de datos. Vista previa (primeras 6 filas):`;
+    const tbody = document.getElementById('adm-imp-preview-tbody');
+    tbody.innerHTML = '';
+    rows.slice(0, 6).forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.fecha}</td><td>${m.litros}</td><td>${m.precio_litro}</td><td>${m.importe_total}</td><td>${m.km_odometro}</td><td>${m.notas || ''}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+async function admExecuteImport() {
+    const vehId = parseInt(document.getElementById('adm-imp-vehiculo').value || '0', 10);
+    if (!vehId) {
+        alert('Selecciona el vehículo destino.');
+        return;
+    }
+    const rows = admGetMappedRows();
+    if (rows.length === 0) {
+        alert('No hay filas válidas para importar.');
+        return;
+    }
+    const btn = document.getElementById('adm-btn-import');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando datos...';
+    try {
+        const res = await fetch('../combustible/api.php?action=import_custom_rows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ vehiculo_id: vehId, rows })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            window.location.href = '?tab=repostajes&vehiculo_id=' + vehId;
+        } else {
+            alert(data.error || 'Error en la importación.');
+        }
+    } catch (e) {
+        alert('Error conectando con el importador: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Confirmar e Importar Datos al Vehículo Seleccionado';
+    }
 }
 </script>
 
