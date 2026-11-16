@@ -2,7 +2,8 @@
 /**
  * admin/combustible.php
  * Apartado exclusivo en la Administración de moratalla-murcia.com para la
- * Gestión de Control de Combustible, Vehículos y Asignación de Permisos de Usuario.
+ * Gestión de Control de Combustible, Vehículos, Escaneo OCR, Informes PDF A4 Vertical
+ * y Asignación de Permisos de Usuario.
  *
  * REGLA ESTRICTA DE PROTECCIÓN DE DATOS:
  * - Prohibido ejecutar DELETE, DROP, TRUNCATE o alterar datos existentes.
@@ -206,6 +207,13 @@ if ($isSuper) {
 }
 
 $selectedVehiculoId = isset($_GET['vehiculo_id']) ? (int)$_GET['vehiculo_id'] : 0;
+$scopeName = "Todos los vehículos (Resultado Conjunto)";
+foreach ($vehiculos as $vItem) {
+    if ((int)$vItem['id'] === $selectedVehiculoId) {
+        $scopeName = $vItem['nombre'] . ($vItem['matricula'] ? ' (' . $vItem['matricula'] . ')' : '');
+        break;
+    }
+}
 
 // Obtener repostajes y calcular consumos encadenados por vehículo
 $sqlRep = "
@@ -317,15 +325,41 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <style>
+    .fuel-header-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
+        color: #fff;
+        padding: 1.1rem 1.35rem;
+        border-radius: 16px;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+    }
+    .fuel-brand-box {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+    }
+    .fuel-brand-box img {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        object-fit: cover;
+    }
     .fuel-topbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
     }
     .fuel-tabs {
         display: flex;
@@ -333,13 +367,16 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         flex-wrap: wrap;
     }
     .fuel-tab {
-        padding: 0.65rem 1.1rem;
+        padding: 0.6rem 1rem;
         border-radius: 10px;
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.86rem;
         background: #e2e8f0;
         color: #1e293b;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
     }
     .fuel-tab.active {
         background: #0f766e;
@@ -347,38 +384,145 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
     }
     .fuel-kpis {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1.35rem;
     }
     .fuel-kpi {
         background: #fff;
-        padding: 1.1rem;
+        padding: 0.95rem 1.05rem;
         border-radius: 14px;
         border-left: 4px solid #0f766e;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
     .fuel-kpi small {
         display: block;
         color: #64748b;
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
     .fuel-kpi strong {
-        font-size: 1.35rem;
+        font-size: 1.25rem;
         color: #0f172a;
         display: block;
-        margin-top: 0.25rem;
+        margin-top: 0.2rem;
+        font-variant-numeric: tabular-nums;
     }
     .fuel-kpi span {
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         color: #64748b;
+    }
+
+    /* Tabla optimizada y fija en cabecera */
+    .fuel-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 68vh;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+    }
+    .fuel-data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.81rem;
+    }
+    .fuel-data-table th,
+    .fuel-data-table td {
+        padding: 0.55rem 0.5rem;
+        text-align: right;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+    .fuel-data-table th:first-child,
+    .fuel-data-table td:first-child,
+    .fuel-data-table th:nth-child(2),
+    .fuel-data-table td:nth-child(2) {
+        text-align: left;
+    }
+    .fuel-data-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #0f172a;
+        color: #fff;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+    .fuel-data-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .fuel-data-table tbody tr:hover { background: #f0fdfa; }
+
+    /* Tarjetas responsive para móvil */
+    .fuel-mobile-cards {
+        display: none;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .fuel-m-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.9rem;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .fuel-m-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.45rem;
+        background: #f8fafc;
+        padding: 0.55rem;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        font-size: 0.76rem;
+    }
+    .fuel-m-grid div span {
+        display: block;
+        color: #64748b;
+        font-size: 0.68rem;
+    }
+
+    @media (max-width: 900px) {
+        .admin-body { flex-direction: column; }
+        .sidebar { width: 100%; height: auto; position: relative; }
+        .main-content { margin-left: 0; padding: 0.75rem; }
+        .fuel-kpis { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+        .fuel-table-container.hide-on-mobile { display: none; }
+        .fuel-mobile-cards { display: flex; }
     }
 </style>
 
+<!-- CABECERA CON ICONO _V2 Y ACCIONES RÁPIDAS -->
+<div class="fuel-header-banner">
+    <div class="fuel-brand-box">
+        <img src="../combustible/assets/icons/icon-192.png" alt="Logo Control Combustible v2" onerror="this.style.display='none'">
+        <div>
+            <h2 style="margin:0; font-size:1.25rem; font-weight:800;">
+                Control de Combustible y Consumo<?php echo $isSuper ? '.' : ''; ?>
+            </h2>
+            <div style="font-size:0.82rem; opacity:0.88;">
+                Ámbito activo: <strong><?php echo htmlspecialchars($scopeName); ?></strong>
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="https://github.com/pablosalinas/ControlCombustible/releases/latest/download/ControlCombustible.apk" target="_blank" class="btn" style="background:#16a34a; color:#fff; text-decoration:none; font-size:0.82rem; padding:0.55rem 0.9rem;">
+            <i class="fab fa-android"></i> Descargar APK Android
+        </a>
+        <a href="../combustible/index.php" target="_blank" class="btn" style="background:#0d9488; color:#fff; text-decoration:none; font-size:0.82rem; padding:0.55rem 0.9rem;">
+            <i class="fas fa-expand"></i> Abrir App Web / OCR
+        </a>
+        <button type="button" onclick="exportFuelPdfA4Vertical()" class="btn" style="background:#f59e0b; color:#fff; font-size:0.82rem; padding:0.55rem 0.9rem;">
+            <i class="fas fa-file-pdf"></i> Informe PDF (A4 Vertical)
+        </button>
+    </div>
+</div>
+
 <?php if ($msg): ?>
-    <div class="card" style="background: #ccfbf1; color: #115e59; padding: 1rem; margin-bottom: 1.5rem; border-left: 4px solid #0f766e;">
+    <div class="card" style="background: #ccfbf1; color: #115e59; padding: 0.9rem 1.1rem; margin-bottom: 1.2rem; border-left: 4px solid #0f766e;">
         <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($msg); ?>
     </div>
 <?php endif; ?>
@@ -386,29 +530,31 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
 <div class="fuel-topbar">
     <div class="fuel-tabs">
         <a href="?tab=repostajes&vehiculo_id=<?php echo $selectedVehiculoId; ?>" class="fuel-tab <?php echo $tab === 'repostajes' ? 'active' : ''; ?>">
-            <i class="fas fa-gas-pump"></i> Repostajes y Consumos
+            <i class="fas fa-gas-pump"></i> Repostajes (<?php echo count($calculatedList); ?>)
         </a>
         <a href="?tab=vehiculos" class="fuel-tab <?php echo $tab === 'vehiculos' ? 'active' : ''; ?>">
             <i class="fas fa-car"></i> Vehículos (<?php echo count($vehiculos); ?>)
         </a>
         <?php if ($isSuper): ?>
             <a href="?tab=usuarios" class="fuel-tab <?php echo $tab === 'usuarios' ? 'active' : ''; ?>">
-                <i class="fas fa-user-shield"></i> Permisos de Usuarios (Web / Combustible)
+                <i class="fas fa-user-shield"></i> Permisos de Usuarios
             </a>
         <?php endif; ?>
     </div>
 
-    <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-        <a href="https://github.com/pablosalinas/ControlCombustible/releases/latest/download/ControlCombustible.apk" target="_blank" class="btn" style="background:#16a34a; color:#fff; text-decoration:none;">
-            <i class="fab fa-android"></i> Descargar APK Android
-        </a>
-        <a href="../combustible/" target="_blank" class="btn" style="background:#0f766e; color:#fff; text-decoration:none;">
-            <i class="fas fa-mobile-alt"></i> Abrir App Web / OCR
-        </a>
-        <button type="button" onclick="exportFuelPdf()" class="btn" style="background:#f59e0b; color:#fff;">
-            <i class="fas fa-file-pdf"></i> Informe PDF
-        </button>
-    </div>
+    <?php if ($tab === 'repostajes'): ?>
+        <form method="GET" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin:0;">
+            <input type="hidden" name="tab" value="repostajes">
+            <select name="vehiculo_id" onchange="this.form.submit()" style="padding:0.55rem 0.85rem; border:1.5px solid #0f766e; border-radius:9px; font-weight:700; background:#fff; color:#0f172a;">
+                <option value="0">📊 Todos los vehículos (Resultado Conjunto)</option>
+                <?php foreach ($vehiculos as $v): ?>
+                    <option value="<?php echo (int)$v['id']; ?>" <?php echo ($selectedVehiculoId == (int)$v['id']) ? 'selected' : ''; ?>>
+                        🚗 <?php echo htmlspecialchars($v['nombre'] . ($v['matricula'] ? ' (' . $v['matricula'] . ')' : '')); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </form>
+    <?php endif; ?>
 </div>
 
 <!-- INDICADORES GLOBALES -->
@@ -441,16 +587,30 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
 </div>
 
 <?php if ($tab === 'repostajes'): ?>
-    <!-- FORMULARIO DE ALTA / EDICIÓN DE REPOSTAJE -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <h3 id="form-rep-heading" style="margin-bottom: 1rem;"><i class="fas fa-plus-circle" style="color:#0f766e;"></i> Registrar / Modificar Repostaje</h3>
+    <!-- FORMULARIO DE ALTA / EDICIÓN DE REPOSTAJE CON ESCANEO OCR INTEGRADO -->
+    <div class="card" style="margin-bottom: 1.35rem; padding: 1.15rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:0.9rem;">
+            <h3 id="form-rep-heading" style="margin:0; font-size:1rem;"><i class="fas fa-plus-circle" style="color:#0f766e;"></i> Registrar / Modificar Repostaje</h3>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <label class="btn btn-sm" style="background:#f0fdfa; color:#0f766e; border:1px dashed #0f766e; cursor:pointer; font-size:0.78rem;">
+                    <i class="fas fa-receipt"></i> Escanear Ticket (OCR)
+                    <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="adminScanTicketOCR(this)">
+                </label>
+                <label class="btn btn-sm" style="background:#fef3c7; color:#b45309; border:1px dashed #f59e0b; cursor:pointer; font-size:0.78rem;">
+                    <i class="fas fa-tachometer-alt"></i> Foto Odómetro (OCR)
+                    <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="adminScanOdometerOCR(this)">
+                </label>
+            </div>
+        </div>
+        <div id="admin-ocr-msg" style="display:none; padding:0.55rem 0.8rem; border-radius:8px; background:#e0f2fe; color:#0369a1; font-size:0.82rem; margin-bottom:0.85rem;"></div>
+
         <form method="POST">
             <input type="hidden" name="form_action" value="save_repostaje">
             <input type="hidden" name="id" id="rep_id" value="0">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.85rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 0.75rem;">
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Vehículo *</label>
-                    <select name="vehiculo_id" id="rep_vehiculo_id" required style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Vehículo *</label>
+                    <select name="vehiculo_id" id="rep_vehiculo_id" required style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                         <?php foreach ($vehiculos as $v): ?>
                             <option value="<?php echo (int)$v['id']; ?>" <?php echo ($selectedVehiculoId == (int)$v['id']) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($v['nombre'] . ($v['matricula'] ? ' (' . $v['matricula'] . ')' : '')); ?>
@@ -459,97 +619,93 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Fecha<?php echo $isSuper ? '.' : ''; ?> *</label>
-                    <input type="date" name="fecha" id="rep_fecha" value="<?php echo date('Y-m-d'); ?>" required style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Fecha<?php echo $isSuper ? '.' : ''; ?> *</label>
+                    <input type="date" name="fecha" id="rep_fecha" value="<?php echo date('Y-m-d'); ?>" required style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Kilómetros (KM.) *</label>
-                    <input type="number" step="0.01" name="km_odometro" id="rep_km" required placeholder="Ej: 183200" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Kilómetros (KM.) *</label>
+                    <input type="number" step="0.01" name="km_odometro" id="rep_km" required placeholder="Ej: 183200" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Litros *</label>
-                    <input type="number" step="0.001" name="litros" id="rep_litros" required placeholder="Ej: 52.12" oninput="calcRepImporte()" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Litros *</label>
+                    <input type="number" step="0.001" name="litros" id="rep_litros" required placeholder="Ej: 52.12" oninput="calcRepImporte()" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Precio €/L *</label>
-                    <input type="number" step="0.0001" name="precio_litro" id="rep_precio" required placeholder="Ej: 1.439" oninput="calcRepImporte()" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Precio €/L *</label>
+                    <input type="number" step="0.0001" name="precio_litro" id="rep_precio" required placeholder="Ej: 1.439" oninput="calcRepImporte()" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Importe Total (€) *</label>
-                    <input type="number" step="0.01" name="importe_total" id="rep_importe" required placeholder="Ej: 75.00" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Importe Total (€) *</label>
+                    <input type="number" step="0.01" name="importe_total" id="rep_importe" required placeholder="Ej: 75.00" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div>
-                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Notas / Mantenimiento</label>
-                    <input type="text" name="notas" id="rep_notas" placeholder="Opcional" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Notas / Mantenimiento</label>
+                    <input type="text" name="notas" id="rep_notas" placeholder="Opcional" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
             </div>
-            <div style="margin-top: 1rem; display:flex; gap:0.5rem;">
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Repostaje</button>
-                <button type="button" class="btn" onclick="resetRepForm()">Limpiar formulario</button>
+            <div style="margin-top: 0.85rem; display:flex; gap:0.5rem;">
+                <button type="submit" class="btn btn-primary" style="padding:0.55rem 1.1rem;"><i class="fas fa-save"></i> Guardar Repostaje</button>
+                <button type="button" class="btn" onclick="resetRepForm()" style="padding:0.55rem 0.9rem;">Limpiar</button>
             </div>
         </form>
     </div>
 
-    <!-- FILTRO E HISTÓRICO DE REPOSTAJES -->
-    <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.2rem;">
-            <h3>Histórico de Repostajes</h3>
-            <form method="GET" style="display:flex; gap:0.5rem; align-items:center;">
-                <input type="hidden" name="tab" value="repostajes">
-                <label style="font-weight:600; font-size:0.85rem;">Filtrar Vehículo:</label>
-                <select name="vehiculo_id" onchange="this.form.submit()" style="padding:0.5rem 0.8rem; border:1px solid #cbd5e1; border-radius:8px; font-weight:600;">
-                    <option value="0">📊 Todos los vehículos (Resultado Conjunto)</option>
-                    <?php foreach ($vehiculos as $v): ?>
-                        <option value="<?php echo (int)$v['id']; ?>" <?php echo ($selectedVehiculoId == (int)$v['id']) ? 'selected' : ''; ?>>
-                            🚗 <?php echo htmlspecialchars($v['nombre']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+    <!-- HISTÓRICO DE REPOSTAJES (TABLA COMPACTA + TARJETAS RESPONSIVE) -->
+    <div class="card" style="padding: 1.15rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+            <h3 style="margin:0; font-size:1rem;"><i class="fas fa-list-ul" style="color:#0f766e;"></i> Listado Histórico y Cálculos</h3>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <input type="text" id="admin-fuel-search" placeholder="Buscar fecha, km, nota..." oninput="filterAdminFuelRows()" style="padding:0.45rem 0.75rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.82rem;">
+                <button type="button" class="btn btn-sm" onclick="toggleAdminView()" style="background:#e2e8f0; color:#1e293b;">
+                    <i class="fas fa-th-large"></i> Alternar Vista
+                </button>
+            </div>
         </div>
 
-        <div style="overflow-x: auto;">
-            <table id="admin-fuel-table">
+        <div class="fuel-table-container hide-on-mobile" id="admin-table-wrap">
+            <table class="fuel-data-table" id="admin-fuel-table">
                 <thead>
                     <tr>
                         <th>Fecha</th>
                         <th>Vehículo</th>
                         <th>Litros</th>
-                        <th>Precio</th>
+                        <th>€/L</th>
                         <th>Importe</th>
                         <th>KM.</th>
                         <th>DIF.</th>
-                        <th>LTS.x.100</th>
-                        <th>KM.x.LTS</th>
-                        <th>€ x 1KM.</th>
+                        <th>L/100</th>
+                        <th>Km/L</th>
+                        <th>€/Km</th>
                         <th>T.Litros</th>
                         <th>Total €</th>
+                        <th>Media €</th>
                         <th>Notas</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($calculatedList as $r): ?>
-                        <tr>
+                        <tr class="fuel-row-item">
                             <td><strong><?php echo htmlspecialchars($r['fecha']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($r['vehiculo_nombre']); ?></td>
+                            <td><span class="badge" style="background:#ccfbf1; color:#115e59;"><?php echo htmlspecialchars($r['vehiculo_nombre']); ?></span></td>
                             <td><?php echo number_format((float)$r['litros'], 2, ',', '.'); ?></td>
-                            <td><?php echo number_format((float)$r['precio_litro'], 3, ',', '.'); ?> €</td>
-                            <td><strong><?php echo number_format((float)$r['importe_total'], 2, ',', '.'); ?> €</strong></td>
-                            <td><?php echo number_format((float)$r['km_odometro'], 0, ',', '.'); ?></td>
+                            <td><?php echo number_format((float)$r['precio_litro'], 3, ',', '.'); ?></td>
+                            <td style="font-weight:700; color:#0f766e;"><?php echo number_format((float)$r['importe_total'], 2, ',', '.'); ?> €</td>
+                            <td><strong><?php echo number_format((float)$r['km_odometro'], 0, ',', '.'); ?></strong></td>
                             <td><?php echo $r['dif_km'] > 0 ? '+' . number_format((float)$r['dif_km'], 0, ',', '.') : '-'; ?></td>
                             <td>
                                 <?php if ($r['litros_por_100'] !== null): ?>
-                                    <span class="badge" style="background:#fef3c7; color:#b45309;"><?php echo number_format((float)$r['litros_por_100'], 2, ',', '.'); ?></span>
+                                    <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;"><?php echo number_format((float)$r['litros_por_100'], 2, ',', '.'); ?></span>
                                 <?php else: ?>-<?php endif; ?>
                             </td>
                             <td><?php echo $r['km_por_litro'] !== null ? number_format((float)$r['km_por_litro'], 2, ',', '.') : '-'; ?></td>
-                            <td><?php echo $r['euros_por_km'] !== null ? number_format((float)$r['euros_por_km'], 4, ',', '.') . ' €' : '-'; ?></td>
+                            <td><?php echo $r['euros_por_km'] !== null ? number_format((float)$r['euros_por_km'], 4, ',', '.') : '-'; ?></td>
                             <td><?php echo number_format((float)$r['total_litros_acum'], 1, ',', '.'); ?></td>
                             <td><?php echo number_format((float)$r['total_euros_acum'], 2, ',', '.'); ?> €</td>
-                            <td><?php echo htmlspecialchars((string)$r['notas']); ?></td>
+                            <td><?php echo $r['coste_medio_100_acum'] !== null ? number_format((float)$r['coste_medio_100_acum'], 2, ',', '.') : '-'; ?></td>
+                            <td style="text-align:left; max-width:140px; overflow:hidden; text-overflow:ellipsis;"><?php echo htmlspecialchars((string)$r['notas']); ?></td>
                             <td style="white-space:nowrap;">
-                                <button type="button" class="btn btn-sm btn-primary" onclick='loadRepIntoForm(<?php echo json_encode(array(
+                                <button type="button" class="btn btn-sm btn-primary" style="padding:0.25rem 0.5rem;" onclick='loadRepIntoForm(<?php echo json_encode(array(
                                     "id" => $r["id"],
                                     "vehiculo_id" => $r["vehiculo_id"],
                                     "fecha" => $r["fecha"],
@@ -562,13 +718,62 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
                                 <form method="POST" style="display:inline;" onsubmit="return confirm('¿Dar de baja lógica este repostaje? (activo = 0)');">
                                     <input type="hidden" name="form_action" value="deactivate_repostaje">
                                     <input type="hidden" name="id" value="<?php echo (int)$r['id']; ?>">
-                                    <button type="submit" class="btn btn-sm" style="color:red;"><i class="fas fa-trash"></i></button>
+                                    <button type="submit" class="btn btn-sm" style="color:red; padding:0.25rem 0.5rem;"><i class="fas fa-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- TARJETAS RESPONSIVE PARA PANTALLAS MÓVILES / COMPACTAS -->
+        <div class="fuel-mobile-cards" id="admin-cards-wrap">
+            <?php foreach ($calculatedList as $r): ?>
+                <div class="fuel-m-card fuel-card-item">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong><?php echo htmlspecialchars($r['fecha']); ?></strong>
+                            <span class="badge" style="background:#ccfbf1; color:#115e59; margin-left:6px;"><?php echo htmlspecialchars($r['vehiculo_nombre']); ?></span>
+                        </div>
+                        <strong style="color:#0f766e; font-size:1.05rem;"><?php echo number_format((float)$r['importe_total'], 2, ',', '.'); ?> €</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#64748b; margin-top:4px;">
+                        <span><strong><?php echo number_format((float)$r['km_odometro'], 0, ',', '.'); ?> km</strong> (<?php echo $r['dif_km'] > 0 ? '+' . number_format((float)$r['dif_km'], 0, ',', '.') . ' km' : 'Inicio'; ?>)</span>
+                        <span><?php echo number_format((float)$r['litros'], 2, ',', '.'); ?> L × <?php echo number_format((float)$r['precio_litro'], 3, ',', '.'); ?> €/L</span>
+                    </div>
+                    <div class="fuel-m-grid">
+                        <div><span>Consumo L/100</span><strong><?php echo $r['litros_por_100'] !== null ? number_format((float)$r['litros_por_100'], 2, ',', '.') : '-'; ?></strong></div>
+                        <div><span>Km / Litro</span><strong><?php echo $r['km_por_litro'] !== null ? number_format((float)$r['km_por_litro'], 2, ',', '.') : '-'; ?></strong></div>
+                        <div><span>Coste / Km</span><strong><?php echo $r['euros_por_km'] !== null ? number_format((float)$r['euros_por_km'], 4, ',', '.') . ' €' : '-'; ?></strong></div>
+                        <div><span>T. Litros</span><strong><?php echo number_format((float)$r['total_litros_acum'], 1, ',', '.'); ?> L</strong></div>
+                        <div><span>Total €</span><strong><?php echo number_format((float)$r['total_euros_acum'], 2, ',', '.'); ?> €</strong></div>
+                        <div><span>Media €/100</span><strong><?php echo $r['coste_medio_100_acum'] !== null ? number_format((float)$r['coste_medio_100_acum'], 2, ',', '.') . ' €' : '-'; ?></strong></div>
+                    </div>
+                    <?php if (!empty($r['notas'])): ?>
+                        <div style="margin-top:6px; font-size:0.78rem; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px;">
+                            <i class="fas fa-wrench"></i> <?php echo htmlspecialchars((string)$r['notas']); ?>
+                        </div>
+                    <?php endif; ?>
+                    <div style="display:flex; justify-content:flex-end; gap:0.4rem; margin-top:8px;">
+                        <button type="button" class="btn btn-sm btn-primary" onclick='loadRepIntoForm(<?php echo json_encode(array(
+                            "id" => $r["id"],
+                            "vehiculo_id" => $r["vehiculo_id"],
+                            "fecha" => $r["fecha"],
+                            "km_odometro" => $r["km_odometro"],
+                            "litros" => $r["litros"],
+                            "precio_litro" => $r["precio_litro"],
+                            "importe_total" => $r["importe_total"],
+                            "notas" => $r["notas"]
+                        )); ?>)'><i class="fas fa-edit"></i> Editar</button>
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('¿Dar de baja lógica este repostaje? (activo = 0)');">
+                            <input type="hidden" name="form_action" value="deactivate_repostaje">
+                            <input type="hidden" name="id" value="<?php echo (int)$r['id']; ?>">
+                            <button type="submit" class="btn btn-sm" style="color:red;"><i class="fas fa-trash"></i> Baja</button>
+                        </form>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
     </div>
 
@@ -621,7 +826,7 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         </form>
     </div>
 
-    <div class="card">
+    <div class="card" style="overflow-x:auto;">
         <h3>Vehículos Activos</h3>
         <table>
             <thead>
@@ -657,7 +862,7 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
     </div>
 
 <?php elseif ($tab === 'usuarios' && $isSuper): ?>
-    <div class="card">
+    <div class="card" style="overflow-x:auto;">
         <h3><i class="fas fa-user-shield" style="color:#0f766e;"></i> Asignación de Acceso por Usuario (Exclusivo Superusuario)</h3>
         <p style="color:#64748b; font-size:0.88rem; margin: 0.4rem 0 1.5rem;">
             Desde aquí puedes decidir para cada usuario si puede utilizar <strong>tanto moratalla-murcia.com como la Gestión de Combustible</strong>, o <strong>solo una de ellas</strong>.
@@ -710,6 +915,27 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
 <?php endif; ?>
 
 <script>
+const pdfDataRows = <?php
+    $exportRows = array();
+    foreach ($calculatedList as $r) {
+        $exportRows[] = array(
+            $r['fecha'],
+            number_format((float)$r['litros'], 2, ',', '.'),
+            number_format((float)$r['precio_litro'], 3, ',', '.'),
+            number_format((float)$r['importe_total'], 2, ',', '.') . ' €',
+            number_format((float)$r['km_odometro'], 0, ',', '.'),
+            $r['dif_km'] > 0 ? '+' . number_format((float)$r['dif_km'], 0, ',', '.') : '-',
+            $r['litros_por_100'] !== null ? number_format((float)$r['litros_por_100'], 2, ',', '.') : '-',
+            $r['km_por_litro'] !== null ? number_format((float)$r['km_por_litro'], 2, ',', '.') : '-',
+            $r['euros_por_km'] !== null ? number_format((float)$r['euros_por_km'], 3, ',', '.') : '-',
+            number_format((float)$r['total_litros_acum'], 1, ',', '.'),
+            number_format((float)$r['total_euros_acum'], 2, ',', '.') . ' €',
+            mb_substr((string)$r['notas'], 0, 22)
+        );
+    }
+    echo json_encode($exportRows);
+?>;
+
 function calcRepImporte() {
     const l = parseFloat(document.getElementById('rep_litros').value);
     const p = parseFloat(document.getElementById('rep_precio').value);
@@ -749,19 +975,150 @@ function loadVehIntoForm(v) {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-function exportFuelPdf() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    doc.setFontSize(15);
-    doc.setTextColor(15, 118, 110);
-    doc.text('Informe de Control de Combustible - moratalla-murcia.com', 14, 15);
-    doc.autoTable({
-        html: '#admin-fuel-table',
-        startY: 22,
-        styles: { fontSize: 7.5 },
-        headStyles: { fillColor: [15, 118, 110] }
+
+let adminCardsForced = false;
+function toggleAdminView() {
+    adminCardsForced = !adminCardsForced;
+    const tWrap = document.getElementById('admin-table-wrap');
+    const cWrap = document.getElementById('admin-cards-wrap');
+    if (adminCardsForced) {
+        tWrap.style.display = 'none';
+        cWrap.style.display = 'flex';
+    } else {
+        tWrap.style.display = '';
+        cWrap.style.display = '';
+    }
+}
+
+function filterAdminFuelRows() {
+    const q = (document.getElementById('admin-fuel-search').value || '').toLowerCase().trim();
+    document.querySelectorAll('.fuel-row-item, .fuel-card-item').forEach(el => {
+        el.style.display = (!q || el.textContent.toLowerCase().includes(q)) ? '' : 'none';
     });
-    doc.save('Informe_Combustible_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// ESCANEO OCR INTEGRADO EN EL PANEL ADMIN
+async function adminScanTicketOCR(input) {
+    if (!input.files || !input.files[0]) return;
+    const msg = document.getElementById('admin-ocr-msg');
+    msg.style.display = 'block';
+    msg.textContent = '🔍 Escaneando ticket de combustible con OCR...';
+    try {
+        const result = await Tesseract.recognize(input.files[0], 'spa');
+        const text = result.data.text;
+        const dateMatch = text.match(/(\d{2})[\/\-](\d{2})[\/\-](20\d{2})/);
+        if (dateMatch) {
+            document.getElementById('rep_fecha').value = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+        }
+        const decimals = [...text.matchAll(/(\d{1,3}[,\.]\d{2,3})/g)].map(m => parseFloat(m[1].replace(',', '.')));
+        const unitPrice = decimals.find(n => n >= 0.85 && n <= 2.60);
+        if (unitPrice) document.getElementById('rep_precio').value = unitPrice.toFixed(3);
+        const largerNums = decimals.filter(n => n > 3.0).sort((a, b) => b - a);
+        if (largerNums.length >= 2) {
+            document.getElementById('rep_importe').value = largerNums[0].toFixed(2);
+            document.getElementById('rep_litros').value = largerNums[1].toFixed(2);
+        }
+        msg.textContent = '✅ Datos extraídos del ticket. Revisa y pulsa Guardar Repostaje.';
+    } catch (e) {
+        msg.textContent = '⚠️ No se pudo procesar el ticket automáticamente.';
+    }
+}
+
+async function adminScanOdometerOCR(input) {
+    if (!input.files || !input.files[0]) return;
+    const msg = document.getElementById('admin-ocr-msg');
+    msg.style.display = 'block';
+    msg.textContent = '🔍 Leyendo kilómetros del cuentakilómetros...';
+    try {
+        const result = await Tesseract.recognize(input.files[0], 'eng');
+        const digits = result.data.text.replace(/\s+/g, '').match(/\d{4,7}/g);
+        if (digits && digits.length > 0) {
+            const bestKm = digits.sort((a, b) => b.length - a.length)[0];
+            document.getElementById('rep_km').value = bestKm;
+            msg.textContent = `✅ Kilometraje detectado: ${bestKm} km`;
+        } else {
+            msg.textContent = '⚠️ No se detectaron dígitos claros en el cuentakilómetros.';
+        }
+    } catch (e) {
+        msg.textContent = '⚠️ Error al procesar imagen del odómetro.';
+    }
+}
+
+// EXPORTACIÓN PDF OPTIMIZADA EN TAMAÑO A4 VERTICAL (PORTRAIT)
+function exportFuelPdfA4Vertical() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    doc.setFontSize(13);
+    doc.setTextColor(15, 118, 110);
+    doc.text('INFORME DE CONTROL DE COMBUSTIBLE Y CONSUMO', 8, 12);
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(70, 70, 70);
+    doc.text('Ámbito: <?php echo addslashes($scopeName); ?>   |   Fecha: ' + new Date().toLocaleDateString('es-ES'), 8, 17);
+
+    // Caja resumen superior en A4 Vertical (194 mm ancho útil)
+    doc.setDrawColor(203, 213, 225);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(8, 20, 194, 13, 2, 2, 'FD');
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(
+        'Consumo Medio: <?php echo number_format($consumoMedio, 2, ",", "."); ?> L/100km  |  Máx / Mín: <?php echo number_format($consumoMax, 2, ",", "."); ?> / <?php echo number_format($consumoMin, 2, ",", "."); ?> L/100  |  Precio Máx / Mín: <?php echo number_format($precioMax, 3, ",", "."); ?> / <?php echo number_format($precioMin, 3, ",", "."); ?> €/L',
+        11, 25.5
+    );
+    doc.text(
+        'Total Combustible: <?php echo number_format($totalLitrosGlobal, 2, ",", "."); ?> L (<?php echo count($calculatedList); ?> rep.)  |  Gasto Acumulado: <?php echo number_format($totalEurosGlobal, 2, ",", "."); ?> €  |  Km Recorridos: <?php echo number_format($totalKmGlobal, 0, ",", "."); ?> km  |  Coste: <?php echo number_format($costeMedio100, 2, ",", "."); ?> €/100km',
+        11, 30.5
+    );
+
+    doc.autoTable({
+        startY: 36,
+        margin: { top: 12, right: 8, bottom: 12, left: 8 },
+        head: [['Fecha', 'Litros', '€/L', 'Importe', 'KM.', 'DIF.', 'L/100', 'Km/L', '€/Km', 'T.Litros', 'Total €', 'Notas']],
+        body: pdfDataRows,
+        styles: {
+            fontSize: 6.8,
+            cellPadding: 1.3,
+            valign: 'middle',
+            overflow: 'linebreak'
+        },
+        headStyles: {
+            fillColor: [15, 118, 110],
+            textColor: 255,
+            fontStyle: 'bold',
+            halign: 'right'
+        },
+        columnStyles: {
+            0: { halign: 'left', cellWidth: 18 },
+            1: { halign: 'right', cellWidth: 13 },
+            2: { halign: 'right', cellWidth: 12 },
+            3: { halign: 'right', cellWidth: 16, fontStyle: 'bold' },
+            4: { halign: 'right', cellWidth: 16 },
+            5: { halign: 'right', cellWidth: 13 },
+            6: { halign: 'right', cellWidth: 13, fontStyle: 'bold' },
+            7: { halign: 'right', cellWidth: 13 },
+            8: { halign: 'right', cellWidth: 13 },
+            9: { halign: 'right', cellWidth: 16 },
+            10: { halign: 'right', cellWidth: 18 },
+            11: { halign: 'left', cellWidth: 'auto' }
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        didDrawPage: function (data) {
+            const pageCount = doc.internal.getNumberOfPages();
+            doc.setFontSize(7.5);
+            doc.setTextColor(120, 120, 120);
+            doc.text(
+                'Página ' + data.pageNumber + ' de ' + pageCount + ' - Control de Combustible (A4 Vertical)',
+                105,
+                291,
+                { align: 'center' }
+            );
+        }
+    });
+
+    doc.save('Informe_Combustible_A4_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 </script>
 
