@@ -1228,7 +1228,7 @@ const pdfFullItems = <?php
         $exportItems[] = array(
             'fecha' => $r['fecha'],
             'vehiculo' => (string)$r['vehiculo_nombre'],
-            'estacion' => (string)($r['estacion_servicio'] ?? ''),
+            'estacion' => isset($r['estacion_servicio']) ? (string)$r['estacion_servicio'] : '',
             'litros' => (float)$r['litros'],
             'precio' => (float)$r['precio_litro'],
             'importe' => (float)$r['importe_total'],
@@ -1239,7 +1239,7 @@ const pdfFullItems = <?php
             'eurkm' => $r['euros_por_km'] !== null ? (float)$r['euros_por_km'] : null,
             't_litros' => (float)$r['total_litros_acum'],
             't_euros' => (float)$r['total_euros_acum'],
-            'notas' => (string)($r['notas'] ?? '')
+            'notas' => isset($r['notas']) ? (string)$r['notas'] : ''
         );
     }
     echo json_encode($exportItems);
