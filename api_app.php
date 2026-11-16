@@ -46,6 +46,14 @@ if (!$user || !password_verify($password, $user['password'])) {
     exit;
 }
 
+$esSuper = !empty($user['es_superusuario']);
+$accesoSistema = !empty($user['acceso_sistema']) ? $user['acceso_sistema'] : 'ambos';
+if (!$esSuper && $accesoSistema === 'combustible') {
+    http_response_code(403);
+    echo json_encode(['error' => 'Tu usuario está asignado exclusivamente a la Gestión de Combustible.']);
+    exit;
+}
+
 // Usuario autenticado correctamente.
 $action = $_GET['action'] ?? '';
 

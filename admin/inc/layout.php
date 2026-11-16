@@ -1,6 +1,15 @@
 <?php
 // admin/inc/layout.php
 function adminHeader($title = "Admin Panel") {
+    $currentUser = function_exists('getCurrentAdminUser') ? getCurrentAdminUser() : null;
+    $esSuper = $currentUser ? !empty($currentUser['es_superusuario']) : true;
+    $accesoSistema = ($currentUser && !empty($currentUser['acceso_sistema'])) ? $currentUser['acceso_sistema'] : 'ambos';
+    if ($esSuper) {
+        $accesoSistema = 'ambos';
+    }
+    $canWeb = ($accesoSistema === 'ambos' || $accesoSistema === 'web');
+    $canCombustible = ($accesoSistema === 'ambos' || $accesoSistema === 'combustible');
+    $displayUser = ($currentUser && !empty($currentUser['username'])) ? htmlspecialchars($currentUser['username']) : 'Admin';
     ?>
     <!DOCTYPE html>
     <html lang="es">
@@ -42,29 +51,39 @@ function adminHeader($title = "Admin Panel") {
     <body class="admin-body">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2 style="font-size: 1.1rem; letter-spacing: 0;">moratalla-murcia.com</h2>
+                <h2 style="font-size: 1.1rem; letter-spacing: 0;">moratalla-murcia.com<?php echo $esSuper ? '.' : ''; ?></h2>
             </div>
             <nav class="sidebar-nav">
-                <a href="index.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
-                <a href="categories.php" class="nav-link"><i class="fas fa-folder-tree"></i> Categorías</a>
-                <a href="pages.php" class="nav-link"><i class="fas fa-file-alt"></i> Páginas</a>
-                <a href="images.php" class="nav-link"><i class="fas fa-images"></i> Galería</a>
-                <a href="news.php" class="nav-link"><i class="fas fa-newspaper"></i> Noticias / Eventos</a>
-                <a href="messages.php" class="nav-link"><i class="fas fa-inbox"></i> Bandeja de Mensajes</a>
-                <a href="quotes.php" class="nav-link"><i class="fas fa-quote-left"></i> Citas Ilustres</a>
-                <a href="restaurantes.php" class="nav-link"><i class="fas fa-utensils"></i> Bares y Restaurantes</a>
-                <a href="alojamientos.php" class="nav-link"><i class="fas fa-hotel"></i> Alojamientos</a>
-                <a href="external_links.php" class="nav-link"><i class="fas fa-external-link-alt"></i> Accesos Externos</a>
-                <a href="icons.php" class="nav-link"><i class="fas fa-icons"></i> Gestor de Iconos</a>
-                <a href="users.php" class="nav-link"><i class="fas fa-users-cog"></i> Usuarios</a>
-                <div class="nav-divider"></div>
-                <a href="manual.php" class="nav-link"><i class="fas fa-book"></i> Manual de Usuario</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>
-                <a href="seo.php" class="nav-link"><i class="fas fa-compass"></i> SEO y Guías</a>
-                <a href="banners.php" class="nav-link"><i class="fas fa-image"></i> Banner Interactivo</a>
-                <a href="celebrations.php" class="nav-link"><i class="fas fa-glass-cheers"></i> Acontecimientos</a>
-                <a href="stats.php" class="nav-link"><i class="fas fa-chart-pie"></i> Estadísticas</a>
-                <a href="backup.php" class="nav-link"><i class="fas fa-database"></i> Copia de Seguridad</a>
+                <?php if ($canWeb): ?>
+                    <a href="index.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
+                    <a href="categories.php" class="nav-link"><i class="fas fa-folder-tree"></i> Categorías</a>
+                    <a href="pages.php" class="nav-link"><i class="fas fa-file-alt"></i> Páginas</a>
+                    <a href="images.php" class="nav-link"><i class="fas fa-images"></i> Galería</a>
+                    <a href="news.php" class="nav-link"><i class="fas fa-newspaper"></i> Noticias / Eventos</a>
+                    <a href="messages.php" class="nav-link"><i class="fas fa-inbox"></i> Bandeja de Mensajes</a>
+                    <a href="quotes.php" class="nav-link"><i class="fas fa-quote-left"></i> Citas Ilustres</a>
+                    <a href="restaurantes.php" class="nav-link"><i class="fas fa-utensils"></i> Bares y Restaurantes</a>
+                    <a href="alojamientos.php" class="nav-link"><i class="fas fa-hotel"></i> Alojamientos</a>
+                    <a href="external_links.php" class="nav-link"><i class="fas fa-external-link-alt"></i> Accesos Externos</a>
+                    <a href="icons.php" class="nav-link"><i class="fas fa-icons"></i> Gestor de Iconos</a>
+                    <a href="users.php" class="nav-link"><i class="fas fa-users-cog"></i> Usuarios</a>
+                <?php endif; ?>
+
+                <?php if ($canCombustible): ?>
+                    <a href="combustible.php" class="nav-link" style="background: rgba(15, 118, 110, 0.18); border-left: 3px solid #14b8a6;"><i class="fas fa-gas-pump" style="color: #2dd4bf;"></i> Control Combustible</a>
+                <?php endif; ?>
+
+                <?php if ($canWeb): ?>
+                    <div class="nav-divider"></div>
+                    <a href="manual.php" class="nav-link"><i class="fas fa-book"></i> Manual de Usuario</a>
+                    <a href="settings.php" class="nav-link"><i class="fas fa-cogs"></i> Configuración Gral.</a>
+                    <a href="seo.php" class="nav-link"><i class="fas fa-compass"></i> SEO y Guías</a>
+                    <a href="banners.php" class="nav-link"><i class="fas fa-image"></i> Banner Interactivo</a>
+                    <a href="celebrations.php" class="nav-link"><i class="fas fa-glass-cheers"></i> Acontecimientos</a>
+                    <a href="stats.php" class="nav-link"><i class="fas fa-chart-pie"></i> Estadísticas</a>
+                    <a href="backup.php" class="nav-link"><i class="fas fa-database"></i> Copia de Seguridad</a>
+                <?php endif; ?>
+
                 <div class="nav-divider"></div>
                 <div style="padding: 0 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
                     <a href="logout.php?redirect=../index.php" class="nav-link-btn" style="background: var(--primary); color: white;"><i class="fas fa-external-link-alt"></i> Ver Web</a>
@@ -75,7 +94,7 @@ function adminHeader($title = "Admin Panel") {
         <main class="main-content">
             <header class="top-bar">
                 <div class="user-info">
-                    <span>Bienvenido, <strong>Admin</strong></span>
+                    <span>Bienvenido, <strong><?php echo $displayUser; ?></strong></span>
                 </div>
             </header>
             <div class="content-wrapper">

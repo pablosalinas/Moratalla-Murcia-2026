@@ -44,7 +44,13 @@ jobs:
           lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ /tmp/recetario/ ${{ secrets.SFTP_REMOTE_PATH }}/recetario/"
 
           echo "✅ Recetario desplegado correctamente."
-          echo "✅ Recetario desplegado correctamente."
+
+      - name: ⛽ Clonar y desplegar Control de Combustible
+        run: |
+          git clone --depth=1 https://github.com/pablosalinas/ControlCombustible.git /tmp/combustible
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ --exclude-glob flutter_app/ /tmp/combustible/ ${{ secrets.SFTP_REMOTE_PATH }}/combustible/"
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ --exclude-glob flutter_app/ /tmp/combustible/ ${{ secrets.SFTP_REMOTE_PATH }}/../combustible/" || true
+          echo "✅ Control de Combustible desplegado correctamente."
 
       - name: 🐬 Migraciones
         run: |
@@ -55,4 +61,6 @@ jobs:
           echo "Actualizando esquema y sincronizando Biblioteca..."
           curl -f -s -S "https://www.moratalla-murcia.com/moratalla/biblioteca/check_schema.php" || echo "Aviso en /moratalla/biblioteca"
           curl -f -s -S "https://www.moratalla-murcia.com/biblioteca/check_schema.php" || echo "Aviso en /biblioteca"
-
+          echo "Inicializando tablas aditivas de Control de Combustible en producción..."
+          curl -f -s -S "https://www.moratalla-murcia.com/moratalla/combustible/setup_db.php" || echo "Aviso en /moratalla/combustible"
+          curl -f -s -S "https://www.moratalla-murcia.com/combustible/setup_db.php" || echo "Aviso en /combustible"
