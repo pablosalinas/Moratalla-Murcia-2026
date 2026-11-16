@@ -60,6 +60,22 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS `veh_estaciones` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `usuario_id` INT NOT NULL,
+        `nombre` VARCHAR(150) NOT NULL,
+        `marca` VARCHAR(80) DEFAULT NULL,
+        `localidad` VARCHAR(120) DEFAULT NULL,
+        `direccion` VARCHAR(200) DEFAULT NULL,
+        `notas` VARCHAR(255) DEFAULT NULL,
+        `activo` TINYINT(1) NOT NULL DEFAULT 1,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX `idx_est_usuario_activo` (`usuario_id`, `activo`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
 $currentUser = getCurrentAdminUser();
 $userId  = (int)$currentUser['id'];
 $isSuper = isSuperUser();
@@ -97,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($id > 0) {
                 if ($isSuper) {
-                    $stmt = $pdo->prepare("UPDATE veh_repostajes SET vehiculo_id=?, fecha=?, km_odometro=?, litros=?, precio_litro=?, importe_total=?, estacion_servicio=?, notas=? WHERE id=? AND activo=1");
-                    $stmt->execute(array($vehiculoId, $fecha, $km, $litros, $precio, $importe, $estacion, $notas, $id));
+                    $stmt = $pdo->prepare("UPDATE veh_repostajes SET vehiculo_id=?, usuario_id=?, fecha=?, km_odometro=?, litros=?, precio_litro=?, importe_total=?, estacion_servicio=?, notas=? WHERE id=? AND activo=1");
+                    $stmt->execute(array($vehiculoId, $ownerId, $fecha, $km, $litros, $precio, $importe, $estacion, $notas, $id));
                 } else {
                     $stmt = $pdo->prepare("UPDATE veh_repostajes SET vehiculo_id=?, fecha=?, km_odometro=?, litros=?, precio_litro=?, importe_total=?, estacion_servicio=?, notas=? WHERE id=? AND usuario_id=? AND activo=1");
                     $stmt->execute(array($vehiculoId, $fecha, $km, $litros, $precio, $importe, $estacion, $notas, $id, $userId));
@@ -182,6 +198,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(array($acceso, $targetSuper, $targetUserId));
         $msg = "Asignación de sistema actualizada para el usuario.";
         $tab = 'usuarios';
+    }
+
+    // 6. Guardar Estación de Servicio (Alta o Modificación)
+    if ($formAction === 'save_estacion') {
+        $id        = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
+        $nombre    = trim(isset($_POST['nombre']) ? $_POST['nombre'] : '');
+        $marca     = trim(isset($_POST['marca']) ? $_POST['marca'] : '');
+        $localidad = trim(isset($_POST['localidad']) ? $_POST['localidad'] : '');
+        $direccion = trim(isset($_POST['direccion']) ? $_POST['direccion'] : '');
+        $notas     = trim(isset($_POST['notas']) ? $_POST['notas'] : '');
+
+        if ($nombre !== '') {
+            if ($id > 0) {
+                if ($isSuper) {
+                    $stmt = $pdo->prepare("UPDATE veh_estaciones SET nombre=?, marca=?, localidad=?, direccion=?, notas=? WHERE id=? AND activo=1");
+                    $stmt->execute(array($nombre, $marca, $localidad, $direccion, $notas, $id));
+                } else {
+                    $stmt = $pdo->prepare("UPDATE veh_estaciones SET nombre=?, marca=?, localidad=?, direccion=?, notas=? WHERE id=? AND usuario_id=? AND activo=1");
+                    $stmt->execute(array($nombre, $marca, $localidad, $direccion, $notas, $id, $userId));
+                }
+                $msg = "Estación de servicio actualizada correctamente.";
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO veh_estaciones (usuario_id, nombre, marca, localidad, direccion, notas, activo) VALUES (?, ?, ?, ?, ?, ?, 1)");
+                $stmt->execute(array($userId, $nombre, $marca, $localidad, $direccion, $notas));
+                $msg = "Estación de servicio dada de alta correctamente.";
+            }
+        }
+        $tab = 'estaciones';
+    }
+
+    // 7. Baja lógica de Estación de Servicio (activo = 0)
+    if ($formAction === 'deactivate_estacion') {
+        $id = (int)$_POST['id'];
+        if ($isSuper) {
+            $pdo->prepare("UPDATE veh_estaciones SET activo = 0 WHERE id = ?")->execute(array($id));
+        } else {
+            $pdo->prepare("UPDATE veh_estaciones SET activo = 0 WHERE id = ? AND usuario_id = ?")->execute(array($id, $userId));
+        }
+        $msg = "Estación de servicio dada de baja lógicamente (activo = 0).";
+        $tab = 'estaciones';
     }
 }
 
@@ -536,6 +592,9 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         <a href="?tab=vehiculos" class="fuel-tab <?php echo $tab === 'vehiculos' ? 'active' : ''; ?>">
             <i class="fas fa-car"></i> Vehículos (<?php echo count($vehiculos); ?>)
         </a>
+        <a href="?tab=estaciones" class="fuel-tab <?php echo $tab === 'estaciones' ? 'active' : ''; ?>">
+            <i class="fas fa-store"></i> Estaciones
+        </a>
         <a href="?tab=importar&vehiculo_id=<?php echo $selectedVehiculoId; ?>" class="fuel-tab <?php echo $tab === 'importar' ? 'active' : ''; ?>">
             <i class="fas fa-file-excel"></i> Importar Excel / CSV
         </a>
@@ -608,15 +667,34 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         </div>
         <div id="admin-ocr-msg" style="display:none; padding:0.55rem 0.8rem; border-radius:8px; background:#e0f2fe; color:#0369a1; font-size:0.82rem; margin-bottom:0.85rem;"></div>
 
+<?php
+if ($isSuper) {
+    $estacionesList = $pdo->query("SELECT * FROM veh_estaciones WHERE activo = 1 ORDER BY nombre ASC")->fetchAll();
+    $lastKmStmt = $pdo->query("SELECT vehiculo_id, MAX(km_odometro) AS ultimo_km FROM veh_repostajes WHERE activo = 1 GROUP BY vehiculo_id");
+} else {
+    $stE = $pdo->prepare("SELECT * FROM veh_estaciones WHERE usuario_id = ? AND activo = 1 ORDER BY nombre ASC");
+    $stE->execute(array($userId));
+    $estacionesList = $stE->fetchAll();
+    $lastKmStmt = $pdo->prepare("SELECT vehiculo_id, MAX(km_odometro) AS ultimo_km FROM veh_repostajes WHERE usuario_id = ? AND activo = 1 GROUP BY vehiculo_id");
+    $lastKmStmt->execute(array($userId));
+}
+$ultimoKmMap = array();
+while ($lk = $lastKmStmt->fetch()) {
+    $ultimoKmMap[(int)$lk['vehiculo_id']] = (float)$lk['ultimo_km'];
+}
+?>
         <form method="POST">
             <input type="hidden" name="form_action" value="save_repostaje">
             <input type="hidden" name="id" id="rep_id" value="0">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 0.75rem;">
                 <div>
                     <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Vehículo *</label>
-                    <select name="vehiculo_id" id="rep_vehiculo_id" required style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <select name="vehiculo_id" id="rep_vehiculo_id" required onchange="admUpdateParcial()" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                        <?php if (count($vehiculos) > 1): ?>
+                            <option value="">-- Selecciona un vehículo --</option>
+                        <?php endif; ?>
                         <?php foreach ($vehiculos as $v): ?>
-                            <option value="<?php echo (int)$v['id']; ?>" <?php echo ($selectedVehiculoId == (int)$v['id']) ? 'selected' : ''; ?>>
+                            <option value="<?php echo (int)$v['id']; ?>" <?php echo (count($vehiculos) === 1) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($v['nombre'] . ($v['matricula'] ? ' (' . $v['matricula'] . ')' : '')); ?>
                             </option>
                         <?php endforeach; ?>
@@ -628,7 +706,8 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
                 </div>
                 <div>
                     <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Kilómetros (KM.) *</label>
-                    <input type="number" step="0.01" name="km_odometro" id="rep_km" required placeholder="Ej: 183200" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <input type="number" step="0.01" name="km_odometro" id="rep_km" required placeholder="Ej: 183200" oninput="admUpdateParcial()" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <div id="adm-km-parcial" style="font-size:0.74rem; margin-top:3px; font-weight:700; color:#0f766e;"></div>
                 </div>
                 <div>
                     <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Litros *</label>
@@ -641,6 +720,15 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
                 <div>
                     <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Importe Total (€) *</label>
                     <input type="number" step="0.01" name="importe_total" id="rep_importe" required placeholder="Ej: 75.00" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Estación de Servicio</label>
+                    <input type="text" name="estacion_servicio" id="rep_estacion" list="adm-estaciones-datalist" placeholder="Elige o escribe" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+                    <datalist id="adm-estaciones-datalist">
+                        <?php foreach ($estacionesList as $est): ?>
+                            <option value="<?php echo htmlspecialchars($est['nombre']); ?>">
+                        <?php endforeach; ?>
+                    </datalist>
                 </div>
                 <div>
                     <label style="font-size:0.78rem; font-weight:600; display:block; margin-bottom:3px;">Notas / Mantenimiento</label>
@@ -1015,6 +1103,86 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
             </button>
         </div>
     </div>
+
+<?php elseif ($tab === 'estaciones'): ?>
+    <?php
+    if ($isSuper) {
+        $estListTab = $pdo->query("SELECT * FROM veh_estaciones WHERE activo = 1 ORDER BY nombre ASC")->fetchAll();
+    } else {
+        $stEstTab = $pdo->prepare("SELECT * FROM veh_estaciones WHERE usuario_id = ? AND activo = 1 ORDER BY nombre ASC");
+        $stEstTab->execute(array($userId));
+        $estListTab = $stEstTab->fetchAll();
+    }
+    ?>
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 1rem;"><i class="fas fa-store" style="color:#f59e0b;"></i> Alta / Modificación de Estación de Servicio</h3>
+        <form method="POST">
+            <input type="hidden" name="form_action" value="save_estacion">
+            <input type="hidden" name="id" id="est_id" value="0">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.85rem;">
+                <div>
+                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Nombre *</label>
+                    <input type="text" name="nombre" id="est_nombre" required placeholder="Ej: Repsol Moratalla" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Marca / Bandera</label>
+                    <input type="text" name="marca" id="est_marca" placeholder="Ej: Repsol, Cepsa, Ballenoil" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Localidad</label>
+                    <input type="text" name="localidad" id="est_localidad" placeholder="Ej: Moratalla" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Dirección</label>
+                    <input type="text" name="direccion" id="est_direccion" placeholder="Opcional" style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:0.82rem; font-weight:600; display:block; margin-bottom:4px;">Notas</label>
+                    <input type="text" name="notas" id="est_notas" placeholder="Descuento, horario..." style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Estación</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card" style="overflow-x:auto;">
+        <h3>Estaciones de Servicio Activas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Marca</th>
+                    <th>Localidad</th>
+                    <th>Dirección</th>
+                    <th>Notas</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($estListTab as $est): ?>
+                    <tr>
+                        <td><?php echo (int)$est['id']; ?></td>
+                        <td><strong><?php echo htmlspecialchars($est['nombre']); ?></strong></td>
+                        <td><?php echo htmlspecialchars((string)$est['marca']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$est['localidad']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$est['direccion']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$est['notas']); ?></td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary" onclick='loadEstIntoForm(<?php echo json_encode($est); ?>)'><i class="fas fa-edit"></i> Editar</button>
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('¿Dar de baja lógica esta estación? (activo = 0)');">
+                                <input type="hidden" name="form_action" value="deactivate_estacion">
+                                <input type="hidden" name="id" value="<?php echo (int)$est['id']; ?>">
+                                <button type="submit" class="btn btn-sm" style="color:red;"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 <?php endif; ?>
 
 <script>
@@ -1039,6 +1207,45 @@ const pdfDataRows = <?php
     echo json_encode($exportRows);
 ?>;
 
+const admUltimoKmMap = <?php echo json_encode(isset($ultimoKmMap) ? $ultimoKmMap : array()); ?>;
+let admEditingPrevKm = null;
+
+function admUpdateParcial() {
+    const el = document.getElementById('adm-km-parcial');
+    if (!el) return;
+    const vehId = document.getElementById('rep_vehiculo_id').value;
+    const editId = parseInt(document.getElementById('rep_id').value || '0', 10);
+    const kmVal = parseFloat(document.getElementById('rep_km').value);
+
+    if (!vehId) {
+        el.textContent = 'Selecciona un vehículo para ver su lectura anterior.';
+        el.style.color = '#64748b';
+        return;
+    }
+    const prevKm = (editId > 0 && admEditingPrevKm !== null)
+        ? admEditingPrevKm
+        : (admUltimoKmMap[vehId] !== undefined ? parseFloat(admUltimoKmMap[vehId]) : null);
+
+    if (prevKm === null || isNaN(prevKm)) {
+        el.textContent = 'Primer repostaje para este vehículo.';
+        el.style.color = '#64748b';
+        return;
+    }
+    if (isNaN(kmVal) || kmVal <= 0) {
+        el.textContent = 'Lectura anterior: ' + prevKm.toLocaleString('es-ES') + ' km';
+        el.style.color = '#64748b';
+        return;
+    }
+    const parcial = kmVal - prevKm;
+    if (parcial < 0) {
+        el.textContent = '⚠️ Menor que anterior (' + prevKm.toLocaleString('es-ES') + ' km): ' + parcial.toLocaleString('es-ES') + ' km';
+        el.style.color = '#dc2626';
+    } else {
+        el.textContent = '✓ Anterior: ' + prevKm.toLocaleString('es-ES') + ' km → Parcial: +' + parcial.toLocaleString('es-ES') + ' km';
+        el.style.color = '#0f766e';
+    }
+}
+
 function calcRepImporte() {
     const l = parseFloat(document.getElementById('rep_litros').value);
     const p = parseFloat(document.getElementById('rep_precio').value);
@@ -1047,6 +1254,7 @@ function calcRepImporte() {
     }
 }
 function loadRepIntoForm(r) {
+    admEditingPrevKm = (r.dif_km && parseFloat(r.dif_km) > 0) ? (parseFloat(r.km_odometro) - parseFloat(r.dif_km)) : null;
     document.getElementById('rep_id').value = r.id;
     document.getElementById('rep_vehiculo_id').value = r.vehiculo_id;
     document.getElementById('rep_fecha').value = r.fecha;
@@ -1054,18 +1262,36 @@ function loadRepIntoForm(r) {
     document.getElementById('rep_litros').value = r.litros;
     document.getElementById('rep_precio').value = r.precio_litro;
     document.getElementById('rep_importe').value = r.importe_total;
+    if (document.getElementById('rep_estacion')) {
+        document.getElementById('rep_estacion').value = r.estacion_servicio || '';
+    }
     document.getElementById('rep_notas').value = r.notas || '';
-    document.getElementById('form-rep-heading').innerHTML = '<i class="fas fa-edit" style="color:#f59e0b;"></i> Editando Repostaje #' + r.id;
+    document.getElementById('form-rep-heading').innerHTML = '<i class="fas fa-edit" style="color:#f59e0b;"></i> Editando / Reasignando Repostaje #' + r.id;
+    admUpdateParcial();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function resetRepForm() {
+    admEditingPrevKm = null;
     document.getElementById('rep_id').value = '0';
     document.getElementById('rep_km').value = '';
     document.getElementById('rep_litros').value = '';
     document.getElementById('rep_precio').value = '';
     document.getElementById('rep_importe').value = '';
+    if (document.getElementById('rep_estacion')) {
+        document.getElementById('rep_estacion').value = '';
+    }
     document.getElementById('rep_notas').value = '';
     document.getElementById('form-rep-heading').innerHTML = '<i class="fas fa-plus-circle" style="color:#0f766e;"></i> Registrar / Modificar Repostaje';
+    admUpdateParcial();
+}
+function loadEstIntoForm(est) {
+    document.getElementById('est_id').value = est.id;
+    document.getElementById('est_nombre').value = est.nombre;
+    document.getElementById('est_marca').value = est.marca || '';
+    document.getElementById('est_localidad').value = est.localidad || '';
+    document.getElementById('est_direccion').value = est.direccion || '';
+    document.getElementById('est_notas').value = est.notas || '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function loadVehIntoForm(v) {
     document.getElementById('veh_id').value = v.id;
