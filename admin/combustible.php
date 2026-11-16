@@ -572,7 +572,7 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         <a href="../combustible/index.php" target="_blank" class="btn" style="background:#0d9488; color:#fff; text-decoration:none; font-size:0.82rem; padding:0.55rem 0.9rem;">
             <i class="fas fa-expand"></i> Abrir App Web / OCR
         </a>
-        <button type="button" onclick="exportFuelPdfA4Vertical()" class="btn" style="background:#f59e0b; color:#fff; font-size:0.82rem; padding:0.55rem 0.9rem;">
+        <button type="button" onclick="openAdmPdfModal()" class="btn" style="background:#f59e0b; color:#fff; font-size:0.82rem; padding:0.55rem 0.9rem;">
             <i class="fas fa-file-pdf"></i> Informe PDF (A4 Vertical)
         </button>
     </div>
@@ -1185,26 +1185,64 @@ while ($lk = $lastKmStmt->fetch()) {
     </div>
 <?php endif; ?>
 
+<!-- MODAL DE CONFIGURACIÓN PDF EN ADMIN (FILTRO Y ORDEN ASC/DESC POR FECHA) -->
+<div id="adm-pdf-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:999; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:#fff; width:100%; max-width:460px; border-radius:16px; padding:1.35rem; box-shadow:0 20px 40px rgba(0,0,0,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="margin:0; font-size:1.05rem; color:#0f766e;"><i class="fas fa-file-pdf" style="color:#f59e0b;"></i> Configurar Informe PDF (A4 Vertical)</h3>
+            <button type="button" onclick="closeAdmPdfModal()" class="btn btn-sm" style="background:#e2e8f0; color:#0f172a;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.85rem;">
+            <div>
+                <label style="font-size:0.78rem; font-weight:700; display:block; margin-bottom:3px;">Desde Fecha</label>
+                <input type="date" id="adm-pdf-from" onchange="updateAdmPdfCount()" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            </div>
+            <div>
+                <label style="font-size:0.78rem; font-weight:700; display:block; margin-bottom:3px;">Hasta Fecha</label>
+                <input type="date" id="adm-pdf-to" onchange="updateAdmPdfCount()" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            </div>
+        </div>
+        <div style="margin-bottom:0.85rem;">
+            <label style="font-size:0.78rem; font-weight:700; display:block; margin-bottom:3px;">Filtro de texto (vehículo, estación, km, nota...)</label>
+            <input type="text" id="adm-pdf-search" oninput="updateAdmPdfCount()" placeholder="Opcional" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+        <div style="margin-bottom:0.9rem;">
+            <label style="font-size:0.78rem; font-weight:700; display:block; margin-bottom:3px;">Ordenación por Fecha *</label>
+            <select id="adm-pdf-order" style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px; font-weight:600;">
+                <option value="desc">⬇️ Descendente (Más recientes primero)</option>
+                <option value="asc">⬆️ Ascendente (Más antiguos primero)</option>
+            </select>
+        </div>
+        <div id="adm-pdf-count" style="font-size:0.82rem; font-weight:700; color:#0f766e; background:#f0fdfa; padding:0.55rem 0.75rem; border-radius:8px; margin-bottom:1rem;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+            <button type="button" onclick="closeAdmPdfModal()" class="btn" style="background:#e2e8f0; color:#0f172a;">Cancelar</button>
+            <button type="button" onclick="exportFuelPdfA4Vertical()" class="btn" style="background:#f59e0b; color:#fff;"><i class="fas fa-file-pdf"></i> Generar PDF</button>
+        </div>
+    </div>
+</div>
+
 <script>
-const pdfDataRows = <?php
-    $exportRows = array();
+const pdfFullItems = <?php
+    $exportItems = array();
     foreach ($calculatedList as $r) {
-        $exportRows[] = array(
-            $r['fecha'],
-            number_format((float)$r['litros'], 2, ',', '.'),
-            number_format((float)$r['precio_litro'], 3, ',', '.'),
-            number_format((float)$r['importe_total'], 2, ',', '.') . ' €',
-            number_format((float)$r['km_odometro'], 0, ',', '.'),
-            $r['dif_km'] > 0 ? '+' . number_format((float)$r['dif_km'], 0, ',', '.') : '-',
-            $r['litros_por_100'] !== null ? number_format((float)$r['litros_por_100'], 2, ',', '.') : '-',
-            $r['km_por_litro'] !== null ? number_format((float)$r['km_por_litro'], 2, ',', '.') : '-',
-            $r['euros_por_km'] !== null ? number_format((float)$r['euros_por_km'], 3, ',', '.') : '-',
-            number_format((float)$r['total_litros_acum'], 1, ',', '.'),
-            number_format((float)$r['total_euros_acum'], 2, ',', '.') . ' €',
-            mb_substr((string)$r['notas'], 0, 22)
+        $exportItems[] = array(
+            'fecha' => $r['fecha'],
+            'vehiculo' => (string)$r['vehiculo_nombre'],
+            'estacion' => (string)($r['estacion_servicio'] ?? ''),
+            'litros' => (float)$r['litros'],
+            'precio' => (float)$r['precio_litro'],
+            'importe' => (float)$r['importe_total'],
+            'km' => (float)$r['km_odometro'],
+            'dif_km' => (float)$r['dif_km'],
+            'l100' => $r['litros_por_100'] !== null ? (float)$r['litros_por_100'] : null,
+            'kml' => $r['km_por_litro'] !== null ? (float)$r['km_por_litro'] : null,
+            'eurkm' => $r['euros_por_km'] !== null ? (float)$r['euros_por_km'] : null,
+            't_litros' => (float)$r['total_litros_acum'],
+            't_euros' => (float)$r['total_euros_acum'],
+            'notas' => (string)($r['notas'] ?? '')
         );
     }
-    echo json_encode($exportRows);
+    echo json_encode($exportItems);
 ?>;
 
 const admUltimoKmMap = <?php echo json_encode(isset($ultimoKmMap) ? $ultimoKmMap : array()); ?>;
@@ -1373,18 +1411,103 @@ async function adminScanOdometerOCR(input) {
     }
 }
 
-// EXPORTACIÓN PDF OPTIMIZADA EN TAMAÑO A4 VERTICAL (PORTRAIT)
+// EXPORTACIÓN PDF OPTIMIZADA EN TAMAÑO A4 VERTICAL CON FILTRO Y ORDEN POR FECHA
+function openAdmPdfModal() {
+    const searchEl = document.getElementById('admin-fuel-search');
+    document.getElementById('adm-pdf-search').value = searchEl ? (searchEl.value || '') : '';
+    updateAdmPdfCount();
+    document.getElementById('adm-pdf-modal').style.display = 'flex';
+}
+function closeAdmPdfModal() {
+    document.getElementById('adm-pdf-modal').style.display = 'none';
+}
+function getAdmFilteredSortedItems() {
+    const from = document.getElementById('adm-pdf-from').value || '';
+    const to   = document.getElementById('adm-pdf-to').value || '';
+    const q    = (document.getElementById('adm-pdf-search').value || '').toLowerCase().trim();
+    const ord  = document.getElementById('adm-pdf-order').value || 'desc';
+
+    const list = pdfFullItems.filter(it => {
+        if (from && it.fecha < from) return false;
+        if (to && it.fecha > to) return false;
+        if (q) {
+            const match = it.fecha.toLowerCase().includes(q) ||
+                          String(it.km).includes(q) ||
+                          it.vehiculo.toLowerCase().includes(q) ||
+                          it.estacion.toLowerCase().includes(q) ||
+                          it.notas.toLowerCase().includes(q);
+            if (!match) return false;
+        }
+        return true;
+    });
+    list.sort((a, b) => {
+        const cmp = a.fecha.localeCompare(b.fecha);
+        if (cmp !== 0) return ord === 'asc' ? cmp : -cmp;
+        return ord === 'asc' ? (a.km - b.km) : (b.km - a.km);
+    });
+    return list;
+}
+function updateAdmPdfCount() {
+    const list = getAdmFilteredSortedItems();
+    document.getElementById('adm-pdf-count').textContent = 'Se incluirán ' + list.length + ' repostaje(s) en el PDF.';
+}
+function fmtEs(v, dec) {
+    return Number(v).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
 function exportFuelPdfA4Vertical() {
+    const items = getAdmFilteredSortedItems();
+    if (items.length === 0) {
+        alert('No hay registros que coincidan con el filtro seleccionado.');
+        return;
+    }
+    const ord = document.getElementById('adm-pdf-order').value || 'desc';
+    const from = document.getElementById('adm-pdf-from').value || '';
+    const to = document.getElementById('adm-pdf-to').value || '';
+
+    let totL = 0, totE = 0, totKm = 0;
+    const cons = [], precs = [];
+    items.forEach(it => {
+        totL += it.litros;
+        totE += it.importe;
+        if (it.dif_km > 0) totKm += it.dif_km;
+        if (it.l100 !== null) cons.push(it.l100);
+        if (it.precio > 0) precs.push(it.precio);
+    });
+    const cMax = cons.length ? Math.max(...cons) : 0;
+    const cMin = cons.length ? Math.min(...cons) : 0;
+    const cMed = cons.length ? (cons.reduce((a, b) => a + b, 0) / cons.length) : 0;
+    const pMax = precs.length ? Math.max(...precs) : 0;
+    const pMin = precs.length ? Math.min(...precs) : 0;
+    const coste100 = totKm > 0 ? ((totE / totKm) * 100) : 0;
+
+    const rows = items.map(it => [
+        it.fecha,
+        fmtEs(it.litros, 2),
+        fmtEs(it.precio, 3),
+        fmtEs(it.importe, 2) + ' €',
+        fmtEs(it.km, 0),
+        it.dif_km > 0 ? '+' + fmtEs(it.dif_km, 0) : '-',
+        it.l100 !== null ? fmtEs(it.l100, 2) : '-',
+        it.kml !== null ? fmtEs(it.kml, 2) : '-',
+        it.eurkm !== null ? fmtEs(it.eurkm, 3) : '-',
+        fmtEs(it.t_litros, 1),
+        fmtEs(it.t_euros, 2) + ' €',
+        it.notas.substring(0, 22)
+    ]);
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const orderLabel = ord === 'asc' ? 'Ascendente (fecha)' : 'Descendente (fecha)';
+    const rangeLabel = (from || to) ? ' | Periodo: ' + (from || '...') + ' a ' + (to || '...') : '';
 
     doc.setFontSize(13);
     doc.setTextColor(15, 118, 110);
     doc.text('INFORME DE CONTROL DE COMBUSTIBLE Y CONSUMO', 8, 12);
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(8.2);
     doc.setTextColor(70, 70, 70);
-    doc.text('Ámbito: <?php echo addslashes($scopeName); ?>   |   Fecha: ' + new Date().toLocaleDateString('es-ES'), 8, 17);
+    doc.text('Ámbito: <?php echo addslashes($scopeName); ?>' + rangeLabel + ' | Orden: ' + orderLabel + ' | ' + new Date().toLocaleDateString('es-ES'), 8, 17);
 
     // Caja resumen superior en A4 Vertical (194 mm ancho útil)
     doc.setDrawColor(203, 213, 225);
@@ -1394,11 +1517,11 @@ function exportFuelPdfA4Vertical() {
     doc.setFontSize(7.5);
     doc.setTextColor(15, 23, 42);
     doc.text(
-        'Consumo Medio: <?php echo number_format($consumoMedio, 2, ",", "."); ?> L/100km  |  Máx / Mín: <?php echo number_format($consumoMax, 2, ",", "."); ?> / <?php echo number_format($consumoMin, 2, ",", "."); ?> L/100  |  Precio Máx / Mín: <?php echo number_format($precioMax, 3, ",", "."); ?> / <?php echo number_format($precioMin, 3, ",", "."); ?> €/L',
+        'Consumo Medio: ' + fmtEs(cMed, 2) + ' L/100km  |  Máx / Mín: ' + fmtEs(cMax, 2) + ' / ' + fmtEs(cMin, 2) + ' L/100  |  Precio Máx / Mín: ' + fmtEs(pMax, 3) + ' / ' + fmtEs(pMin, 3) + ' €/L',
         11, 25.5
     );
     doc.text(
-        'Total Combustible: <?php echo number_format($totalLitrosGlobal, 2, ",", "."); ?> L (<?php echo count($calculatedList); ?> rep.)  |  Gasto Acumulado: <?php echo number_format($totalEurosGlobal, 2, ",", "."); ?> €  |  Km Recorridos: <?php echo number_format($totalKmGlobal, 0, ",", "."); ?> km  |  Coste: <?php echo number_format($costeMedio100, 2, ",", "."); ?> €/100km',
+        'Total Combustible: ' + fmtEs(totL, 2) + ' L (' + items.length + ' rep.)  |  Gasto: ' + fmtEs(totE, 2) + ' €  |  Km Recorridos: ' + fmtEs(totKm, 0) + ' km  |  Coste: ' + fmtEs(coste100, 2) + ' €/100km',
         11, 30.5
     );
 
@@ -1406,7 +1529,7 @@ function exportFuelPdfA4Vertical() {
         startY: 36,
         margin: { top: 12, right: 8, bottom: 12, left: 8 },
         head: [['Fecha', 'Litros', '€/L', 'Importe', 'KM.', 'DIF.', 'L/100', 'Km/L', '€/Km', 'T.Litros', 'Total €', 'Notas']],
-        body: pdfDataRows,
+        body: rows,
         styles: {
             fontSize: 6.8,
             cellPadding: 1.3,
@@ -1447,6 +1570,7 @@ function exportFuelPdfA4Vertical() {
         }
     });
 
+    closeAdmPdfModal();
     doc.save('Informe_Combustible_A4_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
