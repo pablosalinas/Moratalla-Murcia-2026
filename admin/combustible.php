@@ -586,6 +586,9 @@ adminHeader($isSuper ? "Control de Combustible." : "Control de Combustible");
         <a href="?tab=estaciones" class="fuel-tab <?php echo $tab === 'estaciones' ? 'active' : ''; ?>">
             <i class="fas fa-store"></i> Estaciones
         </a>
+        <a href="?tab=tareas&vehiculo_id=<?php echo $selectedVehiculoId; ?>" class="fuel-tab <?php echo $tab === 'tareas' ? 'active' : ''; ?>">
+            <i class="fas fa-wrench"></i> Mantenimiento y Tareas <span id="adm-tasks-badge" style="display:none; background:#dc2626; color:#fff; border-radius:999px; padding:1px 6px; font-size:0.7rem; margin-left:3px;">0</span>
+        </a>
         <a href="?tab=importar&vehiculo_id=<?php echo $selectedVehiculoId; ?>" class="fuel-tab <?php echo $tab === 'importar' ? 'active' : ''; ?>">
             <i class="fas fa-file-excel"></i> Importar Excel / CSV
         </a>
@@ -1167,6 +1170,113 @@ while ($lk = $lastKmStmt->fetch()) {
             </tbody>
         </table>
     </div>
+<?php elseif ($tab === 'tareas'): ?>
+    <!-- TAB: MANTENIMIENTO, TAREAS PERIÓDICAS Y MAESTRO (INTEGRADO CON /combustible/api.php) -->
+    <div class="card" style="padding:1.15rem; margin-bottom:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.65rem; margin-bottom:1rem;">
+            <h3 style="margin:0; font-size:1.05rem; color:#0f766e;"><i class="fas fa-wrench"></i> Mantenimiento y Controles Periódicos</h3>
+            <div style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
+                <select id="adm-t-veh" onchange="admLoadTareasData()" style="padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.82rem;">
+                    <option value="0">Todos los vehículos</option>
+                    <?php foreach ($vehiculos as $v): ?>
+                        <option value="<?php echo (int)$v['id']; ?>" <?php echo ($selectedVehiculoId == (int)$v['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($v['nombre']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <select id="adm-t-estado" onchange="admRenderTareasTable()" style="padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.82rem;">
+                    <option value="todas">Todas las tareas</option>
+                    <option value="pendiente">Pendientes</option>
+                    <option value="proximas">Próximas / En Alerta (&lt;1000 km o &le;15d)</option>
+                    <option value="finalizada">Finalizadas</option>
+                </select>
+                <input type="text" id="adm-t-search" oninput="admRenderTareasTable()" placeholder="Buscar tarea o vehículo..." style="padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:8px; font-size:0.82rem;">
+                <button type="button" class="btn btn-sm" onclick="admOpenMaestroModal()" style="background:#e2e8f0; color:#0f172a;"><i class="fas fa-list-alt"></i> Maestro Tareas</button>
+                <button type="button" class="btn btn-sm" onclick="admOpenUserEmailModal()" style="background:#e0f2fe; color:#0369a1;"><i class="fas fa-envelope"></i> Mi Correo</button>
+                <button type="button" class="btn btn-sm" onclick="admSendTaskAlertsEmail()" style="background:#fef3c7; color:#b45309;"><i class="fas fa-paper-plane"></i> Enviar Avisos Email</button>
+                <button type="button" class="btn btn-sm" onclick="admExportTareasPDF(false)" style="background:#f59e0b; color:#fff;"><i class="fas fa-file-pdf"></i> Informe PDF</button>
+                <button type="button" class="btn btn-sm" onclick="admExportTareasPDF(true)" style="background:#0284c7; color:#fff;"><i class="fas fa-envelope"></i> PDF por Email</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="admOpenVtModal()"><i class="fas fa-plus"></i> Asignar Tarea</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="fuel-data-table">
+                <thead>
+                    <tr>
+                        <th>Vehículo</th>
+                        <th>Tarea / Control</th>
+                        <th>Periodicidad</th>
+                        <th>Última / Próx. Fecha</th>
+                        <th>Último / Próx. Km</th>
+                        <th>Estado / Margen</th>
+                        <th style="text-align:right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="adm-tareas-tbody">
+                    <tr><td colspan="7" style="text-align:center; padding:1.5rem; color:#64748b;">Cargando tareas...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Maestro de Tareas (SCRUB) -->
+    <div id="adm-tm-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+        <div style="background:#fff; width:100%; max-width:640px; border-radius:14px; padding:1.25rem; max-height:90vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                <h3 style="margin:0; color:#0f766e;"><i class="fas fa-list-alt"></i> Maestro de Tareas Periódicas</h3>
+                <button type="button" onclick="document.getElementById('adm-tm-modal').style.display='none'" class="btn btn-sm">✕</button>
+            </div>
+            <div id="adm-tm-list" style="max-height:210px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; margin-bottom:0.9rem;"></div>
+            <form onsubmit="admSaveTm(event)" style="border-top:1px solid #e2e8f0; padding-top:0.8rem;">
+                <input type="hidden" id="adm-tm-id" value="0">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; margin-bottom:0.65rem;">
+                    <div><label style="font-size:0.78rem; font-weight:600;">Nombre *</label><input type="text" id="adm-tm-nombre" required style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                    <div><label style="font-size:0.78rem; font-weight:600;">Periodicidad</label><select id="adm-tm-tipo" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"><option value="ambos">Tiempo y Km</option><option value="kilometros">Solo Km</option><option value="tiempo">Solo Tiempo</option></select></div>
+                </div>
+                <div style="margin-bottom:0.65rem;"><label style="font-size:0.78rem; font-weight:600;">Descripción</label><input type="text" id="adm-tm-desc" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; margin-bottom:0.65rem;">
+                    <div><label style="font-size:0.78rem; font-weight:600;">Días</label><input type="number" id="adm-tm-dias" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                    <div><label style="font-size:0.78rem; font-weight:600;">Kilómetros</label><input type="number" id="adm-tm-km" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                </div>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; margin-bottom:0.8rem;"><input type="checkbox" id="adm-tm-avisar" checked> Avisar por tiempo si no llega al km</label>
+                <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                    <button type="button" onclick="admResetTm()" class="btn btn-sm">Limpiar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Guardar en Maestro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Asignar / Editar Tarea de Vehículo -->
+    <div id="adm-vt-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+        <div style="background:#fff; width:100%; max-width:540px; border-radius:14px; padding:1.25rem; max-height:90vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                <h3 style="margin:0; color:#0f766e;"><i class="fas fa-wrench"></i> Tarea Periódica de Vehículo</h3>
+                <button type="button" onclick="document.getElementById('adm-vt-modal').style.display='none'" class="btn btn-sm">✕</button>
+            </div>
+            <form onsubmit="admSaveVt(event)">
+                <input type="hidden" id="adm-vt-id" value="0">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; margin-bottom:0.65rem;">
+                    <div><label style="font-size:0.78rem; font-weight:600;">Vehículo *</label><select id="adm-vt-veh" required style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"><?php foreach ($vehiculos as $v): ?><option value="<?php echo (int)$v['id']; ?>"><?php echo htmlspecialchars($v['nombre']); ?></option><?php endforeach; ?></select></div>
+                    <div><label style="font-size:0.78rem; font-weight:600;">Plantilla Maestro</label><select id="adm-vt-maestro" onchange="admOnMaestroSelect()" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"><option value="0">-- Personalizada --</option></select></div>
+                </div>
+                <div style="margin-bottom:0.65rem;"><label style="font-size:0.78rem; font-weight:600;">Descripción *</label><input type="text" id="adm-vt-desc" required style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.65rem; margin-bottom:0.65rem;">
+                    <div><label style="font-size:0.78rem; font-weight:600;">Tipo</label><select id="adm-vt-tipo" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"><option value="ambos">Ambos</option><option value="kilometros">Solo Km</option><option value="tiempo">Solo Tiempo</option></select></div>
+                    <div><label style="font-size:0.78rem; font-weight:600;">Cada (días)</label><input type="number" id="adm-vt-dias" value="365" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                    <div><label style="font-size:0.78rem; font-weight:600;">Cada (km)</label><input type="number" id="adm-vt-km" value="15000" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; margin-bottom:0.65rem;">
+                    <div><label style="font-size:0.78rem; font-weight:600;">Última fecha</label><input type="date" id="adm-vt-ult-fecha" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                    <div><label style="font-size:0.78rem; font-weight:600;">Último km</label><input type="number" id="adm-vt-ult-km" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                </div>
+                <div style="margin-bottom:0.65rem;"><label style="font-size:0.78rem; font-weight:600;">Notas</label><input type="text" id="adm-vt-notas" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:7px;"></div>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; margin-bottom:0.85rem;"><input type="checkbox" id="adm-vt-avisar" checked> Avisar por tiempo si no llega al kilometraje</label>
+                <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                    <button type="button" onclick="document.getElementById('adm-vt-modal').style.display='none'" class="btn btn-sm">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Guardar Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
 <?php endif; ?>
 
 <!-- MODAL DE CONFIGURACIÓN PDF EN ADMIN (FILTRO Y ORDEN ASC/DESC POR FECHA) -->
@@ -1198,9 +1308,10 @@ while ($lk = $lastKmStmt->fetch()) {
             </select>
         </div>
         <div id="adm-pdf-count" style="font-size:0.82rem; font-weight:700; color:#0f766e; background:#f0fdfa; padding:0.55rem 0.75rem; border-radius:8px; margin-bottom:1rem;"></div>
-        <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; flex-wrap:wrap;">
             <button type="button" onclick="closeAdmPdfModal()" class="btn" style="background:#e2e8f0; color:#0f172a;">Cancelar</button>
-            <button type="button" onclick="exportFuelPdfA4Vertical()" class="btn" style="background:#f59e0b; color:#fff;"><i class="fas fa-file-pdf"></i> Generar PDF</button>
+            <button type="button" onclick="exportFuelPdfA4Vertical(true)" class="btn" style="background:#0284c7; color:#fff;"><i class="fas fa-envelope"></i> Enviar Email</button>
+            <button type="button" onclick="exportFuelPdfA4Vertical(false)" class="btn" style="background:#f59e0b; color:#fff;"><i class="fas fa-file-pdf"></i> Generar PDF</button>
         </div>
     </div>
 </div>
@@ -1447,7 +1558,7 @@ function fmtEs(v, dec) {
     return Number(v).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-function exportFuelPdfA4Vertical() {
+async function exportFuelPdfA4Vertical(sendByEmail = false) {
     const items = getAdmFilteredSortedItems();
     if (items.length === 0) {
         alert('No hay registros que coincidan con el filtro seleccionado.');
@@ -1551,10 +1662,11 @@ function exportFuelPdfA4Vertical() {
         alternateRowStyles: { fillColor: [248, 250, 252] },
         didDrawPage: function (data) {
             const pageCount = doc.internal.getNumberOfPages();
+            const nowStr = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
             doc.setFontSize(7.5);
             doc.setTextColor(120, 120, 120);
             doc.text(
-                'Página ' + data.pageNumber + ' de ' + pageCount + ' - Control de Combustible (A4 Vertical)',
+                'Página ' + data.pageNumber + ' de ' + pageCount + ' · generado y enviado por www.moratalla-murcia.com (' + nowStr + ')',
                 105,
                 291,
                 { align: 'center' }
@@ -1563,8 +1675,290 @@ function exportFuelPdfA4Vertical() {
     });
 
     closeAdmPdfModal();
-    doc.save('Informe_Combustible_A4_' + new Date().toISOString().slice(0, 10) + '.pdf');
+    const fileName = 'Informe_Combustible_A4_' + new Date().toISOString().slice(0, 10) + '.pdf';
+    if (sendByEmail) {
+        const pdfBase64 = doc.output('datauristring');
+        const res = await fetch('../combustible/api.php?action=send_report_email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                title: 'Informe de Combustible - <?php echo addslashes($scopeName); ?>',
+                summary: 'Registros incluidos: ' + items.length + '\nTotal: ' + fmtEs(totL, 2) + ' L (' + fmtEs(totE, 2) + ' €)',
+                filename: fileName,
+                pdf_base64: pdfBase64
+            })
+        });
+        const data = await res.json();
+        alert(data.message || data.error || 'Operación completada');
+    } else {
+        doc.save(fileName);
+    }
 }
+
+// MANTENIMIENTO Y TAREAS PERIÓDICAS EN ADMIN (CONECTADO A ../combustible/api.php)
+let admTareasData = { tareas_maestro: [], vehiculo_tareas: [], user: {}, ultimo_km_por_vehiculo: {} };
+async function admApiCall(action, payload = {}) {
+    const res = await fetch('../combustible/api.php?action=' + encodeURIComponent(action), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+    });
+    return await res.json();
+}
+function admPdfClean(s) {
+    return String(s || '').replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[^\x20-\x7E\xA0-\xFF]/g, '').replace(/\s+/g, ' ').trim();
+}
+async function admLoadTareasData() {
+    const vehSel = document.getElementById('adm-t-veh');
+    const vid = vehSel ? vehSel.value : <?php echo (int)$selectedVehiculoId; ?>;
+    const res = await admApiCall('dashboard', { vehiculo_id: vid });
+    if (res && res.success) {
+        admTareasData = res;
+        const alertCnt = (res.vehiculo_tareas || []).filter(t => t.en_alerta).length;
+        const badge = document.getElementById('adm-tasks-badge');
+        if (badge) {
+            badge.textContent = String(alertCnt);
+            badge.style.display = alertCnt > 0 ? 'inline-block' : 'none';
+        }
+        if (document.getElementById('adm-tareas-tbody')) admRenderTareasTable();
+    }
+}
+function admGetFilteredTareas() {
+    const est = document.getElementById('adm-t-estado')?.value || 'todas';
+    const q = (document.getElementById('adm-t-search')?.value || '').toLowerCase().trim();
+    return (admTareasData.vehiculo_tareas || []).filter(t => {
+        if (est === 'pendiente' && t.estado !== 'pendiente') return false;
+        if (est === 'finalizada' && t.estado !== 'finalizada') return false;
+        if (est === 'proximas' && !(t.estado === 'pendiente' && t.en_alerta)) return false;
+        if (q && !(`${t.vehiculo_nombre || ''} ${t.descripcion || ''} ${t.notas || ''} ${t.motivo_alerta || ''}`).toLowerCase().includes(q)) return false;
+        return true;
+    });
+}
+function admRenderTareasTable() {
+    const tbody = document.getElementById('adm-tareas-tbody');
+    if (!tbody) return;
+    const list = admGetFilteredTareas();
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:#64748b;">No hay tareas con este filtro.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map(t => {
+        const badge = t.estado === 'finalizada'
+            ? `<span style="background:#e2e8f0; color:#334155; padding:2px 7px; border-radius:6px; font-size:0.75rem; font-weight:700;">Finalizada (${t.fecha_finalizacion || ''})</span>`
+            : (t.vencida
+                ? `<span style="background:#fee2e2; color:#b91c1c; padding:2px 7px; border-radius:6px; font-size:0.75rem; font-weight:700;">VENCIDA: ${t.motivo_alerta}</span>`
+                : (t.en_alerta
+                    ? `<span style="background:#fef3c7; color:#b45309; padding:2px 7px; border-radius:6px; font-size:0.75rem; font-weight:700;">PRÓXIMA: ${t.motivo_alerta}</span>`
+                    : `<span style="background:#dcfce7; color:#15803d; padding:2px 7px; border-radius:6px; font-size:0.75rem; font-weight:700;">En plazo</span>`));
+        const per = [t.periodo_dias ? t.periodo_dias + ' d' : '', t.periodo_km ? Number(t.periodo_km).toLocaleString('es-ES') + ' km' : ''].filter(Boolean).join(' / ') || 'Única';
+        const btns = t.estado === 'pendiente'
+            ? `<button class="btn btn-sm" style="color:#15803d;" onclick='admCompleteVt(${JSON.stringify(t)})' title="Finalizar"><i class="fas fa-check"></i></button>
+               <button class="btn btn-sm btn-primary" onclick='admEditVt(${JSON.stringify(t)})' title="Editar"><i class="fas fa-edit"></i></button>
+               <button class="btn btn-sm" style="color:red;" onclick="admDeactivateVt(${t.id})" title="Baja"><i class="fas fa-trash"></i></button>`
+            : `<button class="btn btn-sm" style="color:red;" onclick="admDeactivateVt(${t.id})" title="Baja"><i class="fas fa-trash"></i></button>`;
+        return `<tr>
+            <td><strong>${t.vehiculo_nombre || ''}</strong></td>
+            <td><strong>${t.descripcion || ''}</strong>${t.notas ? '<br><small style="color:#64748b">' + t.notas + '</small>' : ''}</td>
+            <td>${per}</td>
+            <td>${t.ultima_fecha || '-'}<br><strong>Próx: ${t.proxima_fecha || '-'}</strong></td>
+            <td>${t.ultimo_km !== null ? Number(t.ultimo_km).toLocaleString('es-ES') + ' km' : '-'}<br><strong>Próx: ${t.proximo_km !== null ? Number(t.proximo_km).toLocaleString('es-ES') + ' km' : '-'}</strong></td>
+            <td>${badge}</td>
+            <td style="text-align:right; white-space:nowrap;">${btns}</td>
+        </tr>`;
+    }).join('');
+}
+function admOpenMaestroModal() {
+    admRenderTmList(); admResetTm();
+    document.getElementById('adm-tm-modal').style.display = 'flex';
+}
+function admRenderTmList() {
+    const el = document.getElementById('adm-tm-list');
+    const list = admTareasData.tareas_maestro || [];
+    el.innerHTML = list.length ? list.map(t => `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem; border-bottom:1px solid #f1f5f9;"><div><strong>${t.nombre}</strong> <small style="color:#64748b;">(${t.tipo_periodicidad}${t.periodo_dias ? ' · ' + t.periodo_dias + 'd' : ''}${t.periodo_km ? ' · ' + t.periodo_km + 'km' : ''})</small></div><div><button type="button" class="btn btn-sm" onclick='admEditTm(${JSON.stringify(t)})'><i class="fas fa-edit"></i></button><button type="button" class="btn btn-sm" style="color:red;" onclick="admDeleteTm(${t.id})"><i class="fas fa-trash"></i></button></div></div>`).join('') : '<div style="text-align:center; padding:0.75rem; color:#64748b;">Vacío</div>';
+}
+function admResetTm() {
+    document.getElementById('adm-tm-id').value = '0';
+    document.getElementById('adm-tm-nombre').value = '';
+    document.getElementById('adm-tm-desc').value = '';
+    document.getElementById('adm-tm-tipo').value = 'ambos';
+    document.getElementById('adm-tm-dias').value = '';
+    document.getElementById('adm-tm-km').value = '';
+    document.getElementById('adm-tm-avisar').checked = true;
+}
+function admEditTm(t) {
+    document.getElementById('adm-tm-id').value = t.id;
+    document.getElementById('adm-tm-nombre').value = t.nombre || '';
+    document.getElementById('adm-tm-desc').value = t.descripcion || '';
+    document.getElementById('adm-tm-tipo').value = t.tipo_periodicidad || 'ambos';
+    document.getElementById('adm-tm-dias').value = t.periodo_dias || '';
+    document.getElementById('adm-tm-km').value = t.periodo_km || '';
+    document.getElementById('adm-tm-avisar').checked = Boolean(Number(t.avisar_por_tiempo_si_no_km));
+}
+async function admSaveTm(e) {
+    e.preventDefault();
+    const res = await admApiCall('save_tarea_maestro', {
+        id: document.getElementById('adm-tm-id').value,
+        nombre: document.getElementById('adm-tm-nombre').value,
+        descripcion: document.getElementById('adm-tm-desc').value,
+        tipo_periodicidad: document.getElementById('adm-tm-tipo').value,
+        periodo_dias: document.getElementById('adm-tm-dias').value,
+        periodo_km: document.getElementById('adm-tm-km').value,
+        avisar_por_tiempo_si_no_km: document.getElementById('adm-tm-avisar').checked ? 1 : 0
+    });
+    if (res.success) { await admLoadTareasData(); admRenderTmList(); admResetTm(); } else alert(res.error || 'Error');
+}
+async function admDeleteTm(id) {
+    if (!confirm('¿Dar de baja esta tarea del maestro?')) return;
+    await admApiCall('deactivate_tarea_maestro', { id });
+    await admLoadTareasData(); admRenderTmList();
+}
+function admPopulateMaestroSel() {
+    const sel = document.getElementById('adm-vt-maestro');
+    sel.innerHTML = '<option value="0">-- Personalizada --</option>';
+    (admTareasData.tareas_maestro || []).forEach(tm => {
+        const o = document.createElement('option'); o.value = tm.id; o.textContent = tm.nombre; sel.appendChild(o);
+    });
+}
+function admOnMaestroSelect() {
+    const id = parseInt(document.getElementById('adm-vt-maestro').value || '0', 10);
+    const tm = (admTareasData.tareas_maestro || []).find(x => Number(x.id) === id);
+    if (!tm) return;
+    document.getElementById('adm-vt-desc').value = tm.nombre + (tm.descripcion ? ' - ' + tm.descripcion : '');
+    document.getElementById('adm-vt-tipo').value = tm.tipo_periodicidad || 'ambos';
+    document.getElementById('adm-vt-dias').value = tm.periodo_dias || '';
+    document.getElementById('adm-vt-km').value = tm.periodo_km || '';
+    document.getElementById('adm-vt-avisar').checked = Boolean(Number(tm.avisar_por_tiempo_si_no_km));
+}
+function admOpenVtModal() {
+    admPopulateMaestroSel();
+    document.getElementById('adm-vt-id').value = '0';
+    document.getElementById('adm-vt-maestro').value = '0';
+    document.getElementById('adm-vt-desc').value = '';
+    document.getElementById('adm-vt-tipo').value = 'ambos';
+    document.getElementById('adm-vt-dias').value = '365';
+    document.getElementById('adm-vt-km').value = '15000';
+    document.getElementById('adm-vt-ult-fecha').value = new Date().toISOString().slice(0, 10);
+    const vid = document.getElementById('adm-vt-veh').value;
+    const lk = (admTareasData.ultimo_km_por_vehiculo || {})[vid];
+    document.getElementById('adm-vt-ult-km').value = lk !== undefined ? Math.round(lk) : '';
+    document.getElementById('adm-vt-notas').value = '';
+    document.getElementById('adm-vt-avisar').checked = true;
+    document.getElementById('adm-vt-modal').style.display = 'flex';
+}
+function admEditVt(t) {
+    admPopulateMaestroSel();
+    document.getElementById('adm-vt-id').value = t.id;
+    document.getElementById('adm-vt-veh').value = t.vehiculo_id;
+    document.getElementById('adm-vt-maestro').value = t.tarea_maestro_id || '0';
+    document.getElementById('adm-vt-desc').value = t.descripcion || '';
+    document.getElementById('adm-vt-tipo').value = t.tipo_periodicidad || 'ambos';
+    document.getElementById('adm-vt-dias').value = t.periodo_dias || '';
+    document.getElementById('adm-vt-km').value = t.periodo_km || '';
+    document.getElementById('adm-vt-ult-fecha').value = t.ultima_fecha || '';
+    document.getElementById('adm-vt-ult-km').value = t.ultimo_km !== null ? t.ultimo_km : '';
+    document.getElementById('adm-vt-notas').value = t.notas || '';
+    document.getElementById('adm-vt-avisar').checked = Boolean(Number(t.avisar_por_tiempo_si_no_km));
+    document.getElementById('adm-vt-modal').style.display = 'flex';
+}
+async function admSaveVt(e) {
+    e.preventDefault();
+    const res = await admApiCall('save_vehiculo_tarea', {
+        id: document.getElementById('adm-vt-id').value,
+        vehiculo_id: document.getElementById('adm-vt-veh').value,
+        tarea_maestro_id: document.getElementById('adm-vt-maestro').value,
+        descripcion: document.getElementById('adm-vt-desc').value,
+        tipo_periodicidad: document.getElementById('adm-vt-tipo').value,
+        periodo_dias: document.getElementById('adm-vt-dias').value,
+        periodo_km: document.getElementById('adm-vt-km').value,
+        ultima_fecha: document.getElementById('adm-vt-ult-fecha').value,
+        ultimo_km: document.getElementById('adm-vt-ult-km').value,
+        notas: document.getElementById('adm-vt-notas').value,
+        avisar_por_tiempo_si_no_km: document.getElementById('adm-vt-avisar').checked ? 1 : 0
+    });
+    if (res.success) { document.getElementById('adm-vt-modal').style.display = 'none'; await admLoadTareasData(); } else alert(res.error || 'Error');
+}
+async function admCompleteVt(t) {
+    const km = prompt('Km al realizar la tarea "' + t.descripcion + '":', t.km_actual ? Math.round(t.km_actual) : '');
+    if (km === null) return;
+    const res = await admApiCall('complete_vehiculo_tarea', {
+        id: t.id,
+        fecha_finalizacion: new Date().toISOString().slice(0, 10),
+        km_finalizacion: km,
+        crear_siguiente: 1
+    });
+    alert(res.message || res.error);
+    await admLoadTareasData();
+}
+async function admDeactivateVt(id) {
+    if (!confirm('¿Dar de baja esta tarea?')) return;
+    await admApiCall('deactivate_vehiculo_tarea', { id });
+    await admLoadTareasData();
+}
+async function admSendTaskAlertsEmail() {
+    const vid = document.getElementById('adm-t-veh')?.value || 0;
+    const res = await admApiCall('send_task_alerts_email', { vehiculo_id: vid });
+    alert(res.message || res.error || 'Operación completada');
+}
+async function admOpenUserEmailModal() {
+    const cur = (admTareasData.user && admTareasData.user.email) ? admTareasData.user.email : '';
+    const email = prompt('Correo electrónico para avisos e informes:', cur);
+    if (email === null) return;
+    const res = await admApiCall('update_user_email', { email: email.trim() });
+    alert(res.message || res.error);
+    if (res.success) await admLoadTareasData();
+}
+async function admExportTareasPDF(sendByEmail = false) {
+    const list = admGetFilteredTareas();
+    if (!list.length) { alert('No hay tareas que coincidan con el filtro.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const vSel = document.getElementById('adm-t-veh');
+    const eSel = document.getElementById('adm-t-estado');
+    const vehName = admPdfClean(vSel.options[vSel.selectedIndex].textContent);
+    const estName = admPdfClean(eSel.options[eSel.selectedIndex].textContent);
+
+    doc.setFillColor(15, 118, 110); doc.rect(0, 0, 210, 26, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(14);
+    doc.text('INFORME DE MANTENIMIENTO Y TAREAS PERIODICAS', 12, 11);
+    doc.setFontSize(9);
+    doc.text(admPdfClean('Ambito: ' + vehName + ' · Filtro: ' + estName), 12, 18);
+    doc.text(admPdfClean('Generado: ' + new Date().toLocaleDateString('es-ES') + ' · ' + list.length + ' tareas'), 12, 23);
+
+    const body = list.map(t => [
+        admPdfClean(t.vehiculo_nombre || ''),
+        admPdfClean(t.descripcion || ''),
+        t.proxima_fecha || '-',
+        t.proximo_km !== null ? Number(t.proximo_km).toLocaleString('es-ES') + ' km' : '-',
+        admPdfClean(t.estado === 'finalizada' ? 'Finalizada (' + (t.fecha_finalizacion || '-') + ')' : (t.en_alerta ? 'AVISO: ' + t.motivo_alerta : 'En plazo'))
+    ]);
+    doc.autoTable({
+        startY: 32, margin: { left: 10, right: 10 },
+        head: [['Vehículo', 'Tarea / Control', 'Próx. Fecha', 'Próx. Km', 'Estado / Margen']],
+        body, theme: 'grid', styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [15, 23, 42], textColor: 255 },
+        didDrawPage: function (data) {
+            const pageCount = doc.internal.getNumberOfPages();
+            const nowStr = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            doc.setFontSize(7.5); doc.setTextColor(120, 120, 120);
+            doc.text('Página ' + data.pageNumber + ' de ' + pageCount + ' · generado y enviado por www.moratalla-murcia.com (' + nowStr + ')', 105, 291, { align: 'center' });
+        }
+    });
+    const fileName = 'Informe_Tareas_Mantenimiento_' + new Date().toISOString().slice(0, 10) + '.pdf';
+    if (sendByEmail) {
+        const res = await admApiCall('send_report_email', {
+            title: 'Informe de Mantenimiento - ' + vehName,
+            summary: 'Ámbito: ' + vehName + '\nFiltro: ' + estName + '\nTareas: ' + list.length,
+            filename: fileName,
+            pdf_base64: doc.output('datauristring')
+        });
+        alert(res.message || res.error || 'Operación completada');
+    } else {
+        doc.save(fileName);
+    }
+}
+window.addEventListener('DOMContentLoaded', () => { admLoadTareasData(); });
 
 // IMPORTADOR CONFIGURABLE DE EXCEL (.XLSX / .XLS) Y CSV EN ADMIN
 let admRawSheetRows = [];
