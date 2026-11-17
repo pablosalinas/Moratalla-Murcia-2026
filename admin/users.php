@@ -8,11 +8,15 @@ require_once 'inc/layout.php';
 $pdo = getDB();
 ensureUserAccessColumns($pdo);
 
-// Asegurar columna activo para baja lógica sin destruir registros
+// Asegurar columna activo y email para baja lógica y notificaciones sin destruir registros
 try {
     $colActivo = $pdo->query("SHOW COLUMNS FROM `users` LIKE 'activo'")->fetch();
     if (!$colActivo) {
         $pdo->exec("ALTER TABLE `users` ADD COLUMN `activo` TINYINT(1) NOT NULL DEFAULT 1");
+    }
+    $colEmail = $pdo->query("SHOW COLUMNS FROM `users` LIKE 'email'")->fetch();
+    if (!$colEmail) {
+        $pdo->exec("ALTER TABLE `users` ADD COLUMN `email` VARCHAR(190) DEFAULT NULL");
     }
 } catch (Exception $e) {}
 
@@ -32,11 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $accesoSistema = 'web';
         }
         $nuevoSuper = ($isSuper && !empty($_POST['es_superusuario'])) ? 1 : 0;
+        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
 
         $hash = password_hash($pass, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (username, password, role, acceso_sistema, es_superusuario, activo) VALUES (?, ?, ?, ?, ?, 1)");
+        $stmt = $pdo->prepare("INSERT INTO users (username, email, password, role, acceso_sistema, es_superusuario, activo) VALUES (?, ?, ?, ?, ?, ?, 1)");
         try {
-            $stmt->execute(array($user, $hash, $role, $accesoSistema, $nuevoSuper));
+            $stmt->execute(array($user, $email !== '' ? $email : null, $hash, $role, $accesoSistema, $nuevoSuper));
             $msg = "Usuario creado con éxito.";
             $action = 'list';
         } catch (Exception $e) {
@@ -64,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $role = isset($_POST['role']) ? $_POST['role'] : 'editor';
         $esSuperTarget = !empty($_POST['es_superusuario']) ? 1 : 0;
+        $emailTarget = isset($_POST['email']) ? trim($_POST['email']) : '';
 
         // Evitar que el superusuario actual se quite a sí mismo su permiso de superusuario por accidente
         if ($id == (int)$_SESSION['admin_id']) {
@@ -71,9 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $accesoSistema = 'ambos';
         }
 
-        $stmt = $pdo->prepare("UPDATE users SET role = ?, acceso_sistema = ?, es_superusuario = ? WHERE id = ?");
-        $stmt->execute(array($role, $accesoSistema, $esSuperTarget, $id));
-        $msg = "Permisos de acceso del usuario actualizados correctamente.";
+        $stmt = $pdo->prepare("UPDATE users SET email = ?, role = ?, acceso_sistema = ?, es_superusuario = ? WHERE id = ?");
+        $stmt->execute(array($emailTarget !== '' ? $emailTarget : null, $role, $accesoSistema, $esSuperTarget, $id));
+        $msg = "Permisos y correo del usuario actualizados correctamente.";
         $action = 'list';
     }
 }
@@ -155,6 +161,7 @@ adminHeader("Gestión de Usuarios");
                                     <form method="POST" action="?action=update_access" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin:0;">
                                         <input type="hidden" name="id" value="<?php echo (int)$u['id']; ?>">
                                         <input type="hidden" name="role" value="<?php echo htmlspecialchars($u['role']); ?>">
+                                        <input type="email" name="email" value="<?php echo htmlspecialchars(isset($u['email']) ? $u['email'] : ''); ?>" placeholder="correo@ejemplo.com" style="padding:0.35rem 0.5rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.8rem; width:165px;">
                                         <select name="acceso_sistema" style="padding:0.35rem 0.5rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.82rem;">
                                             <option value="ambos" <?php echo $acceso === 'ambos' ? 'selected' : ''; ?>>✅ Ambos (Web + Combustible)</option>
                                             <option value="web" <?php echo $acceso === 'web' ? 'selected' : ''; ?>>🌐 Solo moratalla-murcia.com</option>
@@ -192,6 +199,10 @@ adminHeader("Gestión de Usuarios");
             <div style="margin-bottom: 1.2rem;">
                 <label style="display:block; margin-bottom: 0.4rem; font-weight:600;">Nombre de Usuario</label>
                 <input type="text" name="username" required style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:8px;">
+            </div>
+            <div style="margin-bottom: 1.2rem;">
+                <label style="display:block; margin-bottom: 0.4rem; font-weight:600;">Correo Electrónico (para avisos de repostaje y tareas)</label>
+                <input type="email" name="email" placeholder="usuario@ejemplo.com" style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:8px;">
             </div>
             <div style="margin-bottom: 1.2rem;">
                 <label style="display:block; margin-bottom: 0.4rem; font-weight:600;">Contraseña</label>
