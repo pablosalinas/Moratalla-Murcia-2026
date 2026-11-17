@@ -50,6 +50,7 @@ jobs:
           git clone --depth=1 https://github.com/pablosalinas/ControlCombustible.git /tmp/combustible
           lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ --exclude-glob flutter_app/ /tmp/combustible/ ${{ secrets.SFTP_REMOTE_PATH }}/combustible/"
           lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ --exclude-glob flutter_app/ /tmp/combustible/ ${{ secrets.SFTP_REMOTE_PATH }}/../combustible/" || true
+          curl -f -s -S "${{ secrets.SITE_URL }}/combustible/setup_db.php" || true
           echo "✅ Control de Combustible desplegado correctamente."
 
       - name: 🐬 Migraciones
