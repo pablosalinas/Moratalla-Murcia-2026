@@ -18,6 +18,10 @@ try {
     if (!$colEmail) {
         $pdo->exec("ALTER TABLE `users` ADD COLUMN `email` VARCHAR(190) DEFAULT NULL");
     }
+    $colValidado = $pdo->query("SHOW COLUMNS FROM `users` LIKE 'validado'")->fetch();
+    if (!$colValidado) {
+        $pdo->exec("ALTER TABLE `users` ADD COLUMN `validado` TINYINT(1) NOT NULL DEFAULT 1");
+    }
 } catch (Exception $e) {}
 
 $isSuper = isSuperUser();
@@ -84,6 +88,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// APROBAR / RECHAZAR SOLICITUD DE ALTA (Exclusivo Superusuario)
+if ($action == 'approve_user' && $isSuper && isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
+    $pdo->prepare("UPDATE users SET validado = 1, activo = 1 WHERE id = ?")->execute(array($id));
+    $mailSent = false;
+    try {
+        $stmtU = $pdo->prepare("SELECT username, email, acceso_sistema FROM users WHERE id = ? LIMIT 1");
+        $stmtU->execute(array($id));
+        $uRow = $stmtU->fetch();
+        if ($uRow && !empty($uRow['email']) && filter_var($uRow['email'], FILTER_VALIDATE_EMAIL) && file_exists(__DIR__ . '/../inc/mailer.php')) {
+            require_once __DIR__ . '/../inc/mailer.php';
+            $cfg = getMailConfig($pdo);
+            $subj = "Tu cuenta en moratalla-murcia.com ha sido dada de alta";
+            $plain = "Hola {$uRow['username']},\r\n\r\nTu solicitud de registro ha sido aprobada por el superusuario y tu usuario ya está dado de alta.\r\nYa puedes iniciar sesión en https://www.moratalla-murcia.com/moratalla/admin/login.php o en https://www.moratalla-murcia.com/combustible/\r\n";
+            $html = "<p>Hola <strong>" . htmlspecialchars($uRow['username']) . "</strong>,</p><p>Tu solicitud ha sido validada por el superusuario y tu cuenta ya está <strong>dada de alta</strong>.</p><p>Ya puedes iniciar sesión en la web y en la app.</p>";
+            $mailSent = smtpSendRaw($cfg['smtp_host'], $cfg['smtp_port'], $cfg['smtp_encryption'], $cfg['smtp_user'], $cfg['smtp_pass'], $cfg['smtp_user'], 'moratalla-murcia.com', $uRow['email'], $cfg['smtp_user'], 'moratalla-murcia.com', $subj, $plain, $html);
+        }
+    } catch (Exception $eMail) {}
+    $msg = $mailSent ? "Usuario aprobado y dado de alta. Se le ha enviado correo de confirmación." : "Usuario aprobado y dado de alta.";
+    $action = 'list';
+}
+
+if ($action == 'reject_user' && $isSuper && isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
+    if ($id != (int)$_SESSION['admin_id']) {
+        $pdo->prepare("UPDATE users SET validado = -1 WHERE id = ?")->execute(array($id));
+        $msg = "Solicitud de usuario rechazada.";
+    }
+    $action = 'list';
+}
+
 // BAJA LÓGICA DE USUARIO (Sin borrar datos)
 if ($action == 'deactivate' && isset($_GET['id'])) {
     $id = (int)$_GET['id'];
@@ -131,9 +166,10 @@ adminHeader("Gestión de Usuarios");
                 </thead>
                 <tbody>
                     <?php
-                    $stmt = $pdo->query("SELECT * FROM users WHERE activo = 1 ORDER BY id ASC");
+                    $stmt = $pdo->query("SELECT * FROM users WHERE activo = 1 AND (validado IS NULL OR validado >= 0) ORDER BY (validado = 0) DESC, id ASC");
                     while ($u = $stmt->fetch()):
-                        $status = (!empty($u['locked_until']) && strtotime($u['locked_until']) > time()) ? "Bloqueado" : "Activo";
+                        $isPending = isset($u['validado']) && (int)$u['validado'] === 0;
+                        $status = $isPending ? "Pendiente validar" : ((!empty($u['locked_until']) && strtotime($u['locked_until']) > time()) ? "Bloqueado" : "Activo");
                         $acceso = !empty($u['acceso_sistema']) ? $u['acceso_sistema'] : 'ambos';
                         $uSuper = !empty($u['es_superusuario']);
 
@@ -153,6 +189,9 @@ adminHeader("Gestión de Usuarios");
                                 <strong><?php echo htmlspecialchars($u['username']); ?></strong>
                                 <?php if ($uSuper): ?>
                                     <span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.72rem; margin-left:6px;"><i class="fas fa-crown"></i> Superusuario</span>
+                                <?php endif; ?>
+                                <?php if ($isPending): ?>
+                                    <span class="badge" style="background:#ffedd5; color:#c2410c; font-size:0.72rem; margin-left:6px;">Pendiente de aprobación</span>
                                 <?php endif; ?>
                             </td>
                             <td><span class="badge badge-info"><?php echo htmlspecialchars($u['role']); ?></span></td>
@@ -180,6 +219,10 @@ adminHeader("Gestión de Usuarios");
                             </td>
                             <td><?php echo $status; ?></td>
                             <td>
+                                <?php if ($isPending && $isSuper): ?>
+                                    <a href="?action=approve_user&id=<?php echo (int)$u['id']; ?>" class="btn btn-sm" style="background:#16a34a; color:#fff;" onclick="return confirm('¿Validar y dar de alta a este usuario?')">Aprobar</a>
+                                    <a href="?action=reject_user&id=<?php echo (int)$u['id']; ?>" class="btn btn-sm" style="background:#dc2626; color:#fff;" onclick="return confirm('¿Rechazar esta solicitud?')">Rechazar</a>
+                                <?php endif; ?>
                                 <a href="?action=change_pass&id=<?php echo (int)$u['id']; ?>" class="btn btn-sm btn-primary">Contraseña</a>
                                 <?php if ($isSuper && (int)$u['id'] !== (int)$_SESSION['admin_id']): ?>
                                     <a href="?action=deactivate&id=<?php echo (int)$u['id']; ?>" class="btn btn-sm" style="color:red" onclick="return confirm('¿Dar de baja a este usuario?')"><i class="fas fa-user-slash"></i></a>

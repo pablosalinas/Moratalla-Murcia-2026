@@ -9,7 +9,20 @@ if (isset($_SESSION['admin_id'])) {
 }
 
 $error = "";
+$success = "";
 $username = "";
+$regEmail = "";
+$formMode = isset($_POST['form_mode']) && $_POST['form_mode'] === 'register' ? 'register' : 'login';
+
+function ensureValidadoColAdmin($pdo) {
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM `users` LIKE 'validado'")->fetch();
+        if (!$col) {
+            $pdo->exec("ALTER TABLE `users` ADD COLUMN `validado` TINYINT(1) NOT NULL DEFAULT 1");
+        }
+    } catch (Exception $e) {}
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
@@ -20,15 +33,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Intento rechazado por el filtro de seguridad anti-robots.";
     } elseif ($captcha === '' || !isset($_SESSION['admin_captcha_sum']) || (int)$captcha !== (int)$_SESSION['admin_captcha_sum']) {
         $error = "La respuesta del CAPTCHA de seguridad es incorrecta. Inténtalo de nuevo.";
+    } elseif ($formMode === 'register') {
+        $regEmail = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $password2 = isset($_POST['password2']) ? $_POST['password2'] : '';
+        if ($username === '' || strlen($username) < 3 || strlen($username) > 50 || !preg_match('/^[a-zA-Z0-9._-]+$/', $username)) {
+            $error = "El usuario debe tener entre 3 y 50 caracteres (letras, números, punto, guion o guion bajo).";
+        } elseif (!filter_var($regEmail, FILTER_VALIDATE_EMAIL)) {
+            $error = "Introduce un correo electrónico válido para comunicaciones.";
+        } elseif (strlen($password) < 6) {
+            $error = "La contraseña debe tener al menos 6 caracteres.";
+        } elseif ($password !== $password2) {
+            $error = "Las contraseñas no coinciden.";
+        } else {
+            $pdo = getDB();
+            ensureValidadoColAdmin($pdo);
+            $stmtDup = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
+            $stmtDup->execute([$username, $regEmail]);
+            if ($stmtDup->fetch()) {
+                $error = "Ya existe un usuario o correo electrónico registrado con esos datos.";
+            } else {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmtIns = $pdo->prepare("INSERT INTO users (username, email, password, role, acceso_sistema, es_superusuario, activo, validado) VALUES (?, ?, ?, 'editor', 'ambos', 0, 1, 0)");
+                $stmtIns->execute([$username, $regEmail, $hash]);
+
+                // Notificar al correo de moratalla-murcia.com
+                try {
+                    if (file_exists(__DIR__ . '/../inc/mailer.php')) {
+                        require_once __DIR__ . '/../inc/mailer.php';
+                        $cfg = getMailConfig($pdo);
+                        $adminTo = !empty($cfg['admin_email']) ? trim($cfg['admin_email']) : trim($cfg['smtp_user']);
+                        if (filter_var($adminTo, FILTER_VALIDATE_EMAIL)) {
+                            $subj = "Nueva alta pendiente de activar ({$username}) - moratalla-murcia.com";
+                            $plain = "Hola,\r\n\r\nHay una nueva solicitud de registro pendiente de validación por parte del superusuario:\r\n- Usuario: {$username}\r\n- Correo: {$regEmail}\r\n- Fecha: " . date('d/m/Y H:i') . "\r\n\r\nAccede a admin/users.php para aprobarla o rechazarla.\r\n";
+                            $html = "<p>Hay una nueva solicitud de registro pendiente de validación en <strong>moratalla-murcia.com</strong>:</p><ul><li><strong>Usuario:</strong> " . htmlspecialchars($username) . "</li><li><strong>Correo:</strong> " . htmlspecialchars($regEmail) . "</li><li><strong>Fecha:</strong> " . date('d/m/Y H:i') . "</li></ul><p>Accede al panel de administración (Usuarios) para validarla.</p>";
+                            smtpSendRaw($cfg['smtp_host'], $cfg['smtp_port'], $cfg['smtp_encryption'], $cfg['smtp_user'], $cfg['smtp_pass'], $cfg['smtp_user'], 'moratalla-murcia.com', $adminTo, $regEmail, $username, $subj, $plain, $html);
+                        }
+                    }
+                } catch (Exception $eMail) {}
+
+                $success = "Solicitud de registro enviada correctamente. Tu cuenta queda pendiente de aprobación por parte del superusuario.";
+                $username = "";
+                $regEmail = "";
+                $formMode = 'login';
+            }
+        }
     } else {
         $pdo = getDB();
+        ensureValidadoColAdmin($pdo);
         $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch();
         
         if ($user) {
-            // Verificar si la cuenta está bloqueada
-            if ($user['locked_until'] && strtotime($user['locked_until']) > time()) {
+            // Verificar si la cuenta está pendiente de validación o rechazada
+            if (isset($user['validado']) && (int)$user['validado'] === 0) {
+                $error = "Tu solicitud de registro está pendiente de aprobación por parte del superusuario.";
+            } elseif (isset($user['validado']) && (int)$user['validado'] < 0) {
+                $error = "Tu solicitud de acceso ha sido rechazada o desactivada por el superusuario.";
+            } elseif ($user['locked_until'] && strtotime($user['locked_until']) > time()) {
                 $error = "Cuenta bloqueada temporalmente por seguridad. Inténtalo más tarde.";
             } else {
                 if (password_verify($password, $user['password'])) {
@@ -97,18 +159,30 @@ $_SESSION['admin_captcha_sum'] = $_SESSION['admin_captcha_n1'] + $_SESSION['admi
             <img id="login-logo" src="../uploads/theme/logo.jpg" alt="Logo Moratalla" style="max-height: 90px; width: auto; border-radius: 8px; transition: opacity 0.5s;">
             <h1 style="font-size: 1.4rem; color: var(--dark); margin-top: 0.8rem; margin-bottom: 0; font-weight: 700;">moratalla-murcia.com</h1>
         </div>
-        <h2 style="font-size: 1.2rem; margin-bottom: 1.5rem; color: #666;">ADMIN LOGIN</h2>
+        <h2 id="login-subtitle" style="font-size: 1.2rem; margin-bottom: 1.5rem; color: #666;"><?php echo $formMode === 'register' ? 'SOLICITAR ALTA DE USUARIO' : 'ADMIN LOGIN'; ?></h2>
         <?php if ($error): ?>
             <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
+        <?php if ($success): ?>
+            <div style="background:#dcfce7; color:#166534; padding:1rem; border-radius:8px; margin-bottom:1.5rem; font-size:0.85rem; text-align:center;"><?php echo htmlspecialchars($success); ?></div>
+        <?php endif; ?>
         <form method="POST" autocomplete="off">
+            <input type="hidden" name="form_mode" id="form_mode" value="<?php echo htmlspecialchars($formMode); ?>">
             <div class="form-group">
                 <label>Usuario</label>
                 <input type="text" name="username" value="<?php echo htmlspecialchars($username); ?>" required autocomplete="off">
             </div>
+            <div class="form-group" id="group-reg-email" style="display: <?php echo $formMode === 'register' ? 'block' : 'none'; ?>;">
+                <label>Correo electrónico (para comunicaciones) *</label>
+                <input type="email" name="email" id="reg_email_input" value="<?php echo htmlspecialchars($regEmail); ?>" <?php echo $formMode === 'register' ? 'required' : ''; ?> autocomplete="email" placeholder="tu@correo.com">
+            </div>
             <div class="form-group">
                 <label>Contraseña</label>
                 <input type="password" name="password" required autocomplete="new-password">
+            </div>
+            <div class="form-group" id="group-reg-pass2" style="display: <?php echo $formMode === 'register' ? 'block' : 'none'; ?>;">
+                <label>Repetir contraseña *</label>
+                <input type="password" name="password2" id="reg_pass2_input" <?php echo $formMode === 'register' ? 'required' : ''; ?> autocomplete="new-password">
             </div>
             <!-- Honeypot anti-bots oculto -->
             <div style="position:absolute; left:-9999px; opacity:0; pointer-events:none;" aria-hidden="true">
@@ -124,13 +198,30 @@ $_SESSION['admin_captcha_sum'] = $_SESSION['admin_captcha_n1'] + $_SESSION['admi
                     <input type="number" id="captcha" name="captcha" required placeholder="Resultado" autocomplete="off">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 0.5rem;">Entrar al Panel</button>
+            <button type="submit" id="submit-auth-btn" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 0.5rem;">
+                <?php echo $formMode === 'register' ? 'Enviar Solicitud de Alta' : 'Entrar al Panel'; ?>
+            </button>
+            <button type="button" id="toggle-auth-btn" onclick="toggleAdminAuthMode()" style="width: 100%; padding: 0.75rem; margin-top: 0.65rem; background: #f8fafc; color: var(--primary); border: 1px solid var(--gray-300); border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <?php echo $formMode === 'register' ? 'Volver a Iniciar Sesión' : 'Solicitar Alta de Nuevo Usuario'; ?>
+            </button>
         </form>
         <p style="text-align: center; margin-top: 1.5rem; font-size: 0.8rem; color: #888;">
             <a href="../index.php" style="color: inherit; text-decoration: none;"><i class="fas fa-arrow-left"></i> Volver a la web</a>
         </p>
     </div>
     <script>
+        function toggleAdminAuthMode() {
+            const modeInput = document.getElementById('form_mode');
+            const isReg = modeInput.value !== 'register';
+            modeInput.value = isReg ? 'register' : 'login';
+            document.getElementById('login-subtitle').textContent = isReg ? 'SOLICITAR ALTA DE USUARIO' : 'ADMIN LOGIN';
+            document.getElementById('group-reg-email').style.display = isReg ? 'block' : 'none';
+            document.getElementById('group-reg-pass2').style.display = isReg ? 'block' : 'none';
+            document.getElementById('reg_email_input').required = isReg;
+            document.getElementById('reg_pass2_input').required = isReg;
+            document.getElementById('submit-auth-btn').textContent = isReg ? 'Enviar Solicitud de Alta' : 'Entrar al Panel';
+            document.getElementById('toggle-auth-btn').textContent = isReg ? 'Volver a Iniciar Sesión' : 'Solicitar Alta de Nuevo Usuario';
+        }
         document.addEventListener('DOMContentLoaded', function() {
             const logo = document.getElementById('login-logo');
             const logos = ['../uploads/theme/logo.jpg', '../uploads/theme/logo2.jpg'];
