@@ -23,7 +23,13 @@ jobs:
 
       - name: 📤 Subir archivos (LFTP Mirror - Rápido y compatible)
         run: |
-          sudo apt-get update && sudo apt-get install -y lftp
+          if ! command -v lftp >/dev/null 2>&1; then
+            for i in 1 2 3; do
+              sudo apt-get update --fix-missing && sudo apt-get install -y --fix-missing lftp && break
+              echo "Reintentando instalación de lftp (intento $i/3)..."
+              sleep 10
+            done
+          fi
           lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 --exclude-glob .git/ --exclude-glob .github/ ./ ${{ secrets.SFTP_REMOTE_PATH }}/"
           lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 ./truque/ ${{ secrets.SFTP_REMOTE_PATH }}/../truque/"
           lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --ignore-time --parallel=10 ./biblioteca/ ${{ secrets.SFTP_REMOTE_PATH }}/../biblioteca/" || true
