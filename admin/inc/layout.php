@@ -70,7 +70,7 @@ function adminHeader($title = "Admin Panel") {
                 <?php endif; ?>
 
                 <?php if ($canCombustible): ?>
-                    <a href="combustible.php" class="nav-link" style="background: rgba(15, 118, 110, 0.18); border-left: 3px solid #14b8a6;"><i class="fas fa-gas-pump" style="color: #2dd4bf;"></i> Control Combustible</a>
+                    <a href="../combustible/index.php" class="nav-link" style="background: rgba(15, 118, 110, 0.18); border-left: 3px solid #14b8a6;"><i class="fas fa-gas-pump" style="color: #2dd4bf;"></i> Control Combustible</a>
                 <?php endif; ?>
 
                 <?php if ($canWeb): ?>

@@ -80,9 +80,9 @@ function checkAuth() {
         $acceso = !empty($u['acceso_sistema']) ? $u['acceso_sistema'] : 'ambos';
         $currentScript = basename($_SERVER['SCRIPT_NAME']);
 
-        // Si el usuario tiene asignado SOLO 'combustible', redirigir cualquier otra página del admin hacia combustible.php
+        // Si el usuario tiene asignado SOLO 'combustible', redirigir cualquier otra página del admin hacia ../combustible/index.php
         if ($acceso === 'combustible' && $currentScript !== 'combustible.php' && $currentScript !== 'logout.php') {
-            header("Location: combustible.php");
+            header("Location: ../combustible/index.php");
             exit;
         }
 
