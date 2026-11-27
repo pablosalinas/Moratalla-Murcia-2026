@@ -59,6 +59,16 @@ jobs:
           curl -f -s -S "${{ secrets.SITE_URL }}/combustible/setup_db.php" || true
           echo "✅ Control de Combustible desplegado correctamente."
 
+      - name: 🍽️ Clonar y desplegar RestauranteBar
+        run: |
+          git clone --depth=1 https://github.com/pablosalinas/restauranteBar.git /tmp/restaurantebar
+          cd /tmp/restaurantebar
+          npm ci
+          npm run build
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 /tmp/restaurantebar/dist/ ${{ secrets.SFTP_REMOTE_PATH }}/restaurantebar/"
+          lftp -c "set sftp:auto-confirm yes; open sftp://${{ secrets.SFTP_USER }}:${{ secrets.SFTP_PASS }}@${{ secrets.SFTP_HOST }}; mirror -R -v --parallel=10 /tmp/restaurantebar/dist/ ${{ secrets.SFTP_REMOTE_PATH }}/../restaurantebar/" || true
+          echo "✅ RestauranteBar desplegado correctamente."
+
       - name: 🐬 Migraciones
         run: |
           echo "Ejecutando migraciones en la raíz..."
